@@ -273,16 +273,9 @@ export class FormulaParser {
                     tokens1.push(new FormulaToken(value, TokenType.OPERAND));
                     value = '';
                 }
-                const tmp = stack.pop();
-                if (tmp) {
-                    tmp.value = '';
-                    tmp.subType = TokenSubType.STOP;
-                    stack.push(tmp);
-                    if (tmp.type === TokenType.FUNCTION) {
-                        tokens1.push(new FormulaToken(',', TokenType.ARGUMENT));
-                    } else {
-                        tokens1.push(new FormulaToken(',', TokenType.ARGUMENT));
-                    }
+                const tmp = stack[stack.length - 1];
+                if (tmp && tmp.type === TokenType.FUNCTION) {
+                    tokens1.push(new FormulaToken(',', TokenType.ARGUMENT));
                 }
                 index++;
                 continue;

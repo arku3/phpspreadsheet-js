@@ -1,5 +1,6 @@
 import { expect, test, describe, beforeEach } from "bun:test";
 import { Spreadsheet } from "../../src/core/spreadsheet.ts";
+import { NamedRange } from "../../src/core/named-range.ts";
 
 describe("Calculation Engine", () => {
     let spreadsheet: Spreadsheet;
@@ -60,12 +61,18 @@ describe("Calculation Engine", () => {
         expect(sheet.getCell("B1").getValue()).toBe("Low");
     });
 
-    test("Nested Functions", () => {
+    test("IFERROR and IFNA", () => {
         const sheet = spreadsheet.getActiveSheet();
-        sheet.setCellValue("A1", 10);
-        sheet.setCellValue("A2", 20);
-        sheet.setCellValue("B1", "=IF(SUM(A1:A2)>25, \"Large\", \"Small\")");
-        expect(sheet.getCell("B1").getValue()).toBe("Large");
+        sheet.setCellValue("A1", "=1/0");
+        sheet.setCellValue("B1", "=IFERROR(A1, \"ErrorHandled\")");
+        expect(sheet.getCell("B1").getValue()).toBe("ErrorHandled");
+
+        sheet.setCellValue("A2", "=VLOOKUP(\"Missing\", Z1:Z2, 1, FALSE)"); // returns #N/A
+        sheet.setCellValue("B2", "=IFNA(A2, \"Not found\")");
+        expect(sheet.getCell("B2").getValue()).toBe("Not found");
+        
+        sheet.setCellValue("B3", "=IFERROR(1+2, \"Error\")");
+        expect(sheet.getCell("B3").getValue()).toBe(3);
     });
 
     test("Branch Pruning (Lazy IF)", () => {
@@ -87,6 +94,67 @@ describe("Calculation Engine", () => {
 
         sheet2.setCellValue("A2", "=SUM(DataSheet!A1, 10)");
         expect(sheet2.getCell("A2").getValue()).toBe(110);
+    });
+
+    test("Named Ranges", () => {
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue("A1", 10);
+        sheet.setCellValue("A2", 20);
+        
+        spreadsheet.addNamedRange(new NamedRange("MY_RANGE", sheet, "A1:A2"));
+        
+        sheet.setCellValue("B1", "=SUM(MY_RANGE)");
+        expect(sheet.getCell("B1").getValue()).toBe(30);
+    });
+
+    test("VLOOKUP", () => {
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue("A1", "Apple");
+        sheet.setCellValue("B1", 10);
+        sheet.setCellValue("A2", "Banana");
+        sheet.setCellValue("B2", 20);
+        sheet.setCellValue("A3", "Cherry");
+        sheet.setCellValue("B3", 30);
+
+        // Exact match
+        sheet.setCellValue("C1", "=VLOOKUP(\"Banana\", A1:B3, 2, FALSE)");
+        expect(sheet.getCell("C1").getValue()).toBe(20);
+
+        // Not found exact
+        sheet.setCellValue("C2", "=VLOOKUP(\"Date\", A1:B3, 2, FALSE)");
+        expect(sheet.getCell("C2").getValue()).toBe("#N/A");
+
+        // Approximate match (A1:B3 is sorted by column A)
+        sheet.setCellValue("C3", "=VLOOKUP(\"B\", A1:B3, 2, TRUE)");
+        expect(sheet.getCell("C3").getValue()).toBe(10); // Apple is the last value <= "B"
+    });
+
+    test("INDEX and MATCH", () => {
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue("A1", "Red");
+        sheet.setCellValue("A2", "Green");
+        sheet.setCellValue("A3", "Blue");
+        sheet.setCellValue("B1", 1);
+        sheet.setCellValue("B2", 2);
+        sheet.setCellValue("B3", 3);
+
+        sheet.setCellValue("C1", "=MATCH(\"Green\", A1:A3, 0)");
+        expect(sheet.getCell("C1").getValue()).toBe(2);
+
+        sheet.setCellValue("C2", "=INDEX(B1:B3, MATCH(\"Blue\", A1:A3, 0))");
+        expect(sheet.getCell("C2").getValue()).toBe(3);
+    });
+
+    test("Argument Count Validation", () => {
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue("A1", "=ABS()");
+        expect(sheet.getCell("A1").getValue()).toContain("#VALUE!");
+
+        sheet.setCellValue("A2", "=ABS(1, 2)");
+        expect(sheet.getCell("A2").getValue()).toContain("#VALUE!");
+
+        sheet.setCellValue("A3", "=ROUND(1)");
+        expect(sheet.getCell("A3").getValue()).toContain("#VALUE!");
     });
 
     test("Circular Reference", () => {

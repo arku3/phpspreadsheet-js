@@ -21,19 +21,16 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
 - [x] Phase 5: Integration & Testing <!-- id: 4 -->
     - [x] Integrate with `Worksheet.setCellValue`.
     - [x] Add unit tests for various formula scenarios.
-- [ ] Phase 6: Parity & Advanced Features <!-- id: 5 -->
-    - [ ] Define standardized Excel Error Codes. <!-- id: 6 -->
-    - [ ] Implement Branch Pruning (Lazy IF evaluation). <!-- id: 7 -->
-    - [ ] Implement Cross-Sheet References (`Sheet2!A1`). <!-- id: 8 -->
-    - [ ] Support for more complex functions (VLOOKUP, etc.). <!-- id: 9 -->
-    - [ ] Add argument count validation to FunctionRegistry. <!-- id: 10 -->
-- [ ] Phase 4: Operators & Basic Functions <!-- id: 3 -->
-    - [ ] Implement arithmetic operators (`+`, `-`, `*`, `/`, `^`).
-    - [ ] Implement comparison operators.
-    - [ ] Implement basic functions (`SUM`, `IF`).
-- [ ] Phase 5: Integration & Testing <!-- id: 4 -->
-    - [ ] Integrate with `Worksheet.setCellValue`.
-    - [ ] Add unit tests for various formula scenarios.
+- [x] Phase 6: Parity & Advanced Features <!-- id: 5 -->
+    - [x] Define standardized Excel Error Codes. <!-- id: 6 -->
+    - [x] Implement Branch Pruning (Lazy IF evaluation). <!-- id: 7 -->
+    - [x] Implement Cross-Sheet References (`Sheet2!A1`). <!-- id: 8 -->
+    - [x] Support for more complex functions (VLOOKUP, etc.). <!-- id: 9 -->
+    - [x] Add argument count validation to FunctionRegistry. <!-- id: 10 -->
+- [ ] Phase 7: Performance & Compatibility <!-- id: 11 -->
+    - [ ] Implement Row-Major / Column-Major range extraction. <!-- id: 12 -->
+    - [ ] Support for Named Ranges. <!-- id: 13 -->
+    - [ ] Refactor FunctionRegistry into Categorized modules. <!-- id: 14 -->
 
 ## Decisions
 - Use native private members (`#`) for internal state.

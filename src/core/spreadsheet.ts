@@ -1,6 +1,8 @@
 import { Worksheet } from './worksheet.ts';
 import { Style } from '../style/style.ts';
 import { Calculation } from '../calculation/calculation.ts';
+import { DefinedName } from './defined-name.ts';
+import { NamedRange } from './named-range.ts';
 
 /**
  * Spreadsheet workbook.
@@ -11,6 +13,7 @@ export class Spreadsheet {
     #cellXfCollection: Style[] = [];
     #cellStyleXfCollection: Style[] = [];
     #calculationEngine: Calculation;
+    #definedNames: DefinedName[] = [];
 
     constructor() {
         this.#calculationEngine = new Calculation();
@@ -22,6 +25,55 @@ export class Spreadsheet {
         // Create the default style
         this.addCellXf(new Style());
         this.addCellStyleXf(new Style());
+    }
+
+    /**
+     * Get defined names.
+     */
+    public getDefinedNames(): DefinedName[] {
+        return this.#definedNames;
+    }
+
+    /**
+     * Add a defined name.
+     */
+    public addDefinedName(definedName: DefinedName): void {
+        this.#definedNames.push(definedName);
+    }
+
+    /**
+     * Get a defined name by name.
+     */
+    public getDefinedName(name: string, worksheet: Worksheet | null = null): DefinedName | undefined {
+        return this.#definedNames.find(dn => {
+            if (dn.getName() !== name) return false;
+            if (dn.getLocalOnly()) {
+                return dn.getScope() === worksheet;
+            }
+            return true;
+        });
+    }
+
+    /**
+     * Get named ranges.
+     */
+    public getNamedRanges(): NamedRange[] {
+        return this.#definedNames.filter(dn => dn instanceof NamedRange) as NamedRange[];
+    }
+
+    /**
+     * Add a named range.
+     */
+    public addNamedRange(namedRange: NamedRange): void {
+        this.addDefinedName(namedRange);
+    }
+
+    /**
+     * Get a named range by name.
+     */
+    public getNamedRange(name: string, worksheet: Worksheet | null = null): NamedRange | undefined {
+        const dn = this.getDefinedName(name, worksheet);
+        return dn instanceof NamedRange ? dn : undefined;
     }
 
     /**

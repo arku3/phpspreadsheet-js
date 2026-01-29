@@ -64,34 +64,34 @@ export class Calculation {
      * Process Token Stack.
      */
     private processTokenStack(tokens: FormulaToken[], worksheet?: Worksheet): any {
-        this.#stack.clear();
-        this.#branchPruner.clear();
+        const branchPruner = new BranchPruner();
+        const stack = new Stack(branchPruner);
         const operatorStack: FormulaToken[] = [];
 
         const executeOperator = (operatorToken: FormulaToken) => {
             const op = operatorToken.value;
             if (operatorToken.type === TokenType.OPERATOR_PREFIX) {
-                const operand = this.#stack.pop();
+                const operand = stack.pop();
                 if (operand) {
                     let val = operand.value;
                     if (op === '-') val = -val;
-                    this.#stack.push(TokenType.OPERAND, val);
+                    stack.push(TokenType.OPERAND, val);
                 }
             } else {
-                this.#processInfixOperator(operatorToken);
+                this.#processInfixOperator(operatorToken, stack);
             }
         };
 
         let tokenIndex = 0;
         for (const token of tokens) {
-            const isPruned = this.#branchPruner.isPruned();
+            const isPruned = branchPruner.isPruned();
 
             switch (token.type) {
                 case TokenType.OPERAND:
                     if (!isPruned) {
-                        this.#processOperand(token, worksheet);
+                        this.#processOperand(token, stack, worksheet);
                     } else {
-                        this.#stack.push(TokenType.OPERAND, null, 'NULL');
+                        stack.push(TokenType.OPERAND, null, 'NULL');
                     }
                     break;
 
@@ -129,9 +129,9 @@ export class Calculation {
                 case TokenType.FUNCTION:
                     if (token.subType === TokenSubType.START) {
                         operatorStack.push(token);
-                        this.#stack.push(TokenType.FUNCTION, token.value, 'START');
+                        stack.push(TokenType.FUNCTION, token.value, 'START');
                         if (token.value.toUpperCase() === 'IF') {
-                            this.#branchPruner.pushIf(`IF_${tokenIndex}`);
+                            branchPruner.pushIf(`IF_${tokenIndex}`);
                         }
                     } else if (token.subType === TokenSubType.STOP) {
                         while (operatorStack.length > 0) {
@@ -142,9 +142,9 @@ export class Calculation {
                         }
                         const startToken = operatorStack.pop(); // Pop START
                         if (startToken && startToken.value.toUpperCase() === 'IF') {
-                            this.#branchPruner.popIf();
+                            branchPruner.popIf();
                         }
-                        this.#processFunctionStop(worksheet);
+                        this.#processFunctionStop(stack, worksheet);
                     }
                     break;
 
@@ -153,13 +153,13 @@ export class Calculation {
                         const top = operatorStack[operatorStack.length - 1];
                         if (top && top.type === TokenType.FUNCTION) {
                             if (top.value.toUpperCase() === 'IF') {
-                                const argCount = this.#countArgumentsSinceStart();
+                                const argCount = this.#countArgumentsSinceStart(stack);
                                 if (argCount === 1) { // Finished condition
-                                    const conditionResult = this.#stack.last()?.value;
-                                    this.#branchPruner.setConditionResult(Boolean(conditionResult));
-                                    this.#branchPruner.enterThen();
+                                    const conditionResult = stack.last()?.value;
+                                    branchPruner.setConditionResult(Boolean(conditionResult));
+                                    branchPruner.enterThen();
                                 } else if (argCount === 2) { // Finished then-branch
-                                    this.#branchPruner.enterElse();
+                                    branchPruner.enterElse();
                                 }
                             }
                             break;
@@ -167,10 +167,7 @@ export class Calculation {
                         const op = operatorStack.pop();
                         if (op) executeOperator(op);
                     }
-                    // Since we don't push ARGUMENT tokens to the operand stack,
-                    // we need another way to track the argument position.
-                    // For now, we'll push a dummy marker.
-                    this.#stack.push(TokenType.ARGUMENT, null, 'ARG');
+                    stack.push(TokenType.ARGUMENT, null, 'ARG');
                     break;
             }
             tokenIndex++;
@@ -180,42 +177,47 @@ export class Calculation {
             executeOperator(operatorStack.pop()!);
         }
 
-        const result = this.#stack.pop();
+        const result = stack.pop();
         return result ? result.value : null;
     }
 
-    #countArgumentsSinceStart(): number {
+    #countArgumentsSinceStart(stack: Stack): number {
         let count = 1;
         for (let i = 1; ; i++) {
-            const item = this.#stack.last(i);
+            const item = stack.last(i);
             if (!item || item.reference === 'START') break;
             if (item.reference === 'ARG') count++;
         }
         return count;
     }
 
-    #processSubexpressionStop(): void {
+    #processSubexpressionStop(stack: Stack): void {
         const operands = [];
-        let item = this.#stack.pop();
+        let item = stack.pop();
         while (item && item.reference !== 'START') {
             operands.push(item.value);
-            item = this.#stack.pop();
+            item = stack.pop();
         }
-        this.#stack.push(TokenType.OPERAND, operands[0]);
+        stack.push(TokenType.OPERAND, operands[0]);
     }
 
-    #processFunctionStop(worksheet?: Worksheet): void {
+    #processFunctionStop(stack: Stack, worksheet?: Worksheet): void {
         const args = [];
-        let item = this.#stack.pop();
+        let item = stack.pop();
         while (item && item.reference !== 'START') {
             if (item.reference !== 'ARG') {
                 args.push(item.value);
             }
-            item = this.#stack.pop();
+            item = stack.pop();
         }
 
-        if (!item || item.type !== TokenType.FUNCTION) {
-            this.#stack.push(TokenType.OPERAND, CalculationErrors.VALUE);
+        if (!item || (item.type !== TokenType.FUNCTION && item.type !== TokenType.SUBEXPRESSION)) {
+            stack.push(TokenType.OPERAND, CalculationErrors.VALUE);
+            return;
+        }
+
+        if (item.type === TokenType.SUBEXPRESSION) {
+            stack.push(TokenType.OPERAND, args[0]);
             return;
         }
 
@@ -223,18 +225,22 @@ export class Calculation {
         args.reverse();
 
         const result = this.#executeFunction(functionName, args, worksheet);
-        this.#stack.push(TokenType.OPERAND, result);
+        stack.push(TokenType.OPERAND, result);
     }
 
     #executeFunction(functionName: string, args: any[], worksheet?: Worksheet): any {
-        const implementation = this.#functionRegistry.get(functionName);
-        if (implementation) {
-            return implementation(args);
+        const metadata = this.#functionRegistry.get(functionName);
+        if (metadata) {
+            const validation = this.#functionRegistry.validateArgumentCount(functionName, args.length);
+            if (validation !== true) {
+                return validation;
+            }
+            return metadata.implementation(args);
         }
         return `${CalculationErrors.NAME} (${functionName})`;
     }
 
-    #processOperand(token: FormulaToken, worksheet?: Worksheet): void {
+    #processOperand(token: FormulaToken, stack: Stack, worksheet?: Worksheet): void {
         let value: any = token.value;
 
         if (token.subType === TokenSubType.NUMBER) {
@@ -243,16 +249,23 @@ export class Calculation {
             value = value.toUpperCase() === 'TRUE';
         } else if (token.subType === TokenSubType.RANGE) {
             if (worksheet) {
-                value = this.#resolveReference(value, worksheet);
+                // Check if it's a named range first
+                const workbook = worksheet.getParent();
+                const namedRange = workbook.getNamedRange(value, worksheet);
+                if (namedRange) {
+                    value = this.#resolveReference(namedRange.getValue(), worksheet);
+                } else {
+                    value = this.#resolveReference(value, worksheet);
+                }
             }
         }
 
-        this.#stack.push(token.type, value);
+        stack.push(token.type, value);
     }
 
-    #processInfixOperator(token: FormulaToken): void {
-        const operand2 = this.#stack.pop();
-        const operand1 = this.#stack.pop();
+    #processInfixOperator(token: FormulaToken, stack: Stack): void {
+        const operand2 = stack.pop();
+        const operand1 = stack.pop();
 
         if (!operand1 || !operand2) {
             return;
@@ -270,7 +283,12 @@ export class Calculation {
                 result = (Number(operand1.value) || 0) * (Number(operand2.value) || 0);
                 break;
             case '/':
-                result = (Number(operand1.value) || 0) / (Number(operand2.value) || 1);
+                const val2 = Number(operand2.value);
+                if (val2 === 0) {
+                    result = CalculationErrors.DIV0;
+                } else {
+                    result = (Number(operand1.value) || 0) / val2;
+                }
                 break;
             case '^':
                 result = Math.pow(Number(operand1.value) || 0, Number(operand2.value) || 0);
@@ -298,7 +316,7 @@ export class Calculation {
                 break;
         }
 
-        this.#stack.push(TokenType.OPERAND, result);
+        stack.push(TokenType.OPERAND, result);
     }
 
     #resolveReference(reference: string, worksheet: Worksheet): any {
