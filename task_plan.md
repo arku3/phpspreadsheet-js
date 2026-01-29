@@ -70,7 +70,7 @@ Complete Phase 14 parity polish with workbook security, themes/tinting, and cond
 - [x] Phase 14: Architectural & Parity Polish <!-- id: 49 -->
     - [x] Implement Document Properties (Metadata). <!-- id: 50 -->
     - [x] Implement Workbook Security and Password Hashing. <!-- id: 51 -->
-    - [ ] Port advanced Style features (Conditional Formatting, Themes/Tinting). <!-- id: 52 -->
+    - [x] Port advanced Style features (Conditional Formatting, Themes/Tinting). <!-- id: 52 -->
     - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 53 -->
 
 - [ ] Phase 15: I/O Extension & Graphics <!-- id: 54 -->
@@ -85,3 +85,5 @@ Complete Phase 14 parity polish with workbook security, themes/tinting, and cond
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
+| Range splitting logic in `writeConditionalFormatting` | Initial implementation failed on single cell references | Fixed to safely handle `topLeftCell` and verified with tests |
+| Missing constants in `Conditional` | Attempted to use BEGINSWITH/ENDSWITH | Added `CONDITION_BEGINSWITH`, `CONDITION_ENDSWITH`, and `TIMEPERIOD_*` constants |

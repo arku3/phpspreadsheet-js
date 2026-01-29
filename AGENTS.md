@@ -101,7 +101,7 @@ As the project grows, follow this intended structure:
 ## 5. Agent Instructions
 
 ### Session Start & Planning
-- **Planning Skill:** Always use the `planning-with-files` skill when starting a new session or a complex task. This ensures consistency through `task_plan.md`, `findings.md`, and `progress.md`.
+- **Planning Skill:**  When starting a new session or a complex task, read `task_plan.md`, `findings.md`, and `progress.md`, which ensures consistency.
 - **PHP Parity:** Before implementing any feature or writer part, ALWAYS reference the original PHP implementation in `php-src/src/PhpSpreadsheet/`. This is critical for ensuring logic parity and handling edge cases correctly.
 
 ### Context Awareness

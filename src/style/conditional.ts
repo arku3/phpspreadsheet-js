@@ -1,5 +1,8 @@
 import { createHash } from 'node:crypto';
 import { Style } from './style.ts';
+import { ConditionalDataBar } from './conditional-formatting/conditional-data-bar.ts';
+import { ConditionalColorScale } from './conditional-formatting/conditional-color-scale.ts';
+import { ConditionalIconSet } from './conditional-formatting/conditional-icon-set.ts';
 
 /**
  * Conditional style.
@@ -7,22 +10,36 @@ import { Style } from './style.ts';
 export class Conditional {
     // Condition types
     public static readonly CONDITION_NONE = 'none';
+    public static readonly CONDITION_BEGINSWITH = 'beginsWith';
     public static readonly CONDITION_CELLIS = 'cellIs';
     public static readonly CONDITION_CONTAINSBLANKS = 'containsBlanks';
     public static readonly CONDITION_CONTAINSERRORS = 'containsErrors';
     public static readonly CONDITION_CONTAINSTEXT = 'containsText';
     public static readonly CONDITION_EXPRESSION = 'expression';
+    public static readonly CONDITION_ENDSWITH = 'endsWith';
     public static readonly CONDITION_NOTCONTAINSBLANKS = 'notContainsBlanks';
     public static readonly CONDITION_NOTCONTAINSERRORS = 'notContainsErrors';
     public static readonly CONDITION_NOTCONTAINSTEXT = 'notContainsText';
     public static readonly CONDITION_TIMEPERIOD = 'timePeriod';
-    public static readonly CONDITION_DUPLICATES = 'duplicates';
-    public static readonly CONDITION_UNIQUE = 'unique';
+    public static readonly CONDITION_DUPLICATES = 'duplicateValues';
+    public static readonly CONDITION_UNIQUE = 'uniqueValues';
     public static readonly CONDITION_COLORSCALE = 'colorScale';
     public static readonly CONDITION_DATABAR = 'dataBar';
     public static readonly CONDITION_ICONSET = 'iconSet';
     public static readonly CONDITION_ABVAVERAGE = 'aboveAverage';
     public static readonly CONDITION_TOP10 = 'top10';
+
+    // Time periods
+    public static readonly TIMEPERIOD_TODAY = 'today';
+    public static readonly TIMEPERIOD_YESTERDAY = 'yesterday';
+    public static readonly TIMEPERIOD_TOMORROW = 'tomorrow';
+    public static readonly TIMEPERIOD_LAST_7_DAYS = 'last7Days';
+    public static readonly TIMEPERIOD_LAST_WEEK = 'lastWeek';
+    public static readonly TIMEPERIOD_THIS_WEEK = 'thisWeek';
+    public static readonly TIMEPERIOD_NEXT_WEEK = 'nextWeek';
+    public static readonly TIMEPERIOD_LAST_MONTH = 'lastMonth';
+    public static readonly TIMEPERIOD_THIS_MONTH = 'thisMonth';
+    public static readonly TIMEPERIOD_NEXT_MONTH = 'nextMonth';
 
     // Operator types
     public static readonly OPERATOR_NONE = '';
@@ -46,8 +63,11 @@ export class Conditional {
     #conditions: (string | number)[] = [];
     #style: Style;
     #priority: number = 0;
+    #noFormatSet: boolean = false;
 
-    // TODO: Add support for DataBar, ColorScale, IconSet objects if needed
+    #dataBar: ConditionalDataBar | null = null;
+    #colorScale: ConditionalColorScale | null = null;
+    #iconSet: ConditionalIconSet | null = null;
 
     constructor() {
         this.#style = new Style(false);
@@ -124,6 +144,42 @@ export class Conditional {
         return this;
     }
 
+    public getNoFormatSet(): boolean {
+        return this.#noFormatSet;
+    }
+
+    public setNoFormatSet(noFormatSet: boolean): this {
+        this.#noFormatSet = noFormatSet;
+        return this;
+    }
+
+    public getDataBar(): ConditionalDataBar | null {
+        return this.#dataBar;
+    }
+
+    public setDataBar(dataBar: ConditionalDataBar): this {
+        this.#dataBar = dataBar;
+        return this;
+    }
+
+    public getColorScale(): ConditionalColorScale | null {
+        return this.#colorScale;
+    }
+
+    public setColorScale(colorScale: ConditionalColorScale): this {
+        this.#colorScale = colorScale;
+        return this;
+    }
+
+    public getIconSet(): ConditionalIconSet | null {
+        return this.#iconSet;
+    }
+
+    public setIconSet(iconSet: ConditionalIconSet): this {
+        this.#iconSet = iconSet;
+        return this;
+    }
+
     /**
      * Get hash code.
      */
@@ -134,6 +190,9 @@ export class Conditional {
                 this.#operatorType +
                 this.#conditions.join(';') +
                 this.#style.getHashCode() +
+                (this.#dataBar ? 'dataBar' : '') +
+                (this.#colorScale ? 'colorScale' : '') +
+                (this.#iconSet ? 'iconSet' : '') +
                 'Conditional'
             )
             .digest('hex');
@@ -151,6 +210,10 @@ export class Conditional {
         clone.#conditions = [...this.#conditions];
         clone.#style = this.#style.clone();
         clone.#priority = this.#priority;
+        clone.#noFormatSet = this.#noFormatSet;
+        clone.#dataBar = this.#dataBar; // TODO: deep clone if needed
+        clone.#colorScale = this.#colorScale; // TODO: deep clone if needed
+        clone.#iconSet = this.#iconSet; // TODO: deep clone if needed
         return clone;
     }
 }

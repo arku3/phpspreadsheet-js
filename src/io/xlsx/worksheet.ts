@@ -8,6 +8,10 @@ import { WriterPart } from './writer-part.ts';
 import { AutoFilter } from '../../worksheet/auto-filter.ts';
 import { Column as AutoFilterColumn } from '../../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../../worksheet/auto-filter/column/rule.ts';
+import { Conditional } from '../../style/conditional.ts';
+import { ConditionalColorScale } from '../../style/conditional-formatting/conditional-color-scale.ts';
+import { ConditionalDataBar } from '../../style/conditional-formatting/conditional-data-bar.ts';
+import { ConditionalIconSet } from '../../style/conditional-formatting/conditional-icon-set.ts';
 
 /**
  * Generates worksheet XMLs.
@@ -437,16 +441,36 @@ export class Worksheet extends WriterPart {
                 sqref: Coordinate.resolveUnionAndIntersection(cellCoordinate.replace(/\$/g, ''), ' ')
             });
 
+            const cellRange = Coordinate.splitRange(cellCoordinate.replace(/\$/g, '').toUpperCase());
+            const firstRange = cellRange[0];
+            const firstPair = firstRange ? firstRange[0] : undefined;
+            const topLeftCell = firstPair ? firstPair[0] : 'A1';
+
             for (const conditional of styles) {
+                const type = conditional.getConditionType();
                 const rule = cf.ele('cfRule', {
-                    type: conditional.getConditionType(),
+                    type: type,
                     priority: conditional.getPriority() || ++id
                 });
 
-                const dxfId = this.getParentWriter().getStylesConditionalHashTable().getIndexForHashCode(conditional.getHashCode());
-                rule.att('dxfId', String(dxfId));
+                if (
+                    type !== Conditional.CONDITION_COLORSCALE &&
+                    type !== Conditional.CONDITION_DATABAR &&
+                    type !== Conditional.CONDITION_ICONSET &&
+                    !conditional.getNoFormatSet()
+                ) {
+                    try {
+                        const dxfId = this.getParentWriter().getStylesConditionalHashTable().getIndexForHashCode(conditional.getHashCode());
+                        rule.att('dxfId', String(dxfId));
+                    } catch {
+                        // DXF not found, skip dxfId
+                    }
+                }
 
-                if (conditional.getOperatorType() !== '') {
+                if (
+                    (type === Conditional.CONDITION_CELLIS || type === Conditional.CONDITION_CONTAINSTEXT || type === Conditional.CONDITION_NOTCONTAINSTEXT || type === Conditional.CONDITION_BEGINSWITH || type === Conditional.CONDITION_ENDSWITH) &&
+                    conditional.getOperatorType() !== ''
+                ) {
                     rule.att('operator', conditional.getOperatorType());
                 }
 
@@ -454,9 +478,128 @@ export class Worksheet extends WriterPart {
                     rule.att('stopIfTrue', '1');
                 }
 
-                for (const condition of conditional.getConditions()) {
+                if (type === Conditional.CONDITION_CONTAINSTEXT || type === Conditional.CONDITION_NOTCONTAINSTEXT || type === Conditional.CONDITION_BEGINSWITH || type === Conditional.CONDITION_ENDSWITH) {
+                    this.writeTextCondElements(rule, conditional, topLeftCell);
+                } else if (type === Conditional.CONDITION_COLORSCALE) {
+                    this.writeColorScaleElements(rule, conditional.getColorScale());
+                } else if (type === Conditional.CONDITION_DATABAR) {
+                    this.writeDataBarElements(rule, conditional.getDataBar());
+                } else if (type === Conditional.CONDITION_ICONSET) {
+                    this.writeIconSetElements(rule, conditional.getIconSet());
+                } else {
+                    this.writeOtherCondElements(rule, conditional, topLeftCell);
+                }
+            }
+        }
+    }
+
+    private writeTextCondElements(rule: any, conditional: Conditional, _topLeftCell: string): void {
+        const txt = conditional.getText();
+        if (txt) {
+            rule.att('text', txt);
+            const conditions = conditional.getConditions();
+            if (conditions.length === 0) {
+                const operator = conditional.getOperatorType();
+                if (operator === 'containsText') {
+                    rule.ele('formula').txt(`NOT(ISERROR(SEARCH("${txt}",${_topLeftCell})))`);
+                } else if (operator === 'beginsWith') {
+                    rule.ele('formula').txt(`LEFT(${_topLeftCell},LEN("${txt}"))="${txt}"`);
+                } else if (operator === 'endsWith') {
+                    rule.ele('formula').txt(`RIGHT(${_topLeftCell},LEN("${txt}"))="${txt}"`);
+                } else if (operator === 'notContains') {
+                    rule.ele('formula').txt(`ISERROR(SEARCH("${txt}",${_topLeftCell}))`);
+                }
+            } else {
+                for (const condition of conditions) {
                     rule.ele('formula').txt(String(condition));
                 }
+            }
+        }
+    }
+
+    private writeColorScaleElements(rule: any, colorScale: ConditionalColorScale | null): void {
+        if (!colorScale) return;
+        const cs = rule.ele('colorScale');
+
+        const minCfvo = colorScale.getMinimumConditionalFormatValueObject();
+        const minColor = colorScale.getMinimumColor();
+        if (minCfvo) {
+            const cfvo = cs.ele('cfvo', { type: minCfvo.getType() });
+            if (minCfvo.getValue() !== null) cfvo.att('val', String(minCfvo.getValue()));
+        }
+
+        const midCfvo = colorScale.getMidpointConditionalFormatValueObject();
+        if (midCfvo) {
+            const cfvo = cs.ele('cfvo', { type: midCfvo.getType() });
+            if (midCfvo.getValue() !== null) cfvo.att('val', String(midCfvo.getValue()));
+        }
+
+        const maxCfvo = colorScale.getMaximumConditionalFormatValueObject();
+        const maxColor = colorScale.getMaximumColor();
+        if (maxCfvo) {
+            const cfvo = cs.ele('cfvo', { type: maxCfvo.getType() });
+            if (maxCfvo.getValue() !== null) cfvo.att('val', String(maxCfvo.getValue()));
+        }
+
+        if (minColor && minColor.getARGB()) cs.ele('color', { rgb: minColor.getARGB() });
+        if (colorScale.getMidpointColor() && colorScale.getMidpointColor()!.getARGB()) {
+            cs.ele('color', { rgb: colorScale.getMidpointColor()!.getARGB() });
+        }
+        if (maxColor && maxColor.getARGB()) cs.ele('color', { rgb: maxColor.getARGB() });
+    }
+
+    private writeDataBarElements(rule: any, dataBar: ConditionalDataBar | null): void {
+        if (!dataBar) return;
+        const db = rule.ele('dataBar');
+        if (dataBar.getShowValue() !== null) db.att('showValue', dataBar.getShowValue() ? '1' : '0');
+
+        const minCfvo = dataBar.getMinimumConditionalFormatValueObject();
+        if (minCfvo) {
+            const cfvo = db.ele('cfvo', { type: minCfvo.getType() });
+            if (minCfvo.getValue() !== null) cfvo.att('val', String(minCfvo.getValue()));
+        }
+
+        const maxCfvo = dataBar.getMaximumConditionalFormatValueObject();
+        if (maxCfvo) {
+            const cfvo = db.ele('cfvo', { type: maxCfvo.getType() });
+            if (maxCfvo.getValue() !== null) cfvo.att('val', String(maxCfvo.getValue()));
+        }
+
+        if (dataBar.getColor()) {
+            db.ele('color', { rgb: dataBar.getColor() });
+        }
+    }
+
+    private writeIconSetElements(rule: any, iconSet: ConditionalIconSet | null): void {
+        if (!iconSet) return;
+        const is = rule.ele('iconSet');
+        if (iconSet.getIconSetType()) is.att('iconSet', iconSet.getIconSetType());
+        if (iconSet.getReverse() !== null) is.att('reverse', iconSet.getReverse() ? '1' : '0');
+        if (iconSet.getShowValue() !== null) is.att('showValue', iconSet.getShowValue() ? '1' : '0');
+
+        for (const cfvoObj of iconSet.getCfvos()) {
+            const cfvo = is.ele('cfvo', { type: cfvoObj.getType() });
+            if (cfvoObj.getValue() !== null) cfvo.att('val', String(cfvoObj.getValue()));
+            if (cfvoObj.getGreaterThanOrEqual() !== null) cfvo.att('gte', cfvoObj.getGreaterThanOrEqual() ? '1' : '0');
+        }
+    }
+
+    private writeOtherCondElements(rule: any, conditional: Conditional, topLeftCell: string): void {
+        const conditions = conditional.getConditions();
+        if (conditions.length > 0) {
+            for (const condition of conditions) {
+                rule.ele('formula').txt(String(condition));
+            }
+        } else {
+            const type = conditional.getConditionType();
+            if (type === Conditional.CONDITION_CONTAINSBLANKS) {
+                rule.ele('formula').txt(`LEN(TRIM(${topLeftCell}))=0`);
+            } else if (type === Conditional.CONDITION_NOTCONTAINSBLANKS) {
+                rule.ele('formula').txt(`LEN(TRIM(${topLeftCell}))>0`);
+            } else if (type === Conditional.CONDITION_CONTAINSERRORS) {
+                rule.ele('formula').txt(`ISERROR(${topLeftCell})`);
+            } else if (type === Conditional.CONDITION_NOTCONTAINSERRORS) {
+                rule.ele('formula').txt(`NOT(ISERROR(${topLeftCell}))`);
             }
         }
     }

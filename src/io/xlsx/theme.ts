@@ -109,12 +109,12 @@ export class Theme extends WriterPart {
         return root.end({ prettyPrint: true });
     }
 
-    private writeFonts(parent: any, latinFont: string, eastAsianFont: string, complexScriptFont: string, fontSet: Map<string, string>): void {
+    private writeFonts(parent: any, latinFont: string, eastAsianFont: string, complexScriptFont: string, fontSet: Record<string, string>): void {
         parent.ele('a:latin', { typeface: latinFont });
         parent.ele('a:ea', { typeface: eastAsianFont });
         parent.ele('a:cs', { typeface: complexScriptFont });
 
-        for (const [script, typeface] of fontSet) {
+        for (const [script, typeface] of Object.entries(fontSet)) {
             parent.ele('a:font', { script, typeface });
         }
     }
