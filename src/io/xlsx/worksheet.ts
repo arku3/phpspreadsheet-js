@@ -444,7 +444,7 @@ export class Worksheet extends WriterPart {
             const cellRange = Coordinate.splitRange(cellCoordinate.replace(/\$/g, '').toUpperCase());
             const firstRange = cellRange[0];
             const firstPair = firstRange ? firstRange[0] : undefined;
-            const topLeftCell = firstPair ? firstPair[0] : 'A1';
+            const topLeftCell = firstPair?.[0] ?? 'A1';
 
             for (const conditional of styles) {
                 const type = conditional.getConditionType();

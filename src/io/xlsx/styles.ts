@@ -144,17 +144,23 @@ export class Styles extends WriterPart {
                 degree: fill.getRotation()
             });
             const stop0 = gf.ele('stop', { position: 0 });
-            this.writeColor(stop0, fill.getStartColor());
+            const startColor = fill.getStartColor().getARGB();
+            if (startColor) {
+                stop0.ele('color', { rgb: startColor });
+            }
             const stop1 = gf.ele('stop', { position: 1 });
-            this.writeColor(stop1, fill.getEndColor());
+            const endColor = fill.getEndColor().getARGB();
+            if (endColor) {
+                stop1.ele('color', { rgb: endColor });
+            }
         } else if (fillType !== null) {
             const pf = f.ele('patternFill', { patternType: fillType || 'none' });
             if (fillType !== 'none') {
                 if (fill.getStartColor().getARGB()) {
-                    this.writeColor(pf, fill.getStartColor(), 'fgColor');
+                    pf.ele('fgColor', { rgb: fill.getStartColor().getARGB() });
                 }
                 if (fill.getEndColor().getARGB()) {
-                    this.writeColor(pf, fill.getEndColor(), 'bgColor');
+                    pf.ele('bgColor', { rgb: fill.getEndColor().getARGB() });
                 }
             }
         }
@@ -189,7 +195,7 @@ export class Styles extends WriterPart {
         if (style !== 'none') {
             el.att('style', style);
             if (border.getColor().getARGB()) {
-                this.writeColor(el, border.getColor());
+                el.ele('color', { rgb: border.getColor().getARGB() });
             }
         }
     }
@@ -198,9 +204,6 @@ export class Styles extends WriterPart {
         const el = parent.ele(name);
         if (color.getTheme() >= 0) {
             el.att('theme', String(color.getTheme()));
-            if (color.getTint() !== 0) {
-                el.att('tint', String(color.getTint()));
-            }
         } else if (color.getARGB()) {
             el.att('rgb', color.getARGB());
         }

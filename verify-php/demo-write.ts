@@ -1,8 +1,8 @@
-import { Spreadsheet } from "./src/core/spreadsheet.ts";
-import { XlsxWriter } from "./src/io/xlsx-writer.ts";
-import { Fill } from "./src/style/fill.ts";
-import { Color } from "./src/style/color.ts";
-import { Alignment } from "./src/style/alignment.ts";
+import { Spreadsheet } from "../src/core/spreadsheet.ts";
+import { XlsxWriter } from "../src/io/xlsx-writer.ts";
+import { Fill } from "../src/style/fill.ts";
+import { Color } from "../src/style/color.ts";
+import { Alignment } from "../src/style/alignment.ts";
 
 async function main() {
     const spreadsheet = new Spreadsheet();

@@ -1,6 +1,8 @@
 # Progress - Calculation Engine Evaluation
 
 ## Session Log
+- [2026-01-30] Aligned Color API with PHP tint behavior, fixed Style export array, and adjusted XLSX writer fill colors.
+- [2026-01-30] Updated worksheet row breaks handling and verify scripts; verified XLSX output with PhpSpreadsheet.
 - [2026-01-29] Started implementing `src/calculation/calculation.ts`.
 - [2026-01-29] Fixed LSP errors regarding mixed `private` and `#` usage.
 - [2026-01-29] Basic arithmetic operators (+, -, *, /) implemented in `Calculation`.
@@ -58,7 +60,6 @@
 - Worksheet Interactivity (Freeze Panes, Zoom, Views) and XLSX Writer support.
 - Workbook Security (Passwords, Hashing) and UI settings with XLSX Writer support.
 - Conditional Formatting and Themes/Tinting infrastructure.
-
 
 
 

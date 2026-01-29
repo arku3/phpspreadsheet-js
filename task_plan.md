@@ -79,6 +79,7 @@ Complete Phase 14 parity polish with workbook security, themes/tinting, and cond
 
 - [ ] Phase 15: I/O Extension & Graphics <!-- id: 54 -->
     - [x] Systematic Writer Parity Review and Verification against PHP. <!-- id: 56 -->
+    - [x] Align Style and Worksheet API with PhpSpreadsheet (API Parity). <!-- id: 57 -->
     - [ ] Implement Xlsx Reader. <!-- id: 45 -->
     - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
 

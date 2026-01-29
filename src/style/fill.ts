@@ -141,7 +141,6 @@ export class Fill extends Supervisor {
                 startColor: {
                     argb: color.getARGB(),
                     theme: color.getTheme(),
-                    tint: color.getTint(),
                 }
             });
             (this.parent as any).applyFromArray(styleArray);
@@ -167,7 +166,6 @@ export class Fill extends Supervisor {
                 endColor: {
                     argb: color.getARGB(),
                     theme: color.getTheme(),
-                    tint: color.getTint(),
                 }
             });
             (this.parent as any).applyFromArray(styleArray);

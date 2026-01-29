@@ -739,6 +739,20 @@ export class Worksheet {
     }
 
     /**
+     * Add conditional styles.
+     *
+     * @param range Range (e.g. 'A1:A10')
+     * @param style Conditional style
+     * @deprecated Use setConditionalStyles() instead to match PHP API
+     */
+    public addConditionalFormatting(range: string, style: Conditional): this {
+        const styles = this.getConditionalStyles(range);
+        styles.push(style);
+        this.setConditionalStyles(range, styles);
+        return this;
+    }
+
+    /**
      * Check if conditional styles exist for a range.
      *
      * @param range Range (e.g. 'A1:A10')

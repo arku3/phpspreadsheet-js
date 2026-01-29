@@ -1,7 +1,7 @@
-import { Spreadsheet } from "./src/core/spreadsheet.ts";
-import { XlsxWriter } from "./src/io/xlsx-writer.ts";
-import { Rule } from "./src/worksheet/auto-filter/column/rule.ts";
-import { Column } from "./src/worksheet/auto-filter/column.ts";
+import { Spreadsheet } from "../src/core/spreadsheet.ts";
+import { XlsxWriter } from "../src/io/xlsx-writer.ts";
+import { Rule } from "../src/worksheet/auto-filter/column/rule.ts";
+import { Column } from "../src/worksheet/auto-filter/column.ts";
 
 async function main() {
     const spreadsheet = new Spreadsheet();

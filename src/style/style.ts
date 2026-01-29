@@ -323,12 +323,10 @@ export class Style extends Supervisor {
                 startColor: {
                     argb: fill.getStartColor().getARGB(),
                     theme: fill.getStartColor().getTheme(),
-                    tint: fill.getStartColor().getTint(),
                 },
                 endColor: {
                     argb: fill.getEndColor().getARGB(),
                     theme: fill.getEndColor().getTheme(),
-                    tint: fill.getEndColor().getTint(),
                 },
             },
             font: {
@@ -343,7 +341,6 @@ export class Style extends Supervisor {
                 color: {
                     argb: font.getColor().getARGB(),
                     theme: font.getColor().getTheme(),
-                    tint: font.getColor().getTint(),
                 },
                 scheme: font.getScheme(),
             },
@@ -353,7 +350,6 @@ export class Style extends Supervisor {
                     color: {
                         argb: borders.getLeft().getColor().getARGB(),
                         theme: borders.getLeft().getColor().getTheme(),
-                        tint: borders.getLeft().getColor().getTint(),
                     },
                 },
                 right: {
@@ -361,7 +357,6 @@ export class Style extends Supervisor {
                     color: {
                         argb: borders.getRight().getColor().getARGB(),
                         theme: borders.getRight().getColor().getTheme(),
-                        tint: borders.getRight().getColor().getTint(),
                     },
                 },
                 top: {
@@ -369,7 +364,6 @@ export class Style extends Supervisor {
                     color: {
                         argb: borders.getTop().getColor().getARGB(),
                         theme: borders.getTop().getColor().getTheme(),
-                        tint: borders.getTop().getColor().getTint(),
                     },
                 },
                 bottom: {
@@ -377,7 +371,6 @@ export class Style extends Supervisor {
                     color: {
                         argb: borders.getBottom().getColor().getARGB(),
                         theme: borders.getBottom().getColor().getTheme(),
-                        tint: borders.getBottom().getColor().getTint(),
                     },
                 },
                 diagonal: {
@@ -385,7 +378,6 @@ export class Style extends Supervisor {
                     color: {
                         argb: borders.getDiagonal().getColor().getARGB(),
                         theme: borders.getDiagonal().getColor().getTheme(),
-                        tint: borders.getDiagonal().getColor().getTint(),
                     },
                 },
                 diagonalDirection: borders.getDiagonalDirection(),

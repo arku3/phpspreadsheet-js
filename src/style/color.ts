@@ -91,7 +91,6 @@ export class Color extends Supervisor {
 
     #argb: string;
     #theme: number = -1;
-    #tint: number = 0;
 
     constructor(colorValue: string = Color.COLOR_BLACK, isSupervisor: boolean = false) {
         super(isSupervisor);
@@ -151,9 +150,10 @@ export class Color extends Supervisor {
 
     public setARGB(colorValue: string = Color.COLOR_BLACK): void {
         if (this.isSupervisor) {
-            const styleArray = this.getStyleArray({ argb: colorValue });
+            const styleArray = this.getStyleArray({ argb: colorValue, theme: -1 });
             (this.parent as any).applyFromArray(styleArray);
         } else {
+            this.#theme = -1;
             this.#argb = this.validateColor(colorValue);
         }
     }
@@ -188,7 +188,7 @@ export class Color extends Supervisor {
     }
 
     /**
-     * Resolve color to ARGB (considering theme and tint).
+     * Resolve color to ARGB (considering theme).
      */
     public resolveColor(): string {
         let argb = this.getARGB();
@@ -196,10 +196,6 @@ export class Color extends Supervisor {
 
         if (themeColor) {
             argb = themeColor;
-        }
-
-        if (this.#tint !== 0) {
-            argb = Color.changeBrightness(argb, this.#tint);
         }
 
         return argb;
@@ -236,28 +232,12 @@ export class Color extends Supervisor {
         }
     }
 
-    public getTint(): number {
-        if (this.isSupervisor) {
-            return this.getSharedComponent().getTint();
-        }
-        return this.#tint;
-    }
-
-    public setTint(tint: number): void {
-        if (this.isSupervisor) {
-            const styleArray = this.getStyleArray({ tint: tint });
-            (this.parent as any).applyFromArray(styleArray);
-        } else {
-            this.#tint = tint;
-        }
-    }
-
     /**
      * Apply styles from array.
      *
      * @param styleArray Array containing style information
      */
-    public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number; tint?: number }): this {
+    public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number }): this {
         if (this.isSupervisor) {
             const styleArrayLocal = this.getStyleArray(styleArray);
             (this.parent as any).applyFromArray(styleArrayLocal);
@@ -273,9 +253,6 @@ export class Color extends Supervisor {
         if (styleArray.theme !== undefined) {
             this.setTheme(styleArray.theme);
         }
-        if (styleArray.tint !== undefined) {
-            this.setTint(styleArray.tint);
-        }
         return this;
     }
 
@@ -287,7 +264,7 @@ export class Color extends Supervisor {
             return this.getSharedComponent().getHashCode();
         }
         return createHash('md5')
-            .update(this.#argb + this.#theme + this.#tint + 'Color')
+            .update(this.#argb + this.#theme + 'Color')
             .digest('hex');
     }
 
@@ -319,7 +296,6 @@ export class Color extends Supervisor {
     public clone(): Color {
         const clone = new Color(this.#argb, this.isSupervisor);
         clone.#theme = this.#theme;
-        clone.#tint = this.#tint;
         return clone;
     }
 }
