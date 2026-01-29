@@ -1,10 +1,11 @@
 import { Color } from './color.ts';
 import { createHash } from 'node:crypto';
+import { Supervisor } from './supervisor.ts';
 
 /**
  * Font style.
  */
-export class Font {
+export class Font extends Supervisor {
     public static readonly UNDERLINE_NONE = 'none';
     public static readonly UNDERLINE_DOUBLE = 'double';
     public static readonly UNDERLINE_DOUBLEACCOUNTING = 'doubleAccounting';
@@ -22,86 +23,171 @@ export class Font {
     #color: Color;
     #scheme: string = '';
 
-    constructor() {
-        this.#color = new Color(Color.COLOR_BLACK);
+    constructor(isSupervisor: boolean = false) {
+        super(isSupervisor);
+        this.#color = new Color(Color.COLOR_BLACK, isSupervisor);
+        if (isSupervisor) {
+            this.#color.bindParent(this);
+        }
+    }
+
+    /**
+     * Get shared component.
+     */
+    public getSharedComponent(): Font {
+        if (!this.parent) {
+            throw new Error('No parent found.');
+        }
+        return this.parent.getSharedComponent().getFont();
+    }
+
+    /**
+     * Build style array from subcomponents.
+     */
+    public getStyleArray(array: any): any {
+        return { font: array };
     }
 
     public getName(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getName();
+        }
         return this.#name;
     }
 
     public setName(name: string): this {
-        this.#name = name || 'Calibri';
-        this.#scheme = '';
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ name: name });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#name = name || 'Calibri';
+            this.#scheme = '';
+        }
         return this;
     }
 
     public getSize(): number {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getSize();
+        }
         return this.#size;
     }
 
     public setSize(size: number): this {
-        this.#size = size > 0 ? size : 10;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ size: size });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#size = size > 0 ? size : 10;
+        }
         return this;
     }
 
     public getBold(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getBold();
+        }
         return this.#bold;
     }
 
     public setBold(bold: boolean): this {
-        this.#bold = bold;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ bold: bold });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#bold = bold;
+        }
         return this;
     }
 
     public getItalic(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getItalic();
+        }
         return this.#italic;
     }
 
     public setItalic(italic: boolean): this {
-        this.#italic = italic;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ italic: italic });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#italic = italic;
+        }
         return this;
     }
 
     public getSuperscript(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getSuperscript();
+        }
         return this.#superscript;
     }
 
     public setSuperscript(superscript: boolean): this {
-        this.#superscript = superscript;
-        if (superscript) {
-            this.#subscript = false;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ superscript: superscript });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#superscript = superscript;
+            if (superscript) {
+                this.#subscript = false;
+            }
         }
         return this;
     }
 
     public getSubscript(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getSubscript();
+        }
         return this.#subscript;
     }
 
     public setSubscript(subscript: boolean): this {
-        this.#subscript = subscript;
-        if (subscript) {
-            this.#superscript = false;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ subscript: subscript });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#subscript = subscript;
+            if (subscript) {
+                this.#superscript = false;
+            }
         }
         return this;
     }
 
     public getUnderline(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getUnderline();
+        }
         return this.#underline;
     }
 
     public setUnderline(underline: string): this {
-        this.#underline = underline || Font.UNDERLINE_NONE;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ underline: underline });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#underline = underline || Font.UNDERLINE_NONE;
+        }
         return this;
     }
 
     public getStrikethrough(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getStrikethrough();
+        }
         return this.#strikethrough;
     }
 
     public setStrikethrough(strikethrough: boolean): this {
-        this.#strikethrough = strikethrough;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ strikethrough: strikethrough });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#strikethrough = strikethrough;
+        }
         return this;
     }
 
@@ -110,16 +196,29 @@ export class Font {
     }
 
     public setColor(color: Color): this {
-        this.#color = color;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ color: { argb: color.getARGB() } });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#color = color;
+        }
         return this;
     }
 
     public getScheme(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getScheme();
+        }
         return this.#scheme;
     }
 
     public setScheme(scheme: string): this {
-        this.#scheme = scheme;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ scheme: scheme });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#scheme = scheme;
+        }
         return this;
     }
 
@@ -129,6 +228,12 @@ export class Font {
      * @param styleArray Array containing style information
      */
     public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (this.isSupervisor) {
+            const styleArrayLocal = this.getStyleArray(styleArray);
+            this.parent!.applyFromArray(styleArrayLocal);
+            return this;
+        }
+
         if (styleArray.name !== undefined) {
             this.setName(String(styleArray.name));
         }
@@ -166,6 +271,9 @@ export class Font {
      * Get hash code.
      */
     public getHashCode(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHashCode();
+        }
         return createHash('md5')
             .update(
                 this.#name +

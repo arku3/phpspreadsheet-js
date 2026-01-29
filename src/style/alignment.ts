@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
+import { Supervisor } from './supervisor.ts';
 
 /**
  * Alignment style.
  */
-export class Alignment {
+export class Alignment extends Supervisor {
     // Horizontal alignment styles
     public static readonly HORIZONTAL_GENERAL = 'general';
     public static readonly HORIZONTAL_LEFT = 'left';
@@ -66,10 +67,34 @@ export class Alignment {
      */
     #justifyLastLine: boolean = false;
 
+    constructor(isSupervisor: boolean = false) {
+        super(isSupervisor);
+    }
+
+    /**
+     * Get shared component.
+     */
+    public getSharedComponent(): Alignment {
+        if (!this.parent) {
+            throw new Error('No parent found.');
+        }
+        return (this.parent as any).getSharedComponent().getAlignment();
+    }
+
+    /**
+     * Build style array from subcomponents.
+     */
+    public getStyleArray(array: any): any {
+        return { alignment: array };
+    }
+
     /**
      * Get horizontal.
      */
     public getHorizontal(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHorizontal();
+        }
         return this.#horizontal;
     }
 
@@ -77,7 +102,12 @@ export class Alignment {
      * Set horizontal.
      */
     public setHorizontal(horizontal: string): this {
-        this.#horizontal = horizontal;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ horizontal: horizontal });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#horizontal = horizontal;
+        }
         return this;
     }
 
@@ -85,6 +115,9 @@ export class Alignment {
      * Get vertical.
      */
     public getVertical(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getVertical();
+        }
         return this.#vertical;
     }
 
@@ -92,7 +125,12 @@ export class Alignment {
      * Set vertical.
      */
     public setVertical(vertical: string): this {
-        this.#vertical = vertical;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ vertical: vertical });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#vertical = vertical;
+        }
         return this;
     }
 
@@ -100,6 +138,9 @@ export class Alignment {
      * Get text rotation.
      */
     public getTextRotation(): number {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getTextRotation();
+        }
         return this.#textRotation;
     }
 
@@ -107,7 +148,12 @@ export class Alignment {
      * Set text rotation.
      */
     public setTextRotation(rotation: number): this {
-        this.#textRotation = rotation;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ textRotation: rotation });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#textRotation = rotation;
+        }
         return this;
     }
 
@@ -115,6 +161,9 @@ export class Alignment {
      * Get wrap text.
      */
     public getWrapText(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getWrapText();
+        }
         return this.#wrapText;
     }
 
@@ -122,7 +171,12 @@ export class Alignment {
      * Set wrap text.
      */
     public setWrapText(wrapText: boolean): this {
-        this.#wrapText = wrapText;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ wrapText: wrapText });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#wrapText = wrapText;
+        }
         return this;
     }
 
@@ -130,6 +184,9 @@ export class Alignment {
      * Get shrink to fit.
      */
     public getShrinkToFit(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getShrinkToFit();
+        }
         return this.#shrinkToFit;
     }
 
@@ -137,7 +194,12 @@ export class Alignment {
      * Set shrink to fit.
      */
     public setShrinkToFit(shrinkToFit: boolean): this {
-        this.#shrinkToFit = shrinkToFit;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ shrinkToFit: shrinkToFit });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#shrinkToFit = shrinkToFit;
+        }
         return this;
     }
 
@@ -145,6 +207,9 @@ export class Alignment {
      * Get indent.
      */
     public getIndent(): number {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getIndent();
+        }
         return this.#indent;
     }
 
@@ -152,7 +217,12 @@ export class Alignment {
      * Set indent.
      */
     public setIndent(indent: number): this {
-        this.#indent = indent;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ indent: indent });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#indent = indent;
+        }
         return this;
     }
 
@@ -160,6 +230,9 @@ export class Alignment {
      * Get read order.
      */
     public getReadOrder(): number {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getReadOrder();
+        }
         return this.#readOrder;
     }
 
@@ -167,7 +240,12 @@ export class Alignment {
      * Set read order.
      */
     public setReadOrder(readOrder: number): this {
-        this.#readOrder = readOrder;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ readOrder: readOrder });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#readOrder = readOrder;
+        }
         return this;
     }
 
@@ -175,6 +253,9 @@ export class Alignment {
      * Get justify last line.
      */
     public getJustifyLastLine(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getJustifyLastLine();
+        }
         return this.#justifyLastLine;
     }
 
@@ -182,7 +263,12 @@ export class Alignment {
      * Set justify last line.
      */
     public setJustifyLastLine(justifyLastLine: boolean): this {
-        this.#justifyLastLine = justifyLastLine;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ justifyLastLine: justifyLastLine });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#justifyLastLine = justifyLastLine;
+        }
         return this;
     }
 
@@ -192,6 +278,12 @@ export class Alignment {
      * @param styleArray Array containing style information
      */
     public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (this.isSupervisor) {
+            const styleArrayLocal = this.getStyleArray(styleArray);
+            (this.parent as any).applyFromArray(styleArrayLocal);
+            return this;
+        }
+
         if (styleArray.horizontal !== undefined) {
             let horizontal = String(styleArray.horizontal).toLowerCase();
             if (horizontal === 'centercontinuous') {
@@ -227,6 +319,9 @@ export class Alignment {
      * Get hash code.
      */
     public getHashCode(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHashCode();
+        }
         return createHash('md5')
             .update(
                 this.#horizontal +

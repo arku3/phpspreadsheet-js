@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
+import { Supervisor } from './supervisor.ts';
 
 /**
  * Number format style.
  */
-export class NumberFormat {
+export class NumberFormat extends Supervisor {
     // Pre-defined formats
     public static readonly FORMAT_GENERAL = 'General';
     public static readonly FORMAT_TEXT = '@';
@@ -57,10 +58,34 @@ export class NumberFormat {
      */
     #builtInFormatCode: number | false = 0;
 
+    constructor(isSupervisor: boolean = false) {
+        super(isSupervisor);
+    }
+
+    /**
+     * Get shared component.
+     */
+    public getSharedComponent(): NumberFormat {
+        if (!this.parent) {
+            throw new Error('No parent found.');
+        }
+        return (this.parent as any).getSharedComponent().getNumberFormat();
+    }
+
+    /**
+     * Build style array from subcomponents.
+     */
+    public getStyleArray(array: any): any {
+        return { numberFormat: array };
+    }
+
     /**
      * Get format code.
      */
     public getFormatCode(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getFormatCode();
+        }
         return this.#formatCode;
     }
 
@@ -68,11 +93,15 @@ export class NumberFormat {
      * Set format code.
      */
     public setFormatCode(formatCode: string): this {
-        if (formatCode === '') {
-            formatCode = NumberFormat.FORMAT_GENERAL;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ formatCode: formatCode });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            if (formatCode === '') {
+                formatCode = NumberFormat.FORMAT_GENERAL;
+            }
+            this.#formatCode = formatCode;
         }
-        this.#formatCode = formatCode;
-        // In a full implementation, we would resolve the built-in format code index here.
         return this;
     }
 
@@ -80,6 +109,9 @@ export class NumberFormat {
      * Get built-in format code.
      */
     public getBuiltInFormatCode(): number | false {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getBuiltInFormatCode();
+        }
         return this.#builtInFormatCode;
     }
 
@@ -87,7 +119,12 @@ export class NumberFormat {
      * Set built-in format code.
      */
     public setBuiltInFormatCode(index: number): this {
-        this.#builtInFormatCode = index;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ builtInFormatCode: index });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#builtInFormatCode = index;
+        }
         return this;
     }
 
@@ -97,6 +134,12 @@ export class NumberFormat {
      * @param styleArray Array containing style information
      */
     public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (this.isSupervisor) {
+            const styleArrayLocal = this.getStyleArray(styleArray);
+            (this.parent as any).applyFromArray(styleArrayLocal);
+            return this;
+        }
+
         if (styleArray.formatCode !== undefined) {
             this.setFormatCode(String(styleArray.formatCode));
         }
@@ -107,6 +150,9 @@ export class NumberFormat {
      * Get hash code.
      */
     public getHashCode(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHashCode();
+        }
         return createHash('md5')
             .update(
                 this.#formatCode +

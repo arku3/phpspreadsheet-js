@@ -1,10 +1,11 @@
 import { Border } from './border.ts';
 import { createHash } from 'node:crypto';
+import { Supervisor } from './supervisor.ts';
 
 /**
  * Borders style.
  */
-export class Borders {
+export class Borders extends Supervisor {
     // Diagonal directions
     public static readonly DIAGONAL_NONE = 0;
     public static readonly DIAGONAL_UP = 1;
@@ -44,12 +45,38 @@ export class Borders {
     /**
      * Create a new Borders.
      */
-    constructor() {
-        this.#left = new Border();
-        this.#right = new Border();
-        this.#top = new Border();
-        this.#bottom = new Border();
-        this.#diagonal = new Border();
+    constructor(isSupervisor: boolean = false) {
+        super(isSupervisor);
+        this.#left = new Border(isSupervisor);
+        this.#right = new Border(isSupervisor);
+        this.#top = new Border(isSupervisor);
+        this.#bottom = new Border(isSupervisor);
+        this.#diagonal = new Border(isSupervisor);
+
+        if (isSupervisor) {
+            this.#left.bindParent(this, 'left');
+            this.#right.bindParent(this, 'right');
+            this.#top.bindParent(this, 'top');
+            this.#bottom.bindParent(this, 'bottom');
+            this.#diagonal.bindParent(this, 'diagonal');
+        }
+    }
+
+    /**
+     * Get shared component.
+     */
+    public getSharedComponent(): Borders {
+        if (!this.parent) {
+            throw new Error('No parent found.');
+        }
+        return (this.parent as any).getSharedComponent().getBorders();
+    }
+
+    /**
+     * Build style array from subcomponents.
+     */
+    public getStyleArray(array: any): any {
+        return { borders: array };
     }
 
     /**
@@ -91,6 +118,9 @@ export class Borders {
      * Get DiagonalDirection.
      */
     public getDiagonalDirection(): number {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getDiagonalDirection();
+        }
         return this.#diagonalDirection;
     }
 
@@ -98,7 +128,12 @@ export class Borders {
      * Set DiagonalDirection.
      */
     public setDiagonalDirection(direction: number): this {
-        this.#diagonalDirection = direction;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ diagonalDirection: direction });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#diagonalDirection = direction;
+        }
         return this;
     }
 
@@ -108,6 +143,12 @@ export class Borders {
      * @param styleArray Array containing style information
      */
     public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (this.isSupervisor) {
+            const styleArrayLocal = this.getStyleArray(styleArray);
+            (this.parent as any).applyFromArray(styleArrayLocal);
+            return this;
+        }
+
         if (styleArray.left !== undefined && typeof styleArray.left === 'object') {
             this.getLeft().applyFromArray(styleArray.left as Record<string, unknown>);
         }
@@ -140,6 +181,9 @@ export class Borders {
      * Get hash code.
      */
     public getHashCode(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHashCode();
+        }
         return createHash('md5')
             .update(
                 this.#left.getHashCode() +

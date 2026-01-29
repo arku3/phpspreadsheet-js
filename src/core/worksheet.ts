@@ -2,7 +2,7 @@ import { Spreadsheet } from './spreadsheet.ts';
 import { CellCollection } from './cell-collection.ts';
 import { Cell, DataType } from './cell.ts';
 import { Coordinate } from '../utils/coordinate.ts';
-
+import { Style } from '../style/style.ts';
 import { Table } from '../worksheet/table.ts';
 
 /**
@@ -13,34 +13,13 @@ export class Worksheet {
     #title: string;
     #cellCollection: CellCollection;
     #tables: Table[] = [];
+    #selectedCells: string = 'A1';
 
     constructor(spreadsheet: Spreadsheet, title: string = 'Worksheet') {
         this.#spreadsheet = spreadsheet;
         this.#title = title;
         this.#cellCollection = new CellCollection();
     }
-
-    /**
-     * Get tables.
-     */
-    public getTables(): Table[] {
-        return this.#tables;
-    }
-
-    /**
-     * Add table.
-     */
-    public addTable(table: Table): void {
-        this.#tables.push(table);
-    }
-
-    /**
-     * Get table by name.
-     */
-    public getTableByName(name: string): Table | undefined {
-        return this.#tables.find(table => table.getName() === name);
-    }
-
 
     /**
      * Get parent spreadsheet.
@@ -61,6 +40,21 @@ export class Worksheet {
      */
     public setTitle(title: string): void {
         this.#title = title;
+    }
+
+    /**
+     * Get selected cells.
+     */
+    public getSelectedCells(): string {
+        return this.#selectedCells;
+    }
+
+    /**
+     * Set selected cells.
+     */
+    public setSelectedCells(coordinate: string): this {
+        this.#selectedCells = coordinate.toUpperCase();
+        return this;
     }
 
     /**
@@ -87,10 +81,40 @@ export class Worksheet {
     }
 
     /**
+     * Get style for cell at coordinate.
+     */
+    public getStyle(coordinate: string): Style {
+        this.setSelectedCells(coordinate);
+        return this.#spreadsheet.getCellXfSupervisor();
+    }
+
+    /**
      * Get cell collection.
      */
     public getCellCollection(): CellCollection {
         return this.#cellCollection;
+    }
+
+    /**
+     * Add table.
+     */
+    public addTable(table: Table): void {
+        this.#tables.push(table);
+    }
+
+    /**
+     * Get tables.
+     */
+    public getTables(): Table[] {
+        return this.#tables;
+    }
+
+    /**
+     * Get table by name.
+     */
+    public getTableByName(name: string): Table | undefined {
+        const searchName = name.toUpperCase();
+        return this.#tables.find(table => table.getName().toUpperCase() === searchName);
     }
 
     /**

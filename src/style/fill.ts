@@ -1,10 +1,11 @@
 import { Color } from './color.ts';
 import { createHash } from 'node:crypto';
+import { Supervisor } from './supervisor.ts';
 
 /**
  * Fill style.
  */
-export class Fill {
+export class Fill extends Supervisor {
     // Fill types
     public static readonly FILL_NONE = 'none';
     public static readonly FILL_SOLID = 'solid';
@@ -51,15 +52,40 @@ export class Fill {
     /**
      * Create a new Fill.
      */
-    constructor() {
-        this.#startColor = new Color(Color.COLOR_WHITE);
-        this.#endColor = new Color(Color.COLOR_BLACK);
+    constructor(isSupervisor: boolean = false) {
+        super(isSupervisor);
+        this.#startColor = new Color(Color.COLOR_WHITE, isSupervisor);
+        this.#endColor = new Color(Color.COLOR_BLACK, isSupervisor);
+        if (isSupervisor) {
+            this.#startColor.bindParent(this);
+            this.#endColor.bindParent(this);
+        }
+    }
+
+    /**
+     * Get shared component.
+     */
+    public getSharedComponent(): Fill {
+        if (!this.parent) {
+            throw new Error('No parent found.');
+        }
+        return (this.parent as any).getSharedComponent().getFill();
+    }
+
+    /**
+     * Build style array from subcomponents.
+     */
+    public getStyleArray(array: any): any {
+        return { fill: array };
     }
 
     /**
      * Get Fill Type.
      */
     public getFillType(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getFillType();
+        }
         return this.#fillType;
     }
 
@@ -67,7 +93,12 @@ export class Fill {
      * Set Fill Type.
      */
     public setFillType(fillType: string): this {
-        this.#fillType = fillType;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ fillType: fillType });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#fillType = fillType;
+        }
         return this;
     }
 
@@ -75,6 +106,9 @@ export class Fill {
      * Get Rotation.
      */
     public getRotation(): number {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getRotation();
+        }
         return this.#rotation;
     }
 
@@ -82,7 +116,12 @@ export class Fill {
      * Set Rotation.
      */
     public setRotation(rotation: number): this {
-        this.#rotation = rotation;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ rotation: rotation });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#rotation = rotation;
+        }
         return this;
     }
 
@@ -97,7 +136,12 @@ export class Fill {
      * Set Start Color.
      */
     public setStartColor(color: Color): this {
-        this.#startColor = color;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ startColor: { argb: color.getARGB() } });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#startColor = color;
+        }
         return this;
     }
 
@@ -112,7 +156,12 @@ export class Fill {
      * Set End Color.
      */
     public setEndColor(color: Color): this {
-        this.#endColor = color;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ endColor: { argb: color.getARGB() } });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#endColor = color;
+        }
         return this;
     }
 
@@ -122,6 +171,12 @@ export class Fill {
      * @param styleArray Array containing style information
      */
     public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (this.isSupervisor) {
+            const styleArrayLocal = this.getStyleArray(styleArray);
+            (this.parent as any).applyFromArray(styleArrayLocal);
+            return this;
+        }
+
         if (styleArray.fillType !== undefined) {
             this.setFillType(String(styleArray.fillType));
         }
@@ -145,6 +200,9 @@ export class Fill {
      * Get hash code.
      */
     public getHashCode(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHashCode();
+        }
         return createHash('md5')
             .update(
                 this.#fillType +

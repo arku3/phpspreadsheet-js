@@ -14,6 +14,7 @@ export class Spreadsheet {
     #activeSheetIndex: number = 0;
     #cellXfCollection: Style[] = [];
     #cellStyleXfCollection: Style[] = [];
+    #cellXfSupervisor: Style | null = null;
     #calculationEngine: Calculation;
     #definedNames: DefinedName[] = [];
     #valueBinder: IValueBinder;
@@ -120,6 +121,13 @@ export class Spreadsheet {
     }
 
     /**
+     * Get selected cells for the active sheet.
+     */
+    public getSelectedCells(): string {
+        return this.getActiveSheet().getSelectedCells();
+    }
+
+    /**
      * Get sheet by index.
      */
     public getSheet(index: number): Worksheet {
@@ -161,6 +169,57 @@ export class Spreadsheet {
     }
 
     /**
+     * Get cell Xf by index.
+     */
+    public getCellXfByIndex(index: number): Style {
+        if (index < 0 || index >= this.#cellXfCollection.length) {
+            throw new Error(`CellXf index ${index} is out of bounds.`);
+        }
+        return this.#cellXfCollection[index]!;
+    }
+
+    /**
+     * Get cell Xf by index or null.
+     */
+    public getCellXfByIndexOrNull(index: number | null): Style | null {
+        if (index === null) return null;
+        return this.#cellXfCollection[index] ?? null;
+    }
+
+    /**
+     * Get cell Xf by hash code.
+     */
+    public getCellXfByHashCode(hashCode: string): Style | false {
+        for (const style of this.#cellXfCollection) {
+            if (style.getHashCode() === hashCode) {
+                return style;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Get default style.
+     */
+    public getDefaultStyle(): Style {
+        if (this.#cellXfCollection.length > 0) {
+            return this.#cellXfCollection[0]!;
+        }
+        throw new Error('No default style found for this workbook.');
+    }
+
+    /**
+     * Get cell Xf supervisor.
+     */
+    public getCellXfSupervisor(): Style {
+        if (!this.#cellXfSupervisor) {
+            this.#cellXfSupervisor = new Style(true);
+            this.#cellXfSupervisor.bindParent(this);
+        }
+        return this.#cellXfSupervisor;
+    }
+
+    /**
      * Add a cell style (Xf).
      */
     public addCellXf(style: Style): void {
@@ -169,11 +228,38 @@ export class Spreadsheet {
     }
 
     /**
-     * Add a cell style Xf.
+     * Remove cell Xf by index.
      */
-    public addCellStyleXf(style: Style): void {
-        this.#cellStyleXfCollection.push(style);
-        style.setIndex(this.#cellStyleXfCollection.length - 1);
+    public removeCellXfByIndex(index: number): void {
+        if (index < 0 || index >= this.#cellXfCollection.length) {
+            throw new Error(`CellXf index ${index} is out of bounds.`);
+        }
+
+        this.#cellXfCollection.splice(index, 1);
+
+        // Update indices for the remaining styles
+        for (let i = index; i < this.#cellXfCollection.length; i++) {
+            this.#cellXfCollection[i]!.setIndex(i);
+        }
+
+        // Update cell Xf indices in all worksheets
+        for (const worksheet of this.#workSheetCollection) {
+            for (const cell of worksheet.getCellCollection().getCells()) {
+                const xfIndex = cell.getXfIndex();
+                if (xfIndex > index) {
+                    cell.setXfIndex(xfIndex - 1);
+                } else if (xfIndex === index) {
+                    cell.setXfIndex(0);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get cell style Xf collection.
+     */
+    public getCellStyleXfCollection(): Style[] {
+        return this.#cellStyleXfCollection;
     }
 
     /**
@@ -181,5 +267,35 @@ export class Spreadsheet {
      */
     public getCellXfCollection(): Style[] {
         return this.#cellXfCollection;
+    }
+
+    /**
+     * Get cell style Xf by index.
+     */
+    public getCellStyleXfByIndex(index: number): Style {
+        if (index < 0 || index >= this.#cellStyleXfCollection.length) {
+            throw new Error(`CellStyleXf index ${index} is out of bounds.`);
+        }
+        return this.#cellStyleXfCollection[index]!;
+    }
+
+    /**
+     * Get cell style Xf by hash code.
+     */
+    public getCellStyleXfByHashCode(hashCode: string): Style | false {
+        for (const style of this.#cellStyleXfCollection) {
+            if (style.getHashCode() === hashCode) {
+                return style;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Add a cell style Xf.
+     */
+    public addCellStyleXf(style: Style): void {
+        this.#cellStyleXfCollection.push(style);
+        style.setIndex(this.#cellStyleXfCollection.length - 1);
     }
 }

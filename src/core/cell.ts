@@ -1,6 +1,7 @@
 import { Worksheet } from './worksheet.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { RichText } from '../rich-text/rich-text.ts';
+import { Style } from '../style/style.ts';
 
 /**
  * Cell data types.
@@ -126,6 +127,13 @@ export class Cell {
      */
     public setXfIndex(index: number): void {
         this.#xfIndex = index;
+    }
+
+    /**
+     * Get cell style.
+     */
+    public getStyle(): Style {
+        return this.#worksheet.getParent().getCellXfByIndex(this.#xfIndex);
     }
 
     /**

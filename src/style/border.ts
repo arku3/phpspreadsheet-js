@@ -1,10 +1,11 @@
 import { Color } from './color.ts';
 import { createHash } from 'node:crypto';
+import { Supervisor } from './supervisor.ts';
 
 /**
  * Border style.
  */
-export class Border {
+export class Border extends Supervisor {
     // Border style
     public static readonly BORDER_NONE = 'none';
     public static readonly BORDER_DASHDOT = 'dashDot';
@@ -33,16 +34,66 @@ export class Border {
     #color: Color;
 
     /**
+     * Parent property name.
+     */
+    #parentPropertyName: string | undefined;
+
+    /**
      * Create a new Border.
      */
-    constructor() {
-        this.#color = new Color(Color.COLOR_BLACK);
+    constructor(isSupervisor: boolean = false) {
+        super(isSupervisor);
+        this.#color = new Color(Color.COLOR_BLACK, isSupervisor);
+        if (isSupervisor) {
+            this.#color.bindParent(this);
+        }
+    }
+
+    /**
+     * Bind parent.
+     */
+    public override bindParent(parent: any, parentPropertyName?: string): this {
+        this.parent = parent;
+        this.#parentPropertyName = parentPropertyName;
+        return this;
+    }
+
+    /**
+     * Get shared component.
+     */
+    public getSharedComponent(): Border {
+        if (!this.parent) {
+            throw new Error('No parent found.');
+        }
+        const parentComponent = (this.parent as any).getSharedComponent();
+        if (this.#parentPropertyName === 'left') return parentComponent.getLeft();
+        if (this.#parentPropertyName === 'right') return parentComponent.getRight();
+        if (this.#parentPropertyName === 'top') return parentComponent.getTop();
+        if (this.#parentPropertyName === 'bottom') return parentComponent.getBottom();
+        if (this.#parentPropertyName === 'diagonal') return parentComponent.getDiagonal();
+        
+        throw new Error('Invalid parent property name.');
+    }
+
+    /**
+     * Build style array from subcomponents.
+     */
+    public getStyleArray(array: any): any {
+        if (!this.#parentPropertyName) {
+            throw new Error('No parent property name found.');
+        }
+        const styleArray: any = { borders: {} };
+        styleArray.borders[this.#parentPropertyName] = array;
+        return styleArray;
     }
 
     /**
      * Get Border style.
      */
     public getBorderStyle(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getBorderStyle();
+        }
         return this.#borderStyle;
     }
 
@@ -50,12 +101,17 @@ export class Border {
      * Set Border style.
      */
     public setBorderStyle(style: string | boolean): this {
-        if (!style) {
-            this.#borderStyle = Border.BORDER_NONE;
-        } else if (style === true) {
-            this.#borderStyle = Border.BORDER_MEDIUM;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ borderStyle: style });
+            (this.parent as any).applyFromArray(styleArray);
         } else {
-            this.#borderStyle = style as string;
+            if (!style) {
+                this.#borderStyle = Border.BORDER_NONE;
+            } else if (style === true) {
+                this.#borderStyle = Border.BORDER_MEDIUM;
+            } else {
+                this.#borderStyle = style as string;
+            }
         }
         return this;
     }
@@ -71,7 +127,12 @@ export class Border {
      * Set Border Color.
      */
     public setColor(color: Color): this {
-        this.#color = color;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ color: { argb: color.getARGB() } });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#color = color;
+        }
         return this;
     }
 
@@ -81,6 +142,12 @@ export class Border {
      * @param styleArray Array containing style information
      */
     public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (this.isSupervisor) {
+            const styleArrayLocal = this.getStyleArray(styleArray);
+            (this.parent as any).applyFromArray(styleArrayLocal);
+            return this;
+        }
+
         if (styleArray.borderStyle !== undefined) {
             this.setBorderStyle(styleArray.borderStyle as string | boolean);
         }
@@ -94,6 +161,9 @@ export class Border {
      * Get hash code.
      */
     public getHashCode(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHashCode();
+        }
         return createHash('md5')
             .update(
                 this.#borderStyle +

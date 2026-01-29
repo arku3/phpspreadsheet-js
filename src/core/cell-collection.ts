@@ -43,6 +43,13 @@ export class CellCollection {
     }
 
     /**
+     * Get all cells.
+     */
+    public getCells(): Cell[] {
+        return Array.from(this.#cells.values());
+    }
+
+    /**
      * Get total cell count.
      */
     public count(): number {

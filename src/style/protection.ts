@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
+import { Supervisor } from './supervisor.ts';
 
 /**
  * Protection style.
  */
-export class Protection {
+export class Protection extends Supervisor {
     public static readonly PROTECTION_INHERIT = 'inherit';
     public static readonly PROTECTION_PROTECTED = 'protected';
     public static readonly PROTECTION_UNPROTECTED = 'unprotected';
@@ -18,10 +19,34 @@ export class Protection {
      */
     #hidden: string = Protection.PROTECTION_INHERIT;
 
+    constructor(isSupervisor: boolean = false) {
+        super(isSupervisor);
+    }
+
+    /**
+     * Get the shared style component for the currently active cell in currently active sheet.
+     */
+    public getSharedComponent(): Protection {
+        if (!this.parent) {
+            throw new Error('No parent found.');
+        }
+        return this.parent.getSharedComponent().getProtection();
+    }
+
+    /**
+     * Build style array from subcomponents.
+     */
+    public getStyleArray(array: any): any {
+        return { protection: array };
+    }
+
     /**
      * Get locked.
      */
     public getLocked(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getLocked();
+        }
         return this.#locked;
     }
 
@@ -29,7 +54,11 @@ export class Protection {
      * Set locked.
      */
     public setLocked(locked: string): this {
-        this.#locked = locked;
+        if (this.isSupervisor) {
+            this.applyFromArray({ locked });
+        } else {
+            this.#locked = locked;
+        }
         return this;
     }
 
@@ -37,6 +66,9 @@ export class Protection {
      * Get hidden.
      */
     public getHidden(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHidden();
+        }
         return this.#hidden;
     }
 
@@ -44,7 +76,11 @@ export class Protection {
      * Set hidden.
      */
     public setHidden(hidden: string): this {
-        this.#hidden = hidden;
+        if (this.isSupervisor) {
+            this.applyFromArray({ hidden });
+        } else {
+            this.#hidden = hidden;
+        }
         return this;
     }
 
@@ -54,11 +90,15 @@ export class Protection {
      * @param styleArray Array containing style information
      */
     public applyFromArray(styleArray: Record<string, unknown>): this {
-        if (styleArray.locked !== undefined) {
-            this.setLocked(String(styleArray.locked));
-        }
-        if (styleArray.hidden !== undefined) {
-            this.setHidden(String(styleArray.hidden));
+        if (this.isSupervisor) {
+            this.parent.applyFromArray({ protection: styleArray });
+        } else {
+            if (styleArray.locked !== undefined) {
+                this.setLocked(String(styleArray.locked));
+            }
+            if (styleArray.hidden !== undefined) {
+                this.setHidden(String(styleArray.hidden));
+            }
         }
         return this;
     }
@@ -67,6 +107,9 @@ export class Protection {
      * Get hash code.
      */
     public getHashCode(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHashCode();
+        }
         return createHash('md5')
             .update(this.#locked + this.#hidden + 'Protection')
             .digest('hex');

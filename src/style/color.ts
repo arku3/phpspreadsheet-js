@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
+import { Supervisor } from './supervisor.ts';
 
 /**
  * Color style.
  */
-export class Color {
+export class Color extends Supervisor {
     public static readonly COLOR_BLACK = 'FF000000';
     public static readonly COLOR_WHITE = 'FFFFFFFF';
     public static readonly COLOR_RED = 'FFFF0000';
@@ -31,8 +32,29 @@ export class Color {
     #argb: string;
     #theme: number = -1;
 
-    constructor(colorValue: string = Color.COLOR_BLACK) {
+    constructor(colorValue: string = Color.COLOR_BLACK, isSupervisor: boolean = false) {
+        super(isSupervisor);
         this.#argb = this.validateColor(colorValue);
+    }
+
+    /**
+     * Get shared component.
+     */
+    public getSharedComponent(): Color {
+        if (!this.parent) {
+            throw new Error('No parent found.');
+        }
+        return (this.parent as any).getSharedComponent().getColor();
+    }
+
+    /**
+     * Build style array from subcomponents.
+     */
+    public getStyleArray(array: any): any {
+        if (!this.parent) {
+            throw new Error('No parent found.');
+        }
+        return (this.parent as any).getStyleArray({ color: array });
     }
 
     private validateColor(colorValue: string): string {
@@ -57,15 +79,23 @@ export class Color {
     }
 
     public getARGB(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getARGB();
+        }
         return this.#argb;
     }
 
     public setARGB(colorValue: string = Color.COLOR_BLACK): void {
-        this.#argb = this.validateColor(colorValue);
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ argb: colorValue });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#argb = this.validateColor(colorValue);
+        }
     }
 
     public getRGB(): string {
-        return this.#argb.substring(2);
+        return this.getARGB().substring(2);
     }
 
     public setRGB(colorValue: string = Color.COLOR_BLACK): void {
@@ -73,11 +103,19 @@ export class Color {
     }
 
     public getTheme(): number {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getTheme();
+        }
         return this.#theme;
     }
 
     public setTheme(theme: number): void {
-        this.#theme = theme;
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ theme: theme });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#theme = theme;
+        }
     }
 
     /**
@@ -86,6 +124,12 @@ export class Color {
      * @param styleArray Array containing style information
      */
     public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number }): this {
+        if (this.isSupervisor) {
+            const styleArrayLocal = this.getStyleArray(styleArray);
+            (this.parent as any).applyFromArray(styleArrayLocal);
+            return this;
+        }
+
         if (styleArray.rgb !== undefined) {
             this.setRGB(styleArray.rgb);
         }
@@ -102,6 +146,9 @@ export class Color {
      * Get hash code.
      */
     public getHashCode(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHashCode();
+        }
         return createHash('md5')
             .update(this.#argb + this.#theme + 'Color')
             .digest('hex');
