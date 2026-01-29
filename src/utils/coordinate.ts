@@ -82,4 +82,21 @@ export abstract class Coordinate {
     public static stringFromCoordinate(column: number, row: number): string {
         return this.stringFromColumnIndex(column + 1) + (row + 1);
     }
+
+    /**
+     * Get range boundaries.
+     *
+     * @param range eg: 'A1:C5'
+     * @returns [[startCol, startRow], [endCol, endRow]] (1-indexed)
+     */
+    public static rangeBoundaries(range: string): [[number, number], [number, number]] {
+        range = range.toUpperCase();
+        if (!range.includes(':')) {
+            range = `${range}:${range}`;
+        }
+        const [start, end] = range.split(':');
+        const [startCol, startRow] = this.indexesFromString(start!);
+        const [endCol, endRow] = this.indexesFromString(end!);
+        return [[startCol, startRow], [endCol, endRow]];
+    }
 }

@@ -5,6 +5,9 @@ import { Coordinate } from '../../utils/coordinate.ts';
 import { RichText } from '../../rich-text/rich-text.ts';
 import { Run } from '../../rich-text/run.ts';
 import { WriterPart } from './writer-part.ts';
+import { AutoFilter } from '../../worksheet/auto-filter.ts';
+import { Column as AutoFilterColumn } from '../../worksheet/auto-filter/column.ts';
+import { Rule as AutoFilterRule } from '../../worksheet/auto-filter/column/rule.ts';
 
 /**
  * Generates worksheet XMLs.
@@ -37,6 +40,9 @@ export class Worksheet extends WriterPart {
 
         // mergeCells
         this.writeMergeCells(root, worksheet);
+
+        // autoFilter
+        this.writeAutoFilter(root, worksheet);
 
         // pageMargins
         const margins = worksheet.getPageMargins();
@@ -423,6 +429,83 @@ export class Worksheet extends WriterPart {
             useFirstPageNumber: pageSetup.getFirstPageNumber() !== null ? '1' : '0',
             pageOrder: pageSetup.getPageOrder()
         });
+    }
+
+    /**
+     * Write AutoFilter.
+     */
+    private writeAutoFilter(root: any, worksheet: CoreWorksheet): void {
+        const autoFilter = worksheet.getAutoFilter();
+        const range = autoFilter.getRange();
+        if (range === '') {
+            return;
+        }
+
+        const autoFilterEle = root.ele('autoFilter', { ref: range });
+
+        for (const [columnID, column] of autoFilter.getColumns()) {
+            const rules = column.getRules();
+            if (rules.length === 0 && column.getAttributes().size === 0) {
+                continue;
+            }
+
+            const filterColumnEle = autoFilterEle.ele('filterColumn', {
+                colId: autoFilter.getColumnOffset(columnID)
+            });
+
+            const filterType = column.getFilterType();
+            const attributes = column.getAttributes();
+
+            if (filterType === AutoFilterColumn.AUTOFILTER_FILTERTYPE_DYNAMICFILTER) {
+                const dynamicFilterEle = filterColumnEle.ele('dynamicFilter');
+                for (const rule of rules) {
+                    dynamicFilterEle.att('type', rule.getGrouping());
+                    const val = column.getAttribute('val');
+                    if (val !== null) dynamicFilterEle.att('val', String(val));
+                    const maxVal = column.getAttribute('maxVal');
+                    if (maxVal !== null) dynamicFilterEle.att('maxVal', String(maxVal));
+                }
+            } else if (filterType === AutoFilterColumn.AUTOFILTER_FILTERTYPE_TOPTENFILTER) {
+                const top10Ele = filterColumnEle.ele('top10');
+                for (const rule of rules) {
+                    top10Ele.att('top', rule.getGrouping() === AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_TOP ? '1' : '0');
+                    top10Ele.att('percent', rule.getOperator() === AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_PERCENT ? '1' : '0');
+                    top10Ele.att('val', String(rule.getValue()));
+                    const filterVal = column.getAttribute('maxVal');
+                    if (filterVal !== null) top10Ele.att('filterVal', String(filterVal));
+                }
+            } else if (filterType === AutoFilterColumn.AUTOFILTER_FILTERTYPE_CUSTOMFILTER) {
+                const customFiltersEle = filterColumnEle.ele('customFilters');
+                if (column.getJoin() === AutoFilterColumn.AUTOFILTER_COLUMN_JOIN_AND) {
+                    customFiltersEle.att('and', '1');
+                }
+                for (const rule of rules) {
+                    const customFilterEle = customFiltersEle.ele('customFilter');
+                    const operator = rule.getOperator();
+                    if (operator !== AutoFilterRule.AUTOFILTER_COLUMN_RULE_EQUAL) {
+                        customFilterEle.att('operator', operator);
+                    }
+                    customFilterEle.att('val', String(rule.getValue()));
+                }
+            } else {
+                const filtersEle = filterColumnEle.ele('filters');
+                const blank = column.getAttribute('blank');
+                if (blank !== null) filtersEle.att('blank', blank ? '1' : '0');
+
+                for (const rule of rules) {
+                    if (rule.getRuleType() === AutoFilterRule.AUTOFILTER_RULETYPE_FILTER) {
+                        filtersEle.ele('filter', { val: String(rule.getValue()) });
+                    } else if (rule.getRuleType() === AutoFilterRule.AUTOFILTER_RULETYPE_DATEGROUP) {
+                        const dateGroupItemEle = filtersEle.ele('dateGroupItem');
+                        const value = rule.getValue() as Record<string, any>;
+                        for (const [key, val] of Object.entries(value)) {
+                            dateGroupItemEle.att(key, String(val));
+                        }
+                        dateGroupItemEle.att('dateTimeGrouping', rule.getGrouping());
+                    }
+                }
+            }
+        }
     }
 
     private getStringTableIndex(value: any, stringTable: (RichText | string)[]): number {

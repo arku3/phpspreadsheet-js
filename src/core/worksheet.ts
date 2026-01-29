@@ -10,6 +10,7 @@ import { ColumnDimension } from '../worksheet/column-dimension.ts';
 import { RowDimension } from '../worksheet/row-dimension.ts';
 import { SheetView } from '../worksheet/sheet-view.ts';
 import { Pane } from '../worksheet/pane.ts';
+import { AutoFilter } from '../worksheet/auto-filter.ts';
 
 /**
  * Worksheet in a Spreadsheet.
@@ -43,6 +44,7 @@ export class Worksheet {
     #pageSetup: PageSetup;
     #pageMargins: PageMargins;
     #sheetView: SheetView;
+    #autoFilter: AutoFilter;
 
     #freezePane: string | null = null;
     #paneTopLeftCell: string = 'A1';
@@ -93,6 +95,7 @@ export class Worksheet {
         this.#pageSetup = new PageSetup();
         this.#pageMargins = new PageMargins();
         this.#sheetView = new SheetView();
+        this.#autoFilter = new AutoFilter('', this);
         this.#defaultColumnDimension = new ColumnDimension(null);
         this.#defaultRowDimension = new RowDimension(null);
     }
@@ -665,6 +668,25 @@ export class Worksheet {
      */
     public setShowRowColHeaders(showRowColHeaders: boolean): this {
         this.#showRowColHeaders = showRowColHeaders;
+        return this;
+    }
+
+    /**
+     * Get auto filter.
+     */
+    public getAutoFilter(): AutoFilter {
+        return this.#autoFilter;
+    }
+
+    /**
+     * Set auto filter.
+     */
+    public setAutoFilter(autoFilter: AutoFilter | string): this {
+        if (typeof autoFilter === 'string') {
+            this.#autoFilter.setRange(autoFilter);
+        } else {
+            this.#autoFilter = autoFilter;
+        }
         return this;
     }
 

@@ -36,6 +36,7 @@
 - [2026-01-29] Configured `bunfig.toml` and restricted tests to the `tests/` directory.
 - [2026-01-29] Fixed `PageSetup` print area insertion logic and verified with unit tests.
 - [2026-01-29] Updated `AGENTS.md` with persistence guidelines and subagent parity mandates.
+- [2026-01-29] Implemented `AutoFilter.showHideRows()` with support for simple, custom, dynamic, and top-ten filters; verified with unit tests.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.

@@ -65,7 +65,7 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
 - [ ] Phase 13: Advanced Features & Interactivity <!-- id: 43 -->
     - [x] Implement Merged Cells logic in Worksheet and Writer. <!-- id: 44 -->
     - [x] Implement Worksheet Panes (Freeze Panes, Split) and View settings. <!-- id: 47 -->
-    - [ ] Implement AutoFilter infrastructure. <!-- id: 48 -->
+    - [x] Implement AutoFilter logic (showHideRows). <!-- id: 48 -->
     - [ ] Implement Xlsx Reader. <!-- id: 45 -->
     - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
 
