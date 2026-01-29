@@ -1,0 +1,87 @@
+import { Worksheet } from './worksheet.ts';
+import { Style } from '../style/style.ts';
+
+/**
+ * Spreadsheet workbook.
+ */
+export class Spreadsheet {
+    #workSheetCollection: Worksheet[] = [];
+    #activeSheetIndex: number = 0;
+    #cellXfCollection: Style[] = [];
+    #cellStyleXfCollection: Style[] = [];
+
+    constructor() {
+        // Initialise worksheet collection and add one worksheet
+        const initialSheet = new Worksheet(this, 'Worksheet 1');
+        this.#workSheetCollection.push(initialSheet);
+        this.#activeSheetIndex = 0;
+
+        // Create the default style
+        this.addCellXf(new Style());
+        this.addCellStyleXf(new Style());
+    }
+
+    /**
+     * Get active sheet.
+     */
+    public getActiveSheet(): Worksheet {
+        return this.getSheet(this.#activeSheetIndex);
+    }
+
+    /**
+     * Get sheet by index.
+     */
+    public getSheet(index: number): Worksheet {
+        if (index < 0 || index >= this.#workSheetCollection.length) {
+            throw new Error(`Sheet index ${index} is out of bounds.`);
+        }
+        return this.#workSheetCollection[index]!;
+    }
+
+    /**
+     * Add a worksheet.
+     */
+    public addSheet(worksheet: Worksheet, index?: number): Worksheet {
+        if (index === undefined) {
+            this.#workSheetCollection.push(worksheet);
+        } else {
+            this.#workSheetCollection.splice(index, 0, worksheet);
+            if (this.#activeSheetIndex >= index) {
+                this.#activeSheetIndex++;
+            }
+        }
+        return worksheet;
+    }
+
+    /**
+     * Create a new sheet and add it to the workbook.
+     */
+    public createSheet(title?: string, index?: number): Worksheet {
+        const newSheet = new Worksheet(this, title);
+        this.addSheet(newSheet, index);
+        return newSheet;
+    }
+
+    /**
+     * Add a cell style (Xf).
+     */
+    public addCellXf(style: Style): void {
+        this.#cellXfCollection.push(style);
+        style.setIndex(this.#cellXfCollection.length - 1);
+    }
+
+    /**
+     * Add a cell style Xf.
+     */
+    public addCellStyleXf(style: Style): void {
+        this.#cellStyleXfCollection.push(style);
+        style.setIndex(this.#cellStyleXfCollection.length - 1);
+    }
+
+    /**
+     * Get cell Xf collection.
+     */
+    public getCellXfCollection(): Style[] {
+        return this.#cellXfCollection;
+    }
+}
