@@ -112,6 +112,7 @@ As the project grows, follow this intended structure:
    - Run `bunx tsc --noEmit` to check types.
    - Run relevant `bun test` commands.
    - If no tests exist for the feature, write them.
+   - **XLSX Writer Parity:** If you modify the XLSX Writer, you MUST verify the output using the scripts in `verify-php/`. Generate a file with Bun and load it with the PHP scripts to ensure full compatibility.
 
 ### Persistence & Saving
 - **Save Progress:** Always save your progress (e.g., via `git commit`) after completing a significant task or sub-task to ensure a clean state and prevent data loss.
