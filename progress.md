@@ -16,7 +16,7 @@
 - [2026-01-29] Implemented Spill Operator (#) via ANCHORARRAY transformation.
 - [2026-01-29] Implemented Matrix/Array Constant refinements ({1,2;3,4}).
 - [2026-01-29] Implemented Rich Text infrastructure (TextElement, Run, RichText).
-- [2026-01-29] Ported Style components (Alignment, NumberFormat).
+- [2026-01-29] Ported Style components (Alignment, NumberFormat, Fill, Border, Borders).
 - [2026-01-29] Updated Cell and DefaultValueBinder to support RichText (TYPE_INLINE).
 - [2026-01-29] Added unit tests for Rich Text and verified with Bun.
 
