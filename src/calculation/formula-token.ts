@@ -28,6 +28,7 @@ export const TokenSubType = {
     LOGICAL: 'Logical',
     ERROR: 'Error',
     RANGE: 'Range',
+    STRUCTURED_REFERENCE: 'StructuredReference',
     MATH: 'Math',
     CONCATENATION: 'Concatenation',
     INTERSECTION: 'Intersection',

@@ -3,25 +3,50 @@ import { CellCollection } from './cell-collection.ts';
 import { Cell, DataType } from './cell.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 
+import { Table } from '../worksheet/table.ts';
+
 /**
  * Worksheet in a Spreadsheet.
  */
 export class Worksheet {
-    #parent: Spreadsheet;
+    #spreadsheet: Spreadsheet;
     #title: string;
     #cellCollection: CellCollection;
+    #tables: Table[] = [];
 
-    constructor(parent: Spreadsheet, title: string = 'Worksheet') {
-        this.#parent = parent;
+    constructor(spreadsheet: Spreadsheet, title: string = 'Worksheet') {
+        this.#spreadsheet = spreadsheet;
         this.#title = title;
         this.#cellCollection = new CellCollection();
     }
 
     /**
+     * Get tables.
+     */
+    public getTables(): Table[] {
+        return this.#tables;
+    }
+
+    /**
+     * Add table.
+     */
+    public addTable(table: Table): void {
+        this.#tables.push(table);
+    }
+
+    /**
+     * Get table by name.
+     */
+    public getTableByName(name: string): Table | undefined {
+        return this.#tables.find(table => table.getName() === name);
+    }
+
+
+    /**
      * Get parent spreadsheet.
      */
     public getParent(): Spreadsheet {
-        return this.#parent;
+        return this.#spreadsheet;
     }
 
     /**
@@ -57,7 +82,7 @@ export class Worksheet {
     public setCellValue(coordinate: string, value: any): Worksheet {
         const cell = this.getCell(coordinate);
         cell.setValue(value);
-        this.#parent.clearCalculationCache();
+        this.#spreadsheet.clearCalculationCache();
         // Basic type detection could be added here
         if (typeof value === 'number') {
             cell.setDataType(DataType.TYPE_NUMERIC);

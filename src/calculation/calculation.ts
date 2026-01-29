@@ -7,14 +7,19 @@ import { Coordinate } from '../utils/coordinate.ts';
 import { FunctionRegistry } from './function-registry.ts';
 import { CalculationErrors } from './calculation-errors.ts';
 
+import { StructuredReference } from './engine/structured-reference.ts';
+
 /**
- * Main Calculation Engine.
+ * Calculation Engine.
  */
 export class Calculation {
+
     #branchPruner: BranchPruner;
     #stack: Stack;
     #functionRegistry: FunctionRegistry;
     #cyclicReferenceStack: Set<string> = new Set();
+    #calculationCache: Map<string, Map<string, any>> = new Map();
+    #cacheEnabled: boolean = true;
 
     constructor() {
         this.#branchPruner = new BranchPruner();
@@ -23,9 +28,44 @@ export class Calculation {
     }
 
     /**
+     * Enable/disable calculation cache.
+     */
+    public setCacheEnabled(enabled: boolean): void {
+        this.#cacheEnabled = enabled;
+        if (!enabled) {
+            this.clearCache();
+        }
+    }
+
+    /**
+     * Clear calculation cache.
+     */
+    public clearCache(): void {
+        this.#calculationCache.clear();
+    }
+
+    /**
      * Calculate formula value.
      */
     public calculateFormula(formula: string, worksheet?: Worksheet, cellID?: string): any {
+        // Pre-process formula for spill operator (#)
+        // Excel handles A1# by converting it to ANCHORARRAY(A1)
+        if (formula.includes('#')) {
+            // Match cell references or ranges followed by #
+            const regex = /(([A-Z]+[0-9]+)(:[A-Z]+[0-9]+)?)(#)/gi;
+            if (regex.test(formula)) {
+                formula = formula.replace(regex, 'ANCHORARRAY($1)');
+            }
+        }
+
+        if (worksheet && cellID && this.#cacheEnabled) {
+            const sheetName = worksheet.getTitle();
+            const sheetCache = this.#calculationCache.get(sheetName);
+            if (sheetCache && sheetCache.has(cellID)) {
+                return sheetCache.get(cellID);
+            }
+        }
+
         if (cellID) {
             if (this.#cyclicReferenceStack.has(cellID)) {
                 return CalculationErrors.CIRCULAR;
@@ -37,7 +77,17 @@ export class Calculation {
             const parser = new FormulaParser(formula);
             const tokens = parser.getTokens();
 
-            return this.processTokenStack(tokens, worksheet);
+            const result = this.processTokenStack(tokens, worksheet, cellID);
+
+            if (worksheet && cellID && this.#cacheEnabled) {
+                const sheetName = worksheet.getTitle();
+                if (!this.#calculationCache.has(sheetName)) {
+                    this.#calculationCache.set(sheetName, new Map());
+                }
+                this.#calculationCache.get(sheetName)!.set(cellID, result);
+            }
+
+            return result;
         } finally {
             if (cellID) {
                 this.#cyclicReferenceStack.delete(cellID);
@@ -63,7 +113,7 @@ export class Calculation {
     /**
      * Process Token Stack.
      */
-    private processTokenStack(tokens: FormulaToken[], worksheet?: Worksheet): any {
+    private processTokenStack(tokens: FormulaToken[], worksheet?: Worksheet, cellID?: string): any {
         const branchPruner = new BranchPruner();
         const stack = new Stack(branchPruner);
         const operatorStack: FormulaToken[] = [];
@@ -75,6 +125,15 @@ export class Calculation {
                 if (operand) {
                     let val = operand.value;
                     if (op === '-') val = -val;
+                    stack.push(TokenType.OPERAND, val);
+                }
+            } else if (operatorToken.type === TokenType.OPERATOR_POSTFIX) {
+                const operand = stack.pop();
+                if (operand) {
+                    let val = operand.value;
+                    if (op === '%') {
+                        val = val / 100;
+                    }
                     stack.push(TokenType.OPERAND, val);
                 }
             } else {
@@ -89,7 +148,7 @@ export class Calculation {
             switch (token.type) {
                 case TokenType.OPERAND:
                     if (!isPruned) {
-                        this.#processOperand(token, stack, worksheet);
+                        this.#processOperand(token, stack, worksheet, cellID);
                     } else {
                         stack.push(TokenType.OPERAND, null, 'NULL');
                     }
@@ -97,6 +156,7 @@ export class Calculation {
 
                 case TokenType.OPERATOR_PREFIX:
                 case TokenType.OPERATOR_INFIX:
+                case TokenType.OPERATOR_POSTFIX:
                     const p1 = Calculation.PRECEDENCE[token.value] ?? 0;
                     while (operatorStack.length > 0) {
                         const top = operatorStack[operatorStack.length - 1];
@@ -224,11 +284,29 @@ export class Calculation {
         const functionName = item.value;
         args.reverse();
 
+        if (functionName === 'ARRAYROW') {
+            stack.push(TokenType.OPERAND, args);
+            return;
+        }
+
+        if (functionName === 'ARRAY') {
+            stack.push(TokenType.OPERAND, args);
+            return;
+        }
+
         const result = this.#executeFunction(functionName, args, worksheet);
         stack.push(TokenType.OPERAND, result);
     }
 
     #executeFunction(functionName: string, args: any[], worksheet?: Worksheet): any {
+        if (functionName.toUpperCase() === 'ANCHORARRAY') {
+            const val = args[0];
+            if (Array.isArray(val)) {
+                return val;
+            }
+            return CalculationErrors.REF;
+        }
+
         const metadata = this.#functionRegistry.get(functionName);
         if (metadata) {
             const validation = this.#functionRegistry.validateArgumentCount(functionName, args.length);
@@ -240,20 +318,34 @@ export class Calculation {
         return `${CalculationErrors.NAME} (${functionName})`;
     }
 
-    #processOperand(token: FormulaToken, stack: Stack, worksheet?: Worksheet): void {
+    #processOperand(token: FormulaToken, stack: Stack, worksheet?: Worksheet, cellID?: string): void {
         let value: any = token.value;
 
         if (token.subType === TokenSubType.NUMBER) {
             value = Number(value);
         } else if (token.subType === TokenSubType.LOGICAL) {
             value = value.toUpperCase() === 'TRUE';
+        } else if (token.subType === TokenSubType.STRUCTURED_REFERENCE) {
+            if (worksheet && cellID) {
+                const resolver = new StructuredReference(value);
+                const cell = worksheet.getCell(cellID);
+                const a1Range = resolver.parse(cell);
+                value = this.#resolveReference(a1Range, worksheet);
+            } else {
+                value = CalculationErrors.REF;
+            }
         } else if (token.subType === TokenSubType.RANGE) {
             if (worksheet) {
                 // Check if it's a named range first
                 const workbook = worksheet.getParent();
                 const namedRange = workbook.getNamedRange(value, worksheet);
                 if (namedRange) {
-                    value = this.#resolveReference(namedRange.getValue(), worksheet);
+                    if (namedRange.isFormula()) {
+                        const formula = namedRange.getValue();
+                        value = this.calculateFormula(formula, namedRange.getWorksheet() || worksheet);
+                    } else {
+                        value = this.#resolveReference(namedRange.getValue(), worksheet);
+                    }
                 } else {
                     value = this.#resolveReference(value, worksheet);
                 }
@@ -319,7 +411,13 @@ export class Calculation {
         stack.push(TokenType.OPERAND, result);
     }
 
-    #resolveReference(reference: string, worksheet: Worksheet): any {
+    public static readonly RANGE_ROW_MAJOR = true;
+    public static readonly RANGE_COLUMN_MAJOR = false;
+
+    /**
+     * Resolve reference.
+     */
+    #resolveReference(reference: string, worksheet: Worksheet, rowMajor: boolean = Calculation.RANGE_ROW_MAJOR): any {
         let targetWorksheet = worksheet;
 
         if (reference.includes('!')) {
@@ -357,13 +455,24 @@ export class Calculation {
             const maxRow = Math.max(startRow, endRow);
 
             const result = [];
-            for (let r = minRow; r <= maxRow; r++) {
-                const rowData = [];
-                for (let c = minCol; c <= maxCol; c++) {
-                    const coord = Coordinate.stringFromCoordinate(c, r);
-                    rowData.push(targetWorksheet.getCell(coord).getValue());
+            if (rowMajor) {
+                for (let r = minRow; r <= maxRow; r++) {
+                    const rowData = [];
+                    for (let c = minCol; c <= maxCol; c++) {
+                        const coord = Coordinate.stringFromCoordinate(c, r);
+                        rowData.push(targetWorksheet.getCell(coord).getValue());
+                    }
+                    result.push(rowData);
                 }
-                result.push(rowData);
+            } else {
+                for (let c = minCol; c <= maxCol; c++) {
+                    const colData = [];
+                    for (let r = minRow; r <= maxRow; r++) {
+                        const coord = Coordinate.stringFromCoordinate(c, r);
+                        colData.push(targetWorksheet.getCell(coord).getValue());
+                    }
+                    result.push(colData);
+                }
             }
             return result;
         }

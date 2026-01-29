@@ -56,6 +56,7 @@ export class FormulaParser {
 
         const ERRORS = ['#NULL!', '#DIV/0!', '#VALUE!', '#REF!', '#NAME?', '#NUM!', '#N/A'];
         const COMPARATORS_MULTI = ['>=', '<=', '<>'];
+        const REGEX_STRUCTURED_REFERENCE = /^[A-Za-z_][A-Za-z0-9_]*\[/;
 
         while (index < formulaLength) {
             const char = this.formula.charAt(index);
@@ -134,6 +135,28 @@ export class FormulaParser {
             }
 
             if (char === FormulaParser.BRACKET_OPEN) {
+                // Check if it's a structured reference start
+                const remainder = this.formula.substring(index);
+                const isTableRef = value !== '' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
+                
+                if (remainder.startsWith('[@') || remainder.startsWith('[#') || isTableRef) {
+                    // It's a structured reference
+                    let bracketCount = 0;
+                    let tempIndex = index;
+                    while (tempIndex < formulaLength) {
+                        const c = this.formula.charAt(tempIndex);
+                        if (c === '[') bracketCount++;
+                        else if (c === ']') bracketCount--;
+                        value += c;
+                        tempIndex++;
+                        if (bracketCount === 0) break;
+                    }
+                    tokens1.push(new FormulaToken(value, TokenType.OPERAND, TokenSubType.STRUCTURED_REFERENCE));
+                    value = '';
+                    index = tempIndex;
+                    continue;
+                }
+
                 inRange = true;
                 value += FormulaParser.BRACKET_OPEN;
                 index++;

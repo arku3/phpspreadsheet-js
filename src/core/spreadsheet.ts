@@ -87,6 +87,7 @@ export class Spreadsheet {
      * Clear calculation cache.
      */
     public clearCalculationCache(): void {
+        this.#calculationEngine.clearCache();
         for (const worksheet of this.#workSheetCollection) {
             worksheet.clearCalculationCache();
         }

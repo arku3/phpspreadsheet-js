@@ -5,14 +5,30 @@
 - [2026-01-29] Fixed LSP errors regarding mixed `private` and `#` usage.
 - [2026-01-29] Basic arithmetic operators (+, -, *, /) implemented in `Calculation`.
 - [2026-01-29] Basic A1 reference resolution implemented.
+- [2026-01-29] Implemented Function Registry and basic function support (SUM, IF, etc.).
+- [2026-01-29] Implemented Branch Pruning for IF statements.
+- [2026-01-29] Implemented Subexpression handling and Argument processing.
+- [2026-01-29] Implemented Cross-Sheet References and Range resolution.
+- [2026-01-29] Implemented Row-Major / Column-Major range extraction.
+- [2026-01-29] Implemented Named Formula support.
+- [2026-01-29] Implemented Calculation Caching mechanism.
+- [2026-01-29] Implemented Structured References (Excel Tables).
+- [2026-01-29] Implemented Spill Operator (#) via ANCHORARRAY transformation.
+- [2026-01-29] Implemented Matrix/Array Constant refinements ({1,2;3,4}).
 
 ## Completed Tasks
 - Main `Calculation` class structure created.
-- `processTokenStack` loop started.
-- Basic operand processing (Numbers, Logicals).
-
-## Pending Tasks
-- Implement Subexpression handling (parentheses).
-- Implement Function calls.
-- Implement Range resolution (A1:B2).
-- Function registry for SUM, AVERAGE, etc.
+- `processTokenStack` loop implemented with operator precedence.
+- Basic operand processing (Numbers, Logicals, Strings).
+- Subexpression handling (parentheses).
+- Function calls and argument count validation.
+- Range resolution (A1:B2) into 2D arrays.
+- Branch Pruning (Lazy evaluation for IF).
+- Cross-Sheet References (Sheet1!A1).
+- Standardized Excel Error Codes.
+- Circular Reference detection.
+- Named Range and Named Formula evaluation.
+- Calculation Caching for performance.
+- Structured Reference (Excel Table) support.
+- Spill Operator (#) support (ANCHORARRAY).
+- Multi-dimensional Array Constant support.

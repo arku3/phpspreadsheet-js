@@ -27,10 +27,15 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
     - [x] Implement Cross-Sheet References (`Sheet2!A1`). <!-- id: 8 -->
     - [x] Support for more complex functions (VLOOKUP, etc.). <!-- id: 9 -->
     - [x] Add argument count validation to FunctionRegistry. <!-- id: 10 -->
-- [ ] Phase 7: Performance & Compatibility <!-- id: 11 -->
-    - [ ] Implement Row-Major / Column-Major range extraction. <!-- id: 12 -->
-    - [ ] Support for Named Ranges. <!-- id: 13 -->
-    - [ ] Refactor FunctionRegistry into Categorized modules. <!-- id: 14 -->
+- [x] Phase 7: Performance & Compatibility <!-- id: 11 -->
+    - [x] Implement Row-Major / Column-Major range extraction. <!-- id: 12 -->
+    - [x] Support for Named Ranges (Formulas). <!-- id: 13 -->
+    - [x] Refactor FunctionRegistry into Categorized modules. <!-- id: 14 -->
+- [ ] Phase 8: Advanced Excel Parity <!-- id: 15 -->
+    - [x] Implement Calculation Caching. <!-- id: 16 -->
+    - [x] Implement Structured References (Excel Tables). <!-- id: 17 -->
+    - [ ] Implement Spill Operator (#) support. <!-- id: 18 -->
+    - [ ] Implement Matrix/Array Constant refinements. <!-- id: 19 -->
 
 ## Decisions
 - Use native private members (`#`) for internal state.
