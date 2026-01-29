@@ -63,19 +63,19 @@ export class FormulaToken {
         this.#value = value;
     }
 
-    public getTokenType(): TTokenType {
+    public getType(): TTokenType {
         return this.#tokenType;
     }
 
-    public setTokenType(value: TTokenType): void {
+    public setType(value: TTokenType): void {
         this.#tokenType = value;
     }
 
-    public getTokenSubType(): TTokenSubType {
+    public getSubType(): TTokenSubType {
         return this.#tokenSubType;
     }
 
-    public setTokenSubType(value: TTokenSubType): void {
+    public setSubType(value: TTokenSubType): void {
         this.#tokenSubType = value;
     }
 }

@@ -181,11 +181,11 @@ export class FormulaParser {
                 }
                 const tmpArr = new FormulaToken('ARRAY', TokenType.FUNCTION, TokenSubType.START);
                 tokens1.push(tmpArr);
-                stack.push(new FormulaToken(tmpArr.value, tmpArr.type, tmpArr.subType));
+                stack.push(new FormulaToken(tmpArr.getValue(), tmpArr.getType(), tmpArr.getSubType()));
 
                 const tmpRow = new FormulaToken('ARRAYROW', TokenType.FUNCTION, TokenSubType.START);
                 tokens1.push(tmpRow);
-                stack.push(new FormulaToken(tmpRow.value, tmpRow.type, tmpRow.subType));
+                stack.push(new FormulaToken(tmpRow.getValue(), tmpRow.getType(), tmpRow.getSubType()));
                 index++;
                 continue;
             }
@@ -197,14 +197,14 @@ export class FormulaParser {
                 }
                 const tmp = stack.pop();
                 if (tmp) {
-                    tmp.value = '';
-                    tmp.subType = TokenSubType.STOP;
-                    tokens1.push(new FormulaToken(tmp.value, tmp.type, tmp.subType));
+                    tmp.setValue('');
+                    tmp.setSubType(TokenSubType.STOP);
+                    tokens1.push(new FormulaToken(tmp.getValue(), tmp.getType(), tmp.getSubType()));
                 }
                 tokens1.push(new FormulaToken(',', TokenType.ARGUMENT));
                 const tmpRow = new FormulaToken('ARRAYROW', TokenType.FUNCTION, TokenSubType.START);
                 tokens1.push(tmpRow);
-                stack.push(new FormulaToken(tmpRow.value, tmpRow.type, tmpRow.subType));
+                stack.push(new FormulaToken(tmpRow.getValue(), tmpRow.getType(), tmpRow.getSubType()));
                 index++;
                 continue;
             }
@@ -216,15 +216,15 @@ export class FormulaParser {
                 }
                 const tmp1 = stack.pop();
                 if (tmp1) {
-                    tmp1.value = '';
-                    tmp1.subType = TokenSubType.STOP;
-                    tokens1.push(new FormulaToken(tmp1.value, tmp1.type, tmp1.subType));
+                    tmp1.setValue('');
+                    tmp1.setSubType(TokenSubType.STOP);
+                    tokens1.push(new FormulaToken(tmp1.getValue(), tmp1.getType(), tmp1.getSubType()));
                 }
                 const tmp2 = stack.pop();
                 if (tmp2) {
-                    tmp2.value = '';
-                    tmp2.subType = TokenSubType.STOP;
-                    tokens1.push(new FormulaToken(tmp2.value, tmp2.type, tmp2.subType));
+                    tmp2.setValue('');
+                    tmp2.setSubType(TokenSubType.STOP);
+                    tokens1.push(new FormulaToken(tmp2.getValue(), tmp2.getType(), tmp2.getSubType()));
                 }
                 index++;
                 continue;
@@ -280,12 +280,12 @@ export class FormulaParser {
                 if (value !== '') {
                     const tmp = new FormulaToken(value, TokenType.FUNCTION, TokenSubType.START);
                     tokens1.push(tmp);
-                    stack.push(new FormulaToken(tmp.value, tmp.type, tmp.subType));
+                    stack.push(new FormulaToken(tmp.getValue(), tmp.getType(), tmp.getSubType()));
                     value = '';
                 } else {
                     const tmp = new FormulaToken('', TokenType.SUBEXPRESSION, TokenSubType.START);
                     tokens1.push(tmp);
-                    stack.push(new FormulaToken(tmp.value, tmp.type, tmp.subType));
+                    stack.push(new FormulaToken(tmp.getValue(), tmp.getType(), tmp.getSubType()));
                 }
                 index++;
                 continue;
@@ -297,7 +297,7 @@ export class FormulaParser {
                     value = '';
                 }
                 const tmp = stack[stack.length - 1];
-                if (tmp && tmp.type === TokenType.FUNCTION) {
+                if (tmp && tmp.getType() === TokenType.FUNCTION) {
                     tokens1.push(new FormulaToken(',', TokenType.ARGUMENT));
                 }
                 index++;
@@ -311,9 +311,9 @@ export class FormulaParser {
                 }
                 const tmp = stack.pop();
                 if (tmp) {
-                    tmp.value = '';
-                    tmp.subType = TokenSubType.STOP;
-                    tokens1.push(new FormulaToken(tmp.value, tmp.type, tmp.subType));
+                    tmp.setValue('');
+                    tmp.setSubType(TokenSubType.STOP);
+                    tokens1.push(new FormulaToken(tmp.getValue(), tmp.getType(), tmp.getSubType()));
                 }
                 index++;
                 continue;
@@ -333,7 +333,7 @@ export class FormulaParser {
             const previousToken = tokens1[i - 1];
             const nextToken = tokens1[i + 1];
 
-            if (token.type !== TokenType.WHITESPACE) {
+            if (token.getType() !== TokenType.WHITESPACE) {
                 tokens2.push(token);
                 continue;
             }
@@ -342,9 +342,9 @@ export class FormulaParser {
 
             if (
                 !(
-                    (previousToken.type === TokenType.FUNCTION && previousToken.subType === TokenSubType.STOP) ||
-                    (previousToken.type === TokenType.SUBEXPRESSION && previousToken.subType === TokenSubType.STOP) ||
-                    previousToken.type === TokenType.OPERAND
+                    (previousToken.getType() === TokenType.FUNCTION && previousToken.getSubType() === TokenSubType.STOP) ||
+                    (previousToken.getType() === TokenType.SUBEXPRESSION && previousToken.getSubType() === TokenSubType.STOP) ||
+                    previousToken.getType() === TokenType.OPERAND
                 )
             ) {
                 continue;
@@ -352,9 +352,9 @@ export class FormulaParser {
 
             if (
                 !(
-                    (nextToken.type === TokenType.FUNCTION && nextToken.subType === TokenSubType.START) ||
-                    (nextToken.type === TokenType.SUBEXPRESSION && nextToken.subType === TokenSubType.START) ||
-                    nextToken.type === TokenType.OPERAND
+                    (nextToken.getType() === TokenType.FUNCTION && nextToken.getSubType() === TokenSubType.START) ||
+                    (nextToken.getType() === TokenType.SUBEXPRESSION && nextToken.getSubType() === TokenSubType.START) ||
+                    nextToken.getType() === TokenType.OPERAND
                 )
             ) {
                 continue;
@@ -368,66 +368,66 @@ export class FormulaParser {
             const token = tokens2[i] as FormulaToken;
             const previousToken = tokens2[i - 1];
 
-            if (token.type === TokenType.OPERATOR_INFIX && token.value === '-') {
+            if (token.getType() === TokenType.OPERATOR_INFIX && token.getValue() === '-') {
                 if (i === 0) {
-                    token.type = TokenType.OPERATOR_PREFIX;
+                    token.setType(TokenType.OPERATOR_PREFIX);
                 } else if (
-                    (previousToken?.type === TokenType.FUNCTION && previousToken?.subType === TokenSubType.STOP) ||
-                    (previousToken?.type === TokenType.SUBEXPRESSION && previousToken?.subType === TokenSubType.STOP) ||
-                    previousToken?.type === TokenType.OPERATOR_POSTFIX ||
-                    previousToken?.type === TokenType.OPERAND
+                    (previousToken?.getType() === TokenType.FUNCTION && previousToken?.getSubType() === TokenSubType.STOP) ||
+                    (previousToken?.getType() === TokenType.SUBEXPRESSION && previousToken?.getSubType() === TokenSubType.STOP) ||
+                    previousToken?.getType() === TokenType.OPERATOR_POSTFIX ||
+                    previousToken?.getType() === TokenType.OPERAND
                 ) {
-                    token.subType = TokenSubType.MATH;
+                    token.setSubType(TokenSubType.MATH);
                 } else {
-                    token.type = TokenType.OPERATOR_PREFIX;
+                    token.setType(TokenType.OPERATOR_PREFIX);
                 }
                 this.tokens.push(token);
                 continue;
             }
 
-            if (token.type === TokenType.OPERATOR_INFIX && token.value === '+') {
+            if (token.getType() === TokenType.OPERATOR_INFIX && token.getValue() === '+') {
                 if (i === 0) continue;
                 if (
-                    (previousToken?.type === TokenType.FUNCTION && previousToken?.subType === TokenSubType.STOP) ||
-                    (previousToken?.type === TokenType.SUBEXPRESSION && previousToken?.subType === TokenSubType.STOP) ||
-                    previousToken?.type === TokenType.OPERATOR_POSTFIX ||
-                    previousToken?.type === TokenType.OPERAND
+                    (previousToken?.getType() === TokenType.FUNCTION && previousToken?.getSubType() === TokenSubType.STOP) ||
+                    (previousToken?.getType() === TokenType.SUBEXPRESSION && previousToken?.getSubType() === TokenSubType.STOP) ||
+                    previousToken?.getType() === TokenType.OPERATOR_POSTFIX ||
+                    previousToken?.getType() === TokenType.OPERAND
                 ) {
-                    token.subType = TokenSubType.MATH;
+                    token.setSubType(TokenSubType.MATH);
                     this.tokens.push(token);
                 }
                 continue;
             }
 
-            if (token.type === TokenType.OPERATOR_INFIX && token.subType === TokenSubType.NOTHING) {
-                if ('<>= '.includes(token.value.charAt(0))) {
-                    token.subType = TokenSubType.LOGICAL;
-                } else if (token.value === '&') {
-                    token.subType = TokenSubType.CONCATENATION;
+            if (token.getType() === TokenType.OPERATOR_INFIX && token.getSubType() === TokenSubType.NOTHING) {
+                if ('<>= '.includes(token.getValue().charAt(0))) {
+                    token.setSubType(TokenSubType.LOGICAL);
+                } else if (token.getValue() === '&') {
+                    token.setSubType(TokenSubType.CONCATENATION);
                 } else {
-                    token.subType = TokenSubType.MATH;
+                    token.setSubType(TokenSubType.MATH);
                 }
                 this.tokens.push(token);
                 continue;
             }
 
-            if (token.type === TokenType.OPERAND && token.subType === TokenSubType.NOTHING) {
-                if (isNaN(Number(token.value))) {
-                    const upperValue = token.value.toUpperCase();
+            if (token.getType() === TokenType.OPERAND && token.getSubType() === TokenSubType.NOTHING) {
+                if (isNaN(Number(token.getValue()))) {
+                    const upperValue = token.getValue().toUpperCase();
                     if (upperValue === 'TRUE' || upperValue === 'FALSE') {
-                        token.subType = TokenSubType.LOGICAL;
+                        token.setSubType(TokenSubType.LOGICAL);
                     } else {
-                        token.subType = TokenSubType.RANGE;
+                        token.setSubType(TokenSubType.RANGE);
                     }
                 } else {
-                    token.subType = TokenSubType.NUMBER;
+                    token.setSubType(TokenSubType.NUMBER);
                 }
                 this.tokens.push(token);
                 continue;
             }
 
-            if (token.type === TokenType.FUNCTION && token.value.startsWith('@')) {
-                token.value = token.value.substring(1);
+            if (token.getType() === TokenType.FUNCTION && token.getValue().startsWith('@')) {
+                token.setValue(token.getValue().substring(1));
             }
 
             this.tokens.push(token);

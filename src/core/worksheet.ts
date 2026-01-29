@@ -4,6 +4,8 @@ import { Cell, DataType } from './cell.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Style } from '../style/style.ts';
 import { Table } from '../worksheet/table.ts';
+import { PageSetup } from '../worksheet/page-setup.ts';
+import { PageMargins } from '../worksheet/page-margins.ts';
 
 /**
  * Worksheet in a Spreadsheet.
@@ -20,11 +22,15 @@ export class Worksheet {
     #selectedCells: string = 'A1';
     #sheetState: string = Worksheet.SHEETSTATE_VISIBLE;
     #tables: Table[] = [];
+    #pageSetup: PageSetup;
+    #pageMargins: PageMargins;
 
     constructor(parent: Spreadsheet, title: string = 'Worksheet') {
         this.#parent = parent;
         this.#title = title;
         this.#cellCollection = new CellCollection();
+        this.#pageSetup = new PageSetup();
+        this.#pageMargins = new PageMargins();
     }
 
     /**
@@ -140,6 +146,36 @@ export class Worksheet {
      */
     public getTables(): Table[] {
         return this.#tables;
+    }
+
+    /**
+     * Get Page Setup.
+     */
+    public getPageSetup(): PageSetup {
+        return this.#pageSetup;
+    }
+
+    /**
+     * Set Page Setup.
+     */
+    public setPageSetup(pageSetup: PageSetup): this {
+        this.#pageSetup = pageSetup;
+        return this;
+    }
+
+    /**
+     * Get Page Margins.
+     */
+    public getPageMargins(): PageMargins {
+        return this.#pageMargins;
+    }
+
+    /**
+     * Set Page Margins.
+     */
+    public setPageMargins(pageMargins: PageMargins): this {
+        this.#pageMargins = pageMargins;
+        return this;
     }
 
     /**

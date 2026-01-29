@@ -119,18 +119,18 @@ export class Calculation {
         const operatorStack: FormulaToken[] = [];
 
         const executeOperator = (operatorToken: FormulaToken) => {
-            const op = operatorToken.value;
-            if (operatorToken.type === TokenType.OPERATOR_PREFIX) {
+            const op = operatorToken.getValue();
+            if (operatorToken.getType() === TokenType.OPERATOR_PREFIX) {
                 const operand = stack.pop();
                 if (operand) {
-                    let val = operand.value;
+                    let val = (operand as any).value;
                     if (op === '-') val = -val;
                     stack.push(TokenType.OPERAND, val);
                 }
-            } else if (operatorToken.type === TokenType.OPERATOR_POSTFIX) {
+            } else if (operatorToken.getType() === TokenType.OPERATOR_POSTFIX) {
                 const operand = stack.pop();
                 if (operand) {
-                    let val = operand.value;
+                    let val = (operand as any).value;
                     if (op === '%') {
                         val = val / 100;
                     }
@@ -145,7 +145,7 @@ export class Calculation {
         for (const token of tokens) {
             const isPruned = branchPruner.isPruned();
 
-            switch (token.type) {
+            switch (token.getType()) {
                 case TokenType.OPERAND:
                     if (!isPruned) {
                         this.#processOperand(token, stack, worksheet, cellID);
@@ -157,11 +157,11 @@ export class Calculation {
                 case TokenType.OPERATOR_PREFIX:
                 case TokenType.OPERATOR_INFIX:
                 case TokenType.OPERATOR_POSTFIX:
-                    const p1 = Calculation.PRECEDENCE[token.value] ?? 0;
+                    const p1 = Calculation.PRECEDENCE[token.getValue()] ?? 0;
                     while (operatorStack.length > 0) {
                         const top = operatorStack[operatorStack.length - 1];
-                        if (!top || top.type === TokenType.SUBEXPRESSION || top.type === TokenType.FUNCTION) break;
-                        const p2 = Calculation.PRECEDENCE[top.value] ?? 0;
+                        if (!top || top.getType() === TokenType.SUBEXPRESSION || top.getType() === TokenType.FUNCTION) break;
+                        const p2 = Calculation.PRECEDENCE[top.getValue()] ?? 0;
                         if (p2 >= p1) {
                             const op = operatorStack.pop();
                             if (op) executeOperator(op);
@@ -173,12 +173,12 @@ export class Calculation {
                     break;
 
                 case TokenType.SUBEXPRESSION:
-                    if (token.subType === TokenSubType.START) {
+                    if (token.getSubType() === TokenSubType.START) {
                         operatorStack.push(token);
-                    } else if (token.subType === TokenSubType.STOP) {
+                    } else if (token.getSubType() === TokenSubType.STOP) {
                         while (operatorStack.length > 0) {
                             const top = operatorStack[operatorStack.length - 1];
-                            if (top && top.type === TokenType.SUBEXPRESSION) break;
+                            if (top && top.getType() === TokenType.SUBEXPRESSION) break;
                             const op = operatorStack.pop();
                             if (op) executeOperator(op);
                         }
@@ -187,21 +187,21 @@ export class Calculation {
                     break;
 
                 case TokenType.FUNCTION:
-                    if (token.subType === TokenSubType.START) {
+                    if (token.getSubType() === TokenSubType.START) {
                         operatorStack.push(token);
-                        stack.push(TokenType.FUNCTION, token.value, 'START');
-                        if (token.value.toUpperCase() === 'IF') {
+                        stack.push(TokenType.FUNCTION, token.getValue(), 'START');
+                        if (token.getValue().toUpperCase() === 'IF') {
                             branchPruner.pushIf(`IF_${tokenIndex}`);
                         }
-                    } else if (token.subType === TokenSubType.STOP) {
+                    } else if (token.getSubType() === TokenSubType.STOP) {
                         while (operatorStack.length > 0) {
                             const top = operatorStack[operatorStack.length - 1];
-                            if (top && top.type === TokenType.FUNCTION) break;
+                            if (top && top.getType() === TokenType.FUNCTION) break;
                             const op = operatorStack.pop();
                             if (op) executeOperator(op);
                         }
                         const startToken = operatorStack.pop(); // Pop START
-                        if (startToken && startToken.value.toUpperCase() === 'IF') {
+                        if (startToken && startToken.getValue().toUpperCase() === 'IF') {
                             branchPruner.popIf();
                         }
                         this.#processFunctionStop(stack, worksheet);
@@ -211,8 +211,8 @@ export class Calculation {
                 case TokenType.ARGUMENT:
                     while (operatorStack.length > 0) {
                         const top = operatorStack[operatorStack.length - 1];
-                        if (top && top.type === TokenType.FUNCTION) {
-                            if (top.value.toUpperCase() === 'IF') {
+                        if (top && top.getType() === TokenType.FUNCTION) {
+                            if (top.getValue().toUpperCase() === 'IF') {
                                 const argCount = this.#countArgumentsSinceStart(stack);
                                 if (argCount === 1) { // Finished condition
                                     const conditionResult = stack.last()?.value;
@@ -319,13 +319,13 @@ export class Calculation {
     }
 
     #processOperand(token: FormulaToken, stack: Stack, worksheet?: Worksheet, cellID?: string): void {
-        let value: any = token.value;
+        let value: any = token.getValue();
 
-        if (token.subType === TokenSubType.NUMBER) {
+        if (token.getSubType() === TokenSubType.NUMBER) {
             value = Number(value);
-        } else if (token.subType === TokenSubType.LOGICAL) {
+        } else if (token.getSubType() === TokenSubType.LOGICAL) {
             value = value.toUpperCase() === 'TRUE';
-        } else if (token.subType === TokenSubType.STRUCTURED_REFERENCE) {
+        } else if (token.getSubType() === TokenSubType.STRUCTURED_REFERENCE) {
             if (worksheet && cellID) {
                 const resolver = new StructuredReference(value);
                 const cell = worksheet.getCell(cellID);
@@ -334,7 +334,7 @@ export class Calculation {
             } else {
                 value = CalculationErrors.REF;
             }
-        } else if (token.subType === TokenSubType.RANGE) {
+        } else if (token.getSubType() === TokenSubType.RANGE) {
             if (worksheet) {
                 // Check if it's a named range first
                 const workbook = worksheet.getParent();
@@ -352,7 +352,7 @@ export class Calculation {
             }
         }
 
-        stack.push(token.type, value);
+        stack.push(token.getType(), value);
     }
 
     #processInfixOperator(token: FormulaToken, stack: Stack): void {
@@ -364,7 +364,7 @@ export class Calculation {
         }
 
         let result: any;
-        switch (token.value) {
+        switch (token.getValue()) {
             case '+':
                 result = (Number(operand1.value) || 0) + (Number(operand2.value) || 0);
                 break;

@@ -113,6 +113,11 @@ As the project grows, follow this intended structure:
    - Run relevant `bun test` commands.
    - If no tests exist for the feature, write them.
 
+### Parallelism & Subagents
+- **Subagents:** For complex tasks with independent sub-tasks (e.g., refactoring multiple files, performing multiple parity reviews), proactively use the `task` tool with `subagent_type: "general"` or `"explore"` to execute them in parallel.
+- **Task Decomposition:** Break down large requests into smaller, actionable tasks that can be delegated to subagents.
+- **Reporting:** Ensure subagents provide a clear summary of their work and any identified issues.
+
 ### Documentation
 - Use JSDoc for all public classes and methods. Include `@param`, `@returns`, and `@throws` where applicable.
 - Keep comments focused on the "Why" rather than the "What".
