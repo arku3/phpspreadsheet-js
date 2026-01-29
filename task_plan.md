@@ -62,10 +62,18 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
     - [x] Implement SharedStrings (SST) support. <!-- id: 41 -->
     - [x] Integrate with `archiver` for .xlsx packaging. <!-- id: 42 -->
 
-- [ ] Phase 13: Advanced Features & Round-tripping <!-- id: 43 -->
-    - [ ] Implement Merged Cells logic in Worksheet and Writer. <!-- id: 44 -->
+- [ ] Phase 13: Advanced Features & Interactivity <!-- id: 43 -->
+    - [x] Implement Merged Cells logic in Worksheet and Writer. <!-- id: 44 -->
+    - [x] Implement Worksheet Panes (Freeze Panes, Split) and View settings. <!-- id: 47 -->
+    - [ ] Implement AutoFilter infrastructure. <!-- id: 48 -->
     - [ ] Implement Xlsx Reader. <!-- id: 45 -->
     - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
+
+- [ ] Phase 14: Architectural & Parity Polish <!-- id: 49 -->
+    - [ ] Implement Document Properties (Metadata). <!-- id: 50 -->
+    - [ ] Port advanced Style features (Conditional Formatting, Themes/Tinting). <!-- id: 51 -->
+    - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 52 -->
+    - [ ] Implement Workbook Security and Protection. <!-- id: 53 -->
 
 ## Decisions
 - Use native private members (`#`) for internal state.

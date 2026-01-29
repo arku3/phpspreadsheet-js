@@ -22,6 +22,12 @@ export class Worksheet extends WriterPart {
                 'mc:Ignorable': 'x14ac',
                 'xmlns:x14ac': 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac'
             });
+        
+        // sheetViews
+        this.writeSheetViews(root, worksheet);
+
+        // sheetFormatPr
+        this.writeSheetFormatPr(root, worksheet);
 
         // cols
         this.writeCols(root, worksheet);
@@ -47,6 +53,178 @@ export class Worksheet extends WriterPart {
         this.writePageSetup(root, worksheet);
 
         return root.end({ prettyPrint: true });
+    }
+
+    /**
+     * Write SheetViews.
+     */
+    private writeSheetViews(root: any, worksheet: CoreWorksheet): void {
+        const sheetViews = root.ele('sheetViews');
+        const sheetView = sheetViews.ele('sheetView', {
+            tabSelected: worksheet.getParent().getActiveSheetIndex() === worksheet.getParent().getIndex(worksheet) ? '1' : '0',
+            workbookViewId: '0'
+        });
+
+        const sv = worksheet.getSheetView();
+        if (sv.getZoomScale() !== null && sv.getZoomScale() !== 100) {
+            sheetView.att('zoomScale', String(sv.getZoomScale()));
+        }
+        if (sv.getZoomScaleNormal() !== null && sv.getZoomScaleNormal() !== 100) {
+            sheetView.att('zoomScaleNormal', String(sv.getZoomScaleNormal()));
+        }
+        if (sv.getZoomScalePageLayoutView() !== 100) {
+            sheetView.att('zoomScalePageLayoutView', String(sv.getZoomScalePageLayoutView()));
+        }
+        if (sv.getZoomScaleSheetLayoutView() !== 100) {
+            sheetView.att('zoomScaleSheetLayoutView', String(sv.getZoomScaleSheetLayoutView()));
+        }
+
+        if (sv.getShowZeros() === false) {
+            sheetView.att('showZeros', '0');
+        }
+
+        if (sv.getView() !== 'normal') {
+            sheetView.att('view', sv.getView());
+        }
+
+        if (worksheet.getShowGridlines()) {
+            sheetView.att('showGridLines', 'true');
+        } else {
+            sheetView.att('showGridLines', 'false');
+        }
+
+        if (worksheet.getShowRowColHeaders()) {
+            sheetView.att('showRowColHeaders', '1');
+        } else {
+            sheetView.att('showRowColHeaders', '0');
+        }
+
+        if (worksheet.getRightToLeft()) {
+            sheetView.att('rightToLeft', 'true');
+        }
+
+        const topLeftCell = worksheet.getTopLeftCell();
+        if (topLeftCell !== '' && topLeftCell !== 'A1' && worksheet.getPaneState() !== CoreWorksheet.PANE_FROZEN && worksheet.getPaneState() !== CoreWorksheet.PANE_FROZENSPLIT) {
+            sheetView.att('topLeftCell', topLeftCell);
+        }
+
+        const activeCell = worksheet.getActiveCell();
+        const sqref = worksheet.getSelectedCells();
+
+        if (worksheet.usesPanes()) {
+            const pane = sheetView.ele('pane');
+            const xSplit = worksheet.getXSplit();
+            const ySplit = worksheet.getYSplit();
+            const activePane = worksheet.getActivePane();
+            const paneTopLeftCell = worksheet.getPaneTopLeftCell();
+            const paneState = worksheet.getPaneState();
+
+            let normalFreeze = '';
+            if (paneState === CoreWorksheet.PANE_FROZEN) {
+                if (ySplit > 0) {
+                    normalFreeze = (xSplit <= 0) ? 'bottomLeft' : 'bottomRight';
+                } else {
+                    normalFreeze = 'topRight';
+                }
+            }
+
+            if (xSplit > 0) {
+                pane.att('xSplit', String(xSplit));
+            }
+            if (ySplit > 0) {
+                pane.att('ySplit', String(ySplit));
+            }
+            if (normalFreeze !== '') {
+                pane.att('activePane', normalFreeze);
+            } else if (activePane !== '') {
+                pane.att('activePane', activePane);
+            }
+            if (paneState !== '') {
+                pane.att('state', paneState);
+            }
+            if (paneTopLeftCell !== '') {
+                pane.att('topLeftCell', paneTopLeftCell);
+            }
+
+            if (normalFreeze !== '') {
+                const selection = sheetView.ele('selection');
+                selection.att('pane', normalFreeze);
+                if (activeCell !== '') {
+                    selection.att('activeCell', activeCell);
+                }
+                if (sqref !== '') {
+                    selection.att('sqref', sqref);
+                }
+            } else {
+                const panes = worksheet.getPanes();
+                for (const position in panes) {
+                    const p = panes[position];
+                    if (p) {
+                        const selection = sheetView.ele('selection');
+                        selection.att('pane', p.getPosition());
+                        if (p.getActiveCell() !== '') {
+                            selection.att('activeCell', p.getActiveCell());
+                        }
+                        if (p.getSqref() !== '') {
+                            selection.att('sqref', p.getSqref());
+                        }
+                    }
+                }
+            }
+        } else {
+            if (activeCell !== '' || sqref !== '') {
+                const selection = sheetView.ele('selection');
+                if (activeCell !== '') {
+                    selection.att('activeCell', activeCell);
+                }
+                if (sqref !== '') {
+                    selection.att('sqref', sqref);
+                }
+            }
+        }
+    }
+
+    /**
+     * Write SheetFormatPr.
+     */
+    private writeSheetFormatPr(root: any, worksheet: CoreWorksheet): void {
+        const sheetFormatPr = root.ele('sheetFormatPr');
+
+        // Default row height
+        if (worksheet.getDefaultRowDimension().getRowHeight() >= 0) {
+            sheetFormatPr.att('customHeight', '1');
+            sheetFormatPr.att('defaultRowHeight', String(worksheet.getDefaultRowDimension().getRowHeight()));
+        } else {
+            sheetFormatPr.att('defaultRowHeight', '14.4');
+        }
+
+        // Set Zero Height row
+        if (worksheet.getDefaultRowDimension().getZeroHeight()) {
+            sheetFormatPr.att('zeroHeight', '1');
+        }
+
+        // Default column width
+        if (worksheet.getDefaultColumnDimension().getWidth() >= 0) {
+            sheetFormatPr.att('defaultColWidth', String(worksheet.getDefaultColumnDimension().getWidthForOutput()));
+        }
+
+        // Outline level - row
+        let outlineLevelRow = 0;
+        for (const dimension of worksheet.getRowDimensions().values()) {
+            if (dimension.getOutlineLevel() > outlineLevelRow) {
+                outlineLevelRow = dimension.getOutlineLevel();
+            }
+        }
+        sheetFormatPr.att('outlineLevelRow', String(outlineLevelRow));
+
+        // Outline level - column
+        let outlineLevelCol = 0;
+        for (const dimension of worksheet.getColumnDimensions().values()) {
+            if (dimension.getOutlineLevel() > outlineLevelCol) {
+                outlineLevelCol = dimension.getOutlineLevel();
+            }
+        }
+        sheetFormatPr.att('outlineLevelCol', String(outlineLevelCol));
     }
 
     /**

@@ -115,6 +115,7 @@ As the project grows, follow this intended structure:
 
 ### Persistence & Saving
 - **Save Progress:** Always save your progress (e.g., via `git commit`) after completing a significant task or sub-task to ensure a clean state and prevent data loss.
+- **Commit Prerequisites:** Before committing, you MUST update the `progress.md` and `task_plan.md` (or equivalent planning files) to accurately reflect the work completed and the remaining steps.
 - **Commit Messages:** Use descriptive, conventional commit messages (e.g., `feat:`, `fix:`, `docs:`) that reflect the work done.
 
 ### Parallelism & Subagents

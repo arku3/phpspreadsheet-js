@@ -370,6 +370,20 @@ export class Spreadsheet {
     }
 
     /**
+     * Get active sheet index.
+     */
+    public getActiveSheetIndex(): number {
+        return this.#activeSheetIndex;
+    }
+
+    /**
+     * Get index of worksheet.
+     */
+    public getIndex(worksheet: Worksheet): number {
+        return this.#workSheetCollection.indexOf(worksheet);
+    }
+
+    /**
      * Get cell style Xf by index.
      */
     public getCellStyleXfByIndex(index: number): Style {

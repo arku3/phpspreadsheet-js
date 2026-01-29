@@ -35,6 +35,16 @@ export abstract class Coordinate {
     }
 
     /**
+     * Convert string coordinate to [column index, row index] (1-indexed).
+     * @param cellAddress eg: 'A1'
+     * @returns [column index, row index] (1-indexed)
+     */
+    public static indexesFromString(cellAddress: string): [number, number] {
+        const [col, row] = this.coordinateFromString(cellAddress);
+        return [col + 1, row + 1];
+    }
+
+    /**
      * Column index from string (A = 1, B = 2, ...).
      * @param columnAddress eg 'A'
      * @returns Column index (1-based)

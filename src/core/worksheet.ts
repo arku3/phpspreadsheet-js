@@ -8,6 +8,8 @@ import { PageSetup } from '../worksheet/page-setup.ts';
 import { PageMargins } from '../worksheet/page-margins.ts';
 import { ColumnDimension } from '../worksheet/column-dimension.ts';
 import { RowDimension } from '../worksheet/row-dimension.ts';
+import { SheetView } from '../worksheet/sheet-view.ts';
+import { Pane } from '../worksheet/pane.ts';
 
 /**
  * Worksheet in a Spreadsheet.
@@ -23,6 +25,15 @@ export class Worksheet {
     public static readonly MERGE_CELL_CONTENT_HIDE = 'hide';
     public static readonly MERGE_CELL_CONTENT_MERGE = 'merge';
 
+    // Pane state constants
+    public static readonly PANE_FROZEN = 'frozen';
+    public static readonly PANE_FROZENSPLIT = 'frozenSplit';
+
+    static readonly #VALID_FROZEN_STATE = [
+        Worksheet.PANE_FROZEN,
+        Worksheet.PANE_FROZENSPLIT,
+    ];
+
     #parent: Spreadsheet;
     #title: string;
     #cellCollection: CellCollection;
@@ -31,6 +42,24 @@ export class Worksheet {
     #tables: Table[] = [];
     #pageSetup: PageSetup;
     #pageMargins: PageMargins;
+    #sheetView: SheetView;
+
+    #freezePane: string | null = null;
+    #paneTopLeftCell: string = 'A1';
+    #topLeftCell: string = 'A1';
+    #paneState: string = '';
+    #xSplit: number = 0;
+    #ySplit: number = 0;
+    #activePane: string = '';
+    #panes: Record<string, Pane | null> = {
+        bottomRight: null,
+        bottomLeft: null,
+        topRight: null,
+        topLeft: null,
+    };
+    #showGridlines: boolean = true;
+    #showRowColHeaders: boolean = true;
+    #rightToLeft: boolean = false;
 
     /**
      * Merge cells array.
@@ -63,6 +92,7 @@ export class Worksheet {
         this.#cellCollection = new CellCollection();
         this.#pageSetup = new PageSetup();
         this.#pageMargins = new PageMargins();
+        this.#sheetView = new SheetView();
         this.#defaultColumnDimension = new ColumnDimension(null);
         this.#defaultRowDimension = new RowDimension(null);
     }
@@ -392,5 +422,264 @@ export class Worksheet {
      */
     public getMergeCells(): Record<string, string> {
         return this.#mergeCells;
+    }
+
+    /**
+     * Get sheet view.
+     */
+    public getSheetView(): SheetView {
+        return this.#sheetView;
+    }
+
+    /**
+     * Set freeze pane.
+     *
+     * @param coordinate Cell coordinate (e.g. 'A1')
+     * @param topLeftCell Top left cell (e.g. 'A1')
+     * @param frozenSplit Whether to use frozen split
+     */
+    public freezePane(coordinate: string | null, topLeftCell: string | null = null, frozenSplit: boolean = false): this {
+        this.#panes = {
+            bottomRight: null,
+            bottomLeft: null,
+            topRight: null,
+            topLeft: null,
+        };
+
+        let cellAddress = coordinate ? coordinate.toUpperCase() : null;
+        if (cellAddress !== null && cellAddress.includes(':')) {
+            throw new Error('Freeze pane can not be set on a range of cells.');
+        }
+
+        let topLeftAddr = topLeftCell ? topLeftCell.toUpperCase() : null;
+
+        if (cellAddress !== null && topLeftAddr === null) {
+            topLeftAddr = 'A1';
+        }
+
+        this.#paneTopLeftCell = topLeftAddr ?? 'A1';
+        this.#freezePane = cellAddress;
+        this.#topLeftCell = this.#paneTopLeftCell;
+
+        if (cellAddress === null) {
+            this.#paneState = '';
+            this.#xSplit = 0;
+            this.#ySplit = 0;
+            this.#activePane = '';
+        } else {
+            const [colIndex, rowIndex] = Coordinate.indexesFromString(cellAddress);
+            const [startColIndex, startRowIndex] = Coordinate.indexesFromString(this.#paneTopLeftCell);
+            this.#xSplit = Math.max(0, colIndex - startColIndex);
+            this.#ySplit = Math.max(0, rowIndex - startRowIndex);
+
+            if (colIndex > startColIndex || rowIndex > startRowIndex) {
+                this.#paneState = frozenSplit ? Worksheet.PANE_FROZENSPLIT : Worksheet.PANE_FROZEN;
+                this.#setSelectedCellsActivePane();
+            } else {
+                this.#paneState = '';
+                this.#freezePane = null;
+                this.#activePane = '';
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Unfreeze pane.
+     */
+    public unfreezePane(): this {
+        return this.freezePane(null);
+    }
+
+    /**
+     * Set freeze pane.
+     *
+     * @param range Range (e.g. 'A1')
+     * @param topLeftCell Top left cell (e.g. 'A1')
+     * @deprecated Use freezePane() instead
+     */
+    public setFreezePane(range: string, topLeftCell: string | null = null): this {
+        return this.freezePane(range, topLeftCell);
+    }
+
+    /**
+     * Get freeze pane.
+     */
+    public getFreezePane(): string | null {
+        return this.#freezePane;
+    }
+
+    /**
+     * Set selected cells active pane.
+     */
+    #setSelectedCellsActivePane(): void {
+        if (this.#freezePane) {
+            const [colC, rowC] = Coordinate.indexesFromString(this.#freezePane);
+            const [colT, rowT] = Coordinate.indexesFromString(this.getActiveCell());
+
+            let activePane: string;
+            if (colC === 1) {
+                activePane = (rowT <= rowC) ? 'topLeft' : 'bottomLeft';
+            } else if (rowC === 1) {
+                activePane = (colT <= colC) ? 'topLeft' : 'topRight';
+            } else if (rowT <= rowC) {
+                activePane = (colT <= colC) ? 'topLeft' : 'topRight';
+            } else {
+                activePane = (colT <= colC) ? 'bottomLeft' : 'bottomRight';
+            }
+
+            this.setActivePane(activePane);
+            this.#panes[activePane] = new Pane(activePane, this.#selectedCells, this.getActiveCell());
+        }
+    }
+
+    /**
+     * Set active pane.
+     */
+    public setActivePane(activePane: string): this {
+        this.#activePane = (activePane in this.#panes) ? activePane : '';
+        return this;
+    }
+
+    /**
+     * Get active pane.
+     */
+    public getActivePane(): string {
+        return this.#activePane;
+    }
+
+    /**
+     * Get x split.
+     */
+    public getXSplit(): number {
+        return this.#xSplit;
+    }
+
+    /**
+     * Set x split.
+     */
+    public setXSplit(xSplit: number): this {
+        this.#xSplit = xSplit;
+        if (Worksheet.#VALID_FROZEN_STATE.includes(this.#paneState)) {
+            const [baseCol, baseRow] = Coordinate.indexesFromString(this.#paneTopLeftCell);
+            this.freezePane(
+                Coordinate.stringFromCoordinate(baseCol + this.#xSplit - 1, baseRow + this.#ySplit - 1),
+                this.#topLeftCell,
+                this.#paneState === Worksheet.PANE_FROZENSPLIT
+            );
+        }
+        return this;
+    }
+
+    /**
+     * Get y split.
+     */
+    public getYSplit(): number {
+        return this.#ySplit;
+    }
+
+    /**
+     * Set y split.
+     */
+    public setYSplit(ySplit: number): this {
+        this.#ySplit = ySplit;
+        if (Worksheet.#VALID_FROZEN_STATE.includes(this.#paneState)) {
+            const [baseCol, baseRow] = Coordinate.indexesFromString(this.#paneTopLeftCell);
+            this.freezePane(
+                Coordinate.stringFromCoordinate(baseCol + this.#xSplit - 1, baseRow + this.#ySplit - 1),
+                this.#topLeftCell,
+                this.#paneState === Worksheet.PANE_FROZENSPLIT
+            );
+        }
+        return this;
+    }
+
+    /**
+     * Get panes.
+     */
+    public getPanes(): Record<string, Pane | null> {
+        return this.#panes;
+    }
+
+    /**
+     * Get pane top left cell.
+     */
+    public getPaneTopLeftCell(): string {
+        return this.#paneTopLeftCell;
+    }
+
+    /**
+     * Get top left cell.
+     */
+    public getTopLeftCell(): string {
+        return this.#topLeftCell;
+    }
+
+    /**
+     * Use panes.
+     */
+    public usesPanes(): boolean {
+        return this.#freezePane !== null || this.#xSplit > 0 || this.#ySplit > 0;
+    }
+
+    /**
+     * Get pane state.
+     */
+    public getPaneState(): string {
+        return this.#paneState;
+    }
+
+    /**
+     * Set pane state.
+     */
+    public setPaneState(paneState: string): this {
+        this.#paneState = paneState;
+        return this;
+    }
+
+    /**
+     * Get show gridlines.
+     */
+    public getShowGridlines(): boolean {
+        return this.#showGridlines;
+    }
+
+    /**
+     * Set show gridlines.
+     */
+    public setShowGridlines(showGridlines: boolean): this {
+        this.#showGridlines = showGridlines;
+        return this;
+    }
+
+    /**
+     * Get show row column headers.
+     */
+    public getShowRowColHeaders(): boolean {
+        return this.#showRowColHeaders;
+    }
+
+    /**
+     * Set show row column headers.
+     */
+    public setShowRowColHeaders(showRowColHeaders: boolean): this {
+        this.#showRowColHeaders = showRowColHeaders;
+        return this;
+    }
+
+    /**
+     * Get right to left.
+     */
+    public getRightToLeft(): boolean {
+        return this.#rightToLeft;
+    }
+
+    /**
+     * Set right to left.
+     */
+    public setRightToLeft(rightToLeft: boolean): this {
+        this.#rightToLeft = rightToLeft;
+        return this;
     }
 }

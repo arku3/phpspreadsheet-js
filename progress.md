@@ -31,12 +31,16 @@
 - [2026-01-29] Implemented fully functional XLSX Writer with style, dimension, and formula support.
 - [2026-01-29] Verified XLSX writer output using PhpSpreadsheet.
 - [2026-01-29] Implemented Merged Cells support in Worksheet and XLSX Writer.
+- [2026-01-29] Conducted comprehensive parity review; identified critical gaps in UI controls, Metadata, and Memory management.
+- [2026-01-29] Implemented Worksheet Interactivity (Freeze Panes, Zoom, View settings) and updated XLSX Writer.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.
 ...
-- XLSX Writer (modular parts, SST, Styles, Rels, ZIP packaging).
-- Worksheet Merged Cells support and Writer integration.
+- Comprehensive PHP-to-TS parity audit and roadmap update.
+- Worksheet Interactivity (Freeze Panes, Zoom, Views) and XLSX Writer support.
+
+
 
 
 
