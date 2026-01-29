@@ -275,6 +275,94 @@ export class Spreadsheet {
     }
 
     /**
+     * Garbage collect.
+     */
+    public garbageCollect(): void {
+        const countReferencesCellXf = new Map<number, number>();
+        for (let i = 0; i < this.#cellXfCollection.length; i++) {
+            countReferencesCellXf.set(i, 0);
+        }
+
+        for (const sheet of this.#workSheetCollection) {
+            // from cells
+            for (const cell of sheet.getCellCollection().getCells()) {
+                const xfIndex = cell.getXfIndex();
+                countReferencesCellXf.set(xfIndex, (countReferencesCellXf.get(xfIndex) || 0) + 1);
+            }
+
+            // from row dimensions
+            for (const rowDimension of sheet.getRowDimensions().values()) {
+                const xfIndex = rowDimension.getXfIndex();
+                if (xfIndex !== null) {
+                    countReferencesCellXf.set(xfIndex, (countReferencesCellXf.get(xfIndex) || 0) + 1);
+                }
+            }
+
+            // from column dimensions
+            for (const columnDimension of sheet.getColumnDimensions().values()) {
+                const xfIndex = columnDimension.getXfIndex();
+                if (xfIndex !== null) {
+                    countReferencesCellXf.set(xfIndex, (countReferencesCellXf.get(xfIndex) || 0) + 1);
+                }
+            }
+        }
+
+        // remove cellXfs without references and create mapping so we can update xfIndex
+        // for all cells and columns
+        const newCellXfCollection: Style[] = [];
+        const map = new Map<number, number>();
+
+        let countNeededCellXfs = 0;
+        for (let i = 0; i < this.#cellXfCollection.length; i++) {
+            const style = this.#cellXfCollection[i]!;
+            if ((countReferencesCellXf.get(i) || 0) > 0 || i === 0) {
+                newCellXfCollection.push(style);
+                countNeededCellXfs++;
+            }
+            map.set(i, countNeededCellXfs - 1);
+        }
+
+        this.#cellXfCollection = newCellXfCollection;
+
+        // update the index for all cellXfs
+        for (let i = 0; i < this.#cellXfCollection.length; i++) {
+            this.#cellXfCollection[i]!.setIndex(i);
+        }
+
+        // make sure there is always at least one cellXf
+        if (this.#cellXfCollection.length === 0) {
+            this.addCellXf(new Style());
+        }
+
+        // update the xfIndex for all cells, row dimensions, column dimensions
+        for (const sheet of this.#workSheetCollection) {
+            // for all cells
+            for (const cell of sheet.getCellCollection().getCells()) {
+                cell.setXfIndex(map.get(cell.getXfIndex())!);
+            }
+
+            // for all row dimensions
+            for (const rowDimension of sheet.getRowDimensions().values()) {
+                const xfIndex = rowDimension.getXfIndex();
+                if (xfIndex !== null) {
+                    rowDimension.setXfIndex(map.get(xfIndex)!);
+                }
+            }
+
+            // for all column dimensions
+            for (const columnDimension of sheet.getColumnDimensions().values()) {
+                const xfIndex = columnDimension.getXfIndex();
+                if (xfIndex !== null) {
+                    columnDimension.setXfIndex(map.get(xfIndex)!);
+                }
+            }
+
+            // also do garbage collection for all the sheets
+            sheet.garbageCollect();
+        }
+    }
+
+    /**
      * Get cell style Xf by index.
      */
     public getCellStyleXfByIndex(index: number): Style {

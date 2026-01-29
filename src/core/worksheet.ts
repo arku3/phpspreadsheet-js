@@ -288,10 +288,19 @@ export class Worksheet {
 
     /**
      * Get table by name.
+     *
+     * @param name Table name
      */
     public getTableByName(name: string): Table | undefined {
         const searchName = name.toUpperCase();
         return this.#tables.find(table => table.getName().toUpperCase() === searchName);
+    }
+
+    /**
+     * Garbage collect.
+     */
+    public garbageCollect(): this {
+        return this;
     }
 
     /**
