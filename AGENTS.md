@@ -103,6 +103,7 @@ As the project grows, follow this intended structure:
 ### Context Awareness
 - Before editing, read the relevant file and its neighbors to understand established patterns.
 - If a file is large, read its exports first to get an overview.
+- **Reference Implementation:** Always compare your implementation with the PHP counterpart in `/php-src` after finishing an implementation to ensure parity and review logic.
 
 ### Self-Verification Loop
 1. **Plan:** Describe your approach briefly.

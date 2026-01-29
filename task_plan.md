@@ -21,9 +21,12 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
 - [x] Phase 5: Integration & Testing <!-- id: 4 -->
     - [x] Integrate with `Worksheet.setCellValue`.
     - [x] Add unit tests for various formula scenarios.
-- [ ] Phase 6: Advanced Features <!-- id: 5 -->
-    - [ ] Branch pruning for lazy IF evaluation.
-    - [ ] Support for more complex functions (VLOOKUP, etc.).
+- [ ] Phase 6: Parity & Advanced Features <!-- id: 5 -->
+    - [ ] Define standardized Excel Error Codes. <!-- id: 6 -->
+    - [ ] Implement Branch Pruning (Lazy IF evaluation). <!-- id: 7 -->
+    - [ ] Implement Cross-Sheet References (`Sheet2!A1`). <!-- id: 8 -->
+    - [ ] Support for more complex functions (VLOOKUP, etc.). <!-- id: 9 -->
+    - [ ] Add argument count validation to FunctionRegistry. <!-- id: 10 -->
 - [ ] Phase 4: Operators & Basic Functions <!-- id: 3 -->
     - [ ] Implement arithmetic operators (`+`, `-`, `*`, `/`, `^`).
     - [ ] Implement comparison operators.

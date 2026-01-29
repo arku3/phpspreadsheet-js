@@ -5,6 +5,7 @@ import { BranchPruner } from './engine/branch-pruner.ts';
 import { TokenType, TokenSubType, FormulaToken } from './formula-token.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { FunctionRegistry } from './function-registry.ts';
+import { CalculationErrors } from './calculation-errors.ts';
 
 /**
  * Main Calculation Engine.
@@ -27,7 +28,7 @@ export class Calculation {
     public calculateFormula(formula: string, worksheet?: Worksheet, cellID?: string): any {
         if (cellID) {
             if (this.#cyclicReferenceStack.has(cellID)) {
-                return '#CIRCULAR!';
+                return CalculationErrors.CIRCULAR;
             }
             this.#cyclicReferenceStack.add(cellID);
         }
@@ -64,6 +65,7 @@ export class Calculation {
      */
     private processTokenStack(tokens: FormulaToken[], worksheet?: Worksheet): any {
         this.#stack.clear();
+        this.#branchPruner.clear();
         const operatorStack: FormulaToken[] = [];
 
         const executeOperator = (operatorToken: FormulaToken) => {
@@ -80,11 +82,17 @@ export class Calculation {
             }
         };
 
+        let tokenIndex = 0;
         for (const token of tokens) {
-            // console.log(`Processing token: ${token.type} ${token.subType} ${token.value}`);
+            const isPruned = this.#branchPruner.isPruned();
+
             switch (token.type) {
                 case TokenType.OPERAND:
-                    this.#processOperand(token, worksheet);
+                    if (!isPruned) {
+                        this.#processOperand(token, worksheet);
+                    } else {
+                        this.#stack.push(TokenType.OPERAND, null, 'NULL');
+                    }
                     break;
 
                 case TokenType.OPERATOR_PREFIX:
@@ -122,6 +130,9 @@ export class Calculation {
                     if (token.subType === TokenSubType.START) {
                         operatorStack.push(token);
                         this.#stack.push(TokenType.FUNCTION, token.value, 'START');
+                        if (token.value.toUpperCase() === 'IF') {
+                            this.#branchPruner.pushIf(`IF_${tokenIndex}`);
+                        }
                     } else if (token.subType === TokenSubType.STOP) {
                         while (operatorStack.length > 0) {
                             const top = operatorStack[operatorStack.length - 1];
@@ -129,7 +140,10 @@ export class Calculation {
                             const op = operatorStack.pop();
                             if (op) executeOperator(op);
                         }
-                        operatorStack.pop(); // Pop START
+                        const startToken = operatorStack.pop(); // Pop START
+                        if (startToken && startToken.value.toUpperCase() === 'IF') {
+                            this.#branchPruner.popIf();
+                        }
                         this.#processFunctionStop(worksheet);
                     }
                     break;
@@ -137,13 +151,29 @@ export class Calculation {
                 case TokenType.ARGUMENT:
                     while (operatorStack.length > 0) {
                         const top = operatorStack[operatorStack.length - 1];
-                        if (top && top.type === TokenType.FUNCTION) break;
+                        if (top && top.type === TokenType.FUNCTION) {
+                            if (top.value.toUpperCase() === 'IF') {
+                                const argCount = this.#countArgumentsSinceStart();
+                                if (argCount === 1) { // Finished condition
+                                    const conditionResult = this.#stack.last()?.value;
+                                    this.#branchPruner.setConditionResult(Boolean(conditionResult));
+                                    this.#branchPruner.enterThen();
+                                } else if (argCount === 2) { // Finished then-branch
+                                    this.#branchPruner.enterElse();
+                                }
+                            }
+                            break;
+                        }
                         const op = operatorStack.pop();
                         if (op) executeOperator(op);
                     }
-                    // No need to push ARGUMENT to stack, we just need to clear operators
+                    // Since we don't push ARGUMENT tokens to the operand stack,
+                    // we need another way to track the argument position.
+                    // For now, we'll push a dummy marker.
+                    this.#stack.push(TokenType.ARGUMENT, null, 'ARG');
                     break;
             }
+            tokenIndex++;
         }
 
         while (operatorStack.length > 0) {
@@ -154,6 +184,16 @@ export class Calculation {
         return result ? result.value : null;
     }
 
+    #countArgumentsSinceStart(): number {
+        let count = 1;
+        for (let i = 1; ; i++) {
+            const item = this.#stack.last(i);
+            if (!item || item.reference === 'START') break;
+            if (item.reference === 'ARG') count++;
+        }
+        return count;
+    }
+
     #processSubexpressionStop(): void {
         const operands = [];
         let item = this.#stack.pop();
@@ -161,7 +201,6 @@ export class Calculation {
             operands.push(item.value);
             item = this.#stack.pop();
         }
-        // Subexpression usually has one value inside
         this.#stack.push(TokenType.OPERAND, operands[0]);
     }
 
@@ -169,22 +208,21 @@ export class Calculation {
         const args = [];
         let item = this.#stack.pop();
         while (item && item.reference !== 'START') {
-            args.push(item.value);
+            if (item.reference !== 'ARG') {
+                args.push(item.value);
+            }
             item = this.#stack.pop();
         }
 
         if (!item || item.type !== TokenType.FUNCTION) {
-            this.#stack.push(TokenType.OPERAND, '#VALUE!');
+            this.#stack.push(TokenType.OPERAND, CalculationErrors.VALUE);
             return;
         }
 
         const functionName = item.value;
         args.reverse();
-        // console.log(`Executing function ${functionName} with args:`, JSON.stringify(args));
 
-        // Dispatch to function
         const result = this.#executeFunction(functionName, args, worksheet);
-        // console.log(`Function ${functionName} result:`, result);
         this.#stack.push(TokenType.OPERAND, result);
     }
 
@@ -193,7 +231,7 @@ export class Calculation {
         if (implementation) {
             return implementation(args);
         }
-        return `#NAME? (${functionName})`;
+        return `${CalculationErrors.NAME} (${functionName})`;
     }
 
     #processOperand(token: FormulaToken, worksheet?: Worksheet): void {
@@ -223,13 +261,13 @@ export class Calculation {
         let result: any;
         switch (token.value) {
             case '+':
-                result = (operand1.value || 0) + (operand2.value || 0);
+                result = (Number(operand1.value) || 0) + (Number(operand2.value) || 0);
                 break;
             case '-':
-                result = (operand1.value || 0) - (operand2.value || 0);
+                result = (Number(operand1.value) || 0) - (Number(operand2.value) || 0);
                 break;
             case '*':
-                result = (operand1.value || 0) * (operand2.value || 0);
+                result = (Number(operand1.value) || 0) * (Number(operand2.value) || 0);
                 break;
             case '/':
                 result = (Number(operand1.value) || 0) / (Number(operand2.value) || 1);
@@ -264,6 +302,25 @@ export class Calculation {
     }
 
     #resolveReference(reference: string, worksheet: Worksheet): any {
+        let targetWorksheet = worksheet;
+
+        if (reference.includes('!')) {
+            const parts = reference.split('!');
+            const sheetName = parts[0]?.replace(/^'|'$/g, '');
+            const cellRef = parts[1];
+
+            if (sheetName && cellRef) {
+                const workbook = worksheet.getParent();
+                const sheet = workbook.getSheetByName(sheetName);
+                if (sheet) {
+                    targetWorksheet = sheet;
+                    reference = cellRef;
+                } else {
+                    return CalculationErrors.REF;
+                }
+            }
+        }
+
         if (reference.includes(':')) {
             const parts = reference.split(':');
             const start = parts[0];
@@ -286,15 +343,14 @@ export class Calculation {
                 const rowData = [];
                 for (let c = minCol; c <= maxCol; c++) {
                     const coord = Coordinate.stringFromCoordinate(c, r);
-                    rowData.push(worksheet.getCell(coord).getValue());
+                    rowData.push(targetWorksheet.getCell(coord).getValue());
                 }
                 result.push(rowData);
             }
             return result;
         }
 
-        // Simple A1 resolution
-        const cell = worksheet.getCell(reference);
+        const cell = targetWorksheet.getCell(reference);
         return cell.getValue();
     }
 }

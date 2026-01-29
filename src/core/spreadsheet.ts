@@ -58,6 +58,13 @@ export class Spreadsheet {
     }
 
     /**
+     * Get sheet by name.
+     */
+    public getSheetByName(name: string): Worksheet | undefined {
+        return this.#workSheetCollection.find(sheet => sheet.getTitle() === name);
+    }
+
+    /**
      * Add a worksheet.
      */
     public addSheet(worksheet: Worksheet, index?: number): Worksheet {

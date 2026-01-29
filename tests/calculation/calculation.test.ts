@@ -68,6 +68,27 @@ describe("Calculation Engine", () => {
         expect(sheet.getCell("B1").getValue()).toBe("Large");
     });
 
+    test("Branch Pruning (Lazy IF)", () => {
+        const sheet = spreadsheet.getActiveSheet();
+        // If pruning works, the second argument (1/0) should NOT be evaluated if condition is false
+        sheet.setCellValue("A1", 10);
+        sheet.setCellValue("B1", "=IF(A1<5, 1/0, \"Safe\")");
+        expect(sheet.getCell("B1").getValue()).toBe("Safe");
+    });
+
+    test("Cross-Sheet References", () => {
+        const sheet1 = spreadsheet.getActiveSheet();
+        sheet1.setTitle("DataSheet");
+        sheet1.setCellValue("A1", 100);
+
+        const sheet2 = spreadsheet.createSheet("CalcSheet");
+        sheet2.setCellValue("A1", "=DataSheet!A1 + 50");
+        expect(sheet2.getCell("A1").getValue()).toBe(150);
+
+        sheet2.setCellValue("A2", "=SUM(DataSheet!A1, 10)");
+        expect(sheet2.getCell("A2").getValue()).toBe(110);
+    });
+
     test("Circular Reference", () => {
         const sheet = spreadsheet.getActiveSheet();
         sheet.setCellValue("A1", "=B1");
