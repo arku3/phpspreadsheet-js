@@ -45,7 +45,7 @@ export class Border extends Supervisor {
         super(isSupervisor);
         this.#color = new Color(Color.COLOR_BLACK, isSupervisor);
         if (isSupervisor) {
-            this.#color.bindParent(this);
+            this.#color.bindParent(this, 'color');
         }
     }
 

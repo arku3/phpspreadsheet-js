@@ -157,9 +157,11 @@ export class Worksheet extends WriterPart {
                     cellEle.ele('v').txt(String(value));
                 } else if (dataType === DataType.TYPE_FORMULA) {
                     cellEle.ele('f').txt(String(value).substring(1));
-                    const calculatedValue = cell.getCalculatedValue();
-                    if (calculatedValue !== undefined && calculatedValue !== null) {
-                        cellEle.ele('v').txt(String(calculatedValue));
+                    if (this.getParentWriter().getPreCalculateFormulas()) {
+                        const calculatedValue = cell.getCalculatedValue();
+                        if (calculatedValue !== undefined && calculatedValue !== null) {
+                            cellEle.ele('v').txt(String(calculatedValue));
+                        }
                     }
                 } else if (value !== null && value !== '') {
                     // Shared string or inline string

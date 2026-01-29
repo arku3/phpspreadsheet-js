@@ -216,28 +216,28 @@ export class Style extends Supervisor {
      *
      * @param styleArray Array containing style information
      */
-    public applyFromArray(styleArray: Record<string, unknown>): this {
+    public applyFromArray(styleArray: Record<string, any>): this {
         if (this.isSupervisor) {
             this.applyFromArraySupervisor(styleArray);
             return this;
         }
         if (styleArray.fill !== undefined && typeof styleArray.fill === 'object') {
-            this.getFill().applyFromArray(styleArray.fill as Record<string, unknown>);
+            this.getFill().applyFromArray(styleArray.fill);
         }
         if (styleArray.font !== undefined && typeof styleArray.font === 'object') {
-            this.getFont().applyFromArray(styleArray.font as Record<string, unknown>);
+            this.getFont().applyFromArray(styleArray.font);
         }
         if (styleArray.borders !== undefined && typeof styleArray.borders === 'object') {
-            this.getBorders().applyFromArray(styleArray.borders as Record<string, unknown>);
+            this.getBorders().applyFromArray(styleArray.borders);
         }
         if (styleArray.alignment !== undefined && typeof styleArray.alignment === 'object') {
-            this.getAlignment().applyFromArray(styleArray.alignment as Record<string, unknown>);
+            this.getAlignment().applyFromArray(styleArray.alignment);
         }
         if (styleArray.numberFormat !== undefined && typeof styleArray.numberFormat === 'object') {
-            this.getNumberFormat().applyFromArray(styleArray.numberFormat as Record<string, unknown>);
+            this.getNumberFormat().applyFromArray(styleArray.numberFormat);
         }
         if (styleArray.protection !== undefined && typeof styleArray.protection === 'object') {
-            this.getProtection().applyFromArray(styleArray.protection as Record<string, unknown>);
+            this.getProtection().applyFromArray(styleArray.protection);
         }
         if (styleArray.quotePrefix !== undefined) {
             this.setQuotePrefix(Boolean(styleArray.quotePrefix));
@@ -248,7 +248,7 @@ export class Style extends Supervisor {
         return this;
     }
 
-    private applyFromArraySupervisor(styleArray: Record<string, unknown>): void {
+    private applyFromArraySupervisor(styleArray: Record<string, any>): void {
         const activeSheet = this.getActiveSheet();
         const workbook = activeSheet.getParent();
         const ranges = Style.splitRanges(this.getSelectedCells());
@@ -320,8 +320,8 @@ export class Style extends Supervisor {
             fill: {
                 fillType: fill.getFillType(),
                 rotation: fill.getRotation(),
-                startColor: { argb: fill.getStartColor().getARGB(), theme: fill.getStartColor().getTheme() },
-                endColor: { argb: fill.getEndColor().getARGB(), theme: fill.getEndColor().getTheme() },
+                startColor: { argb: fill.getStartColor().getARGB() },
+                endColor: { argb: fill.getEndColor().getARGB() },
             },
             font: {
                 name: font.getName(),
@@ -332,29 +332,29 @@ export class Style extends Supervisor {
                 subscript: font.getSubscript(),
                 underline: font.getUnderline(),
                 strikethrough: font.getStrikethrough(),
-                color: { argb: font.getColor().getARGB(), theme: font.getColor().getTheme() },
+                color: { argb: font.getColor().getARGB() },
                 scheme: font.getScheme(),
             },
             borders: {
                 left: {
                     borderStyle: borders.getLeft().getBorderStyle(),
-                    color: { argb: borders.getLeft().getColor().getARGB(), theme: borders.getLeft().getColor().getTheme() },
+                    color: { argb: borders.getLeft().getColor().getARGB() },
                 },
                 right: {
                     borderStyle: borders.getRight().getBorderStyle(),
-                    color: { argb: borders.getRight().getColor().getARGB(), theme: borders.getRight().getColor().getTheme() },
+                    color: { argb: borders.getRight().getColor().getARGB() },
                 },
                 top: {
                     borderStyle: borders.getTop().getBorderStyle(),
-                    color: { argb: borders.getTop().getColor().getARGB(), theme: borders.getTop().getColor().getTheme() },
+                    color: { argb: borders.getTop().getColor().getARGB() },
                 },
                 bottom: {
                     borderStyle: borders.getBottom().getBorderStyle(),
-                    color: { argb: borders.getBottom().getColor().getARGB(), theme: borders.getBottom().getColor().getTheme() },
+                    color: { argb: borders.getBottom().getColor().getARGB() },
                 },
                 diagonal: {
                     borderStyle: borders.getDiagonal().getBorderStyle(),
-                    color: { argb: borders.getDiagonal().getColor().getARGB(), theme: borders.getDiagonal().getColor().getTheme() },
+                    color: { argb: borders.getDiagonal().getColor().getARGB() },
                 },
                 diagonalDirection: borders.getDiagonalDirection(),
             },

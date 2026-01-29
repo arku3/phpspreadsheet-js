@@ -17,7 +17,7 @@ export abstract class Supervisor {
     /**
      * Parent property name.
      */
-    #parentPropertyName: string | null = null;
+    protected parentPropertyName: string | null = null;
 
     /**
      * Create a new Supervisor.
@@ -33,7 +33,7 @@ export abstract class Supervisor {
      */
     public bindParent(parent: any, parentPropertyName: string | null = null): this {
         this.parent = parent;
-        this.#parentPropertyName = parentPropertyName;
+        this.parentPropertyName = parentPropertyName;
         return this;
     }
 

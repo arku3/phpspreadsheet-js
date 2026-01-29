@@ -49,8 +49,18 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
 - [ ] Phase 11: Parity Refinement & Robustness <!-- id: 29 -->
     - [x] Systematic Parity Review against PHP source. <!-- id: 30 -->
     - [x] Refactor FormulaToken for better encapsulation. <!-- id: 31 -->
-    - [ ] Implement missing Worksheet PageSetup/Margins. <!-- id: 32 -->
-    - [ ] Resolve remaining LSP errors in Calculation modules. <!-- id: 33 -->
+    - [x] Implement missing Worksheet PageSetup/Margins. <!-- id: 32 -->
+    - [x] Resolve remaining LSP errors in Calculation modules. <!-- id: 33 -->
+    - [x] Implement Worksheet dimensions (Row/Column). <!-- id: 34 -->
+    - [x] Implement Spreadsheet.garbageCollect(). <!-- id: 35 -->
+
+- [ ] Phase 12: XLSX Writer Implementation <!-- id: 36 -->
+    - [ ] Set up XLSX writer infrastructure (IO module, ZIP container). <!-- id: 37 -->
+    - [ ] Implement ContentTypes and Rels generation. <!-- id: 38 -->
+    - [ ] Implement Workbook and Worksheet XML generation. <!-- id: 39 -->
+    - [ ] Implement Styles XML generation (CellXf, Fonts, Fills, Borders). <!-- id: 40 -->
+    - [ ] Implement SharedStrings (SST) support. <!-- id: 41 -->
+    - [ ] Integrate with `archiver` for .xlsx packaging. <!-- id: 42 -->
 
 ## Decisions
 - Use native private members (`#`) for internal state.

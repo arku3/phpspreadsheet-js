@@ -54,7 +54,10 @@ export class Color extends Supervisor {
         if (!this.parent) {
             throw new Error('No parent found.');
         }
-        return (this.parent as any).getStyleArray({ color: array });
+        const key = (this as any).parentPropertyName || 'color';
+        const obj: any = {};
+        obj[key] = array;
+        return (this.parent as any).getStyleArray(obj);
     }
 
     private validateColor(colorValue: string): string {

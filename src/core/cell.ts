@@ -43,9 +43,6 @@ export class Cell {
      * Get value.
      */
     public getValue(): any {
-        if (this.#dataType === DataType.TYPE_FORMULA) {
-            return this.getCalculatedValue();
-        }
         return this.#value;
     }
 
