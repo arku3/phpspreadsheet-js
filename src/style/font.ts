@@ -290,4 +290,22 @@ export class Font extends Supervisor {
             )
             .digest('hex');
     }
+
+    /**
+     * Implement cloning.
+     */
+    public clone(): Font {
+        const clone = new Font(this.isSupervisor);
+        clone.#name = this.#name;
+        clone.#size = this.#size;
+        clone.#bold = this.#bold;
+        clone.#italic = this.#italic;
+        clone.#superscript = this.#superscript;
+        clone.#subscript = this.#subscript;
+        clone.#underline = this.#underline;
+        clone.#strikethrough = this.#strikethrough;
+        clone.#color = this.#color.clone();
+        clone.#scheme = this.#scheme;
+        return clone;
+    }
 }

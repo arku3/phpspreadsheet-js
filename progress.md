@@ -21,12 +21,16 @@
 - [2026-01-29] Added unit tests for Rich Text and verified with Bun.
 - [2026-01-29] Implemented Style and Protection classes with applyFromArray support across styles.
 - [2026-01-29] Added applyFromArray unit tests for Style components.
+- [2026-01-29] Implemented Style Supervisor behavior and Xf index management in Workbook.
+- [2026-01-29] Performed systematic parity review of Styles, Core, Calculation, and Rich Text modules.
+- [2026-01-29] Refactored FormulaToken to use private properties and explicit getters/setters.
+- [2026-01-29] Aligned Spreadsheet and Worksheet constants (visibility, sheet states) with PHP.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.
 ...
-- Multi-dimensional Array Constant support.
-- Rich Text infrastructure (TextElement, Run, RichText).
-- Style components (Alignment, NumberFormat, Fill, Border, Borders, Protection, Style).
-- Value Binder support for RichText.
 - applyFromArray support across style classes.
+- Style Supervisor implementation and Xf reuse logic.
+- Systematic parity review and alignment for Style and Rich Text modules.
+- Refactored FormulaToken for encapsulation.
+

@@ -28,6 +28,13 @@ export class Run extends TextElement {
         return this.#font;
     }
 
+    public getFontOrThrow(): Font {
+        if (this.#font === null) {
+            throw new Error('unexpected null font');
+        }
+        return this.#font;
+    }
+
     /**
      * Set font.
      */

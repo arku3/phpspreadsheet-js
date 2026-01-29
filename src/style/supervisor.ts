@@ -1,4 +1,3 @@
-import { Spreadsheet } from '../core/spreadsheet.ts';
 import { Worksheet } from '../core/worksheet.ts';
 
 /**
@@ -16,6 +15,11 @@ export abstract class Supervisor {
     protected parent: any = null;
 
     /**
+     * Parent property name.
+     */
+    #parentPropertyName: string | null = null;
+
+    /**
      * Create a new Supervisor.
      *
      * @param isSupervisor Flag indicating if this is a supervisor or not
@@ -25,13 +29,11 @@ export abstract class Supervisor {
     }
 
     /**
-     * Bind parent.
-     *
-     * @param parent Parent object
-     * @param parentPropertyName Property name on parent
+     * Bind parent. Only used for supervisor.
      */
-    public bindParent(parent: any, parentPropertyName?: string): this {
+    public bindParent(parent: any, parentPropertyName: string | null = null): this {
         this.parent = parent;
+        this.#parentPropertyName = parentPropertyName;
         return this;
     }
 
@@ -69,6 +71,13 @@ export abstract class Supervisor {
         }
 
         return this.parent.getSelectedCells();
+    }
+
+    /**
+     * Get the currently active cell coordinate in currently active sheet.
+     */
+    public getActiveCell(): string {
+        return this.getActiveSheet().getActiveCell();
     }
 
     /**

@@ -10,6 +10,11 @@ import { DefaultValueBinder } from './default-value-binder.ts';
  * Spreadsheet workbook.
  */
 export class Spreadsheet {
+    // Visibility constants
+    public static readonly VISIBILITY_VISIBLE = 'visible';
+    public static readonly VISIBILITY_HIDDEN = 'hidden';
+    public static readonly VISIBILITY_VERY_HIDDEN = 'veryHidden';
+
     #workSheetCollection: Worksheet[] = [];
     #activeSheetIndex: number = 0;
     #cellXfCollection: Style[] = [];

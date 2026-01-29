@@ -9,23 +9,44 @@ import { Table } from '../worksheet/table.ts';
  * Worksheet in a Spreadsheet.
  */
 export class Worksheet {
-    #spreadsheet: Spreadsheet;
+    // Sheet state constants
+    public static readonly SHEETSTATE_VISIBLE = 'visible';
+    public static readonly SHEETSTATE_HIDDEN = 'hidden';
+    public static readonly SHEETSTATE_VERYHIDDEN = 'veryHidden';
+
+    #parent: Spreadsheet;
     #title: string;
     #cellCollection: CellCollection;
-    #tables: Table[] = [];
     #selectedCells: string = 'A1';
+    #sheetState: string = Worksheet.SHEETSTATE_VISIBLE;
+    #tables: Table[] = [];
 
-    constructor(spreadsheet: Spreadsheet, title: string = 'Worksheet') {
-        this.#spreadsheet = spreadsheet;
+    constructor(parent: Spreadsheet, title: string = 'Worksheet') {
+        this.#parent = parent;
         this.#title = title;
         this.#cellCollection = new CellCollection();
+    }
+
+    /**
+     * Get sheet state.
+     */
+    public getSheetState(): string {
+        return this.#sheetState;
+    }
+
+    /**
+     * Set sheet state.
+     */
+    public setSheetState(state: string): this {
+        this.#sheetState = state;
+        return this;
     }
 
     /**
      * Get parent spreadsheet.
      */
     public getParent(): Spreadsheet {
-        return this.#spreadsheet;
+        return this.#parent;
     }
 
     /**
@@ -58,6 +79,18 @@ export class Worksheet {
     }
 
     /**
+     * Get active cell.
+     */
+    public getActiveCell(): string {
+        const ranges = this.#selectedCells.split(/[\s,]+/);
+        const first = ranges[0] ?? 'A1';
+        if (first.includes(':')) {
+            return first.split(':')[0]!.toUpperCase();
+        }
+        return first.toUpperCase();
+    }
+
+    /**
      * Get cell by coordinate.
      */
     public getCell(coordinate: string): Cell {
@@ -76,7 +109,7 @@ export class Worksheet {
     public setCellValue(coordinate: string, value: any): Worksheet {
         const cell = this.getCell(coordinate);
         cell.setValue(value);
-        this.#spreadsheet.clearCalculationCache();
+        this.#parent.clearCalculationCache();
         return this;
     }
 
@@ -85,7 +118,7 @@ export class Worksheet {
      */
     public getStyle(coordinate: string): Style {
         this.setSelectedCells(coordinate);
-        return this.#spreadsheet.getCellXfSupervisor();
+        return this.#parent.getCellXfSupervisor();
     }
 
     /**

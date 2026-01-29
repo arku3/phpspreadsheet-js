@@ -41,9 +41,41 @@ export type TTokenSubType = typeof TokenSubType[keyof typeof TokenSubType];
  * Represents a token in a spreadsheet formula.
  */
 export class FormulaToken {
+    #value: string;
+    #tokenType: TTokenType;
+    #tokenSubType: TTokenSubType;
+
     constructor(
-        public value: string,
-        public type: TTokenType = TokenType.UNKNOWN,
-        public subType: TTokenSubType = TokenSubType.NOTHING
-    ) {}
+        value: string,
+        type: TTokenType = TokenType.UNKNOWN,
+        subType: TTokenSubType = TokenSubType.NOTHING
+    ) {
+        this.#value = value;
+        this.#tokenType = type;
+        this.#tokenSubType = subType;
+    }
+
+    public getValue(): string {
+        return this.#value;
+    }
+
+    public setValue(value: string): void {
+        this.#value = value;
+    }
+
+    public getTokenType(): TTokenType {
+        return this.#tokenType;
+    }
+
+    public setTokenType(value: TTokenType): void {
+        this.#tokenType = value;
+    }
+
+    public getTokenSubType(): TTokenSubType {
+        return this.#tokenSubType;
+    }
+
+    public setTokenSubType(value: TTokenSubType): void {
+        this.#tokenSubType = value;
+    }
 }

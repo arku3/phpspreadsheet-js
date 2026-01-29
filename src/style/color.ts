@@ -153,4 +153,13 @@ export class Color extends Supervisor {
             .update(this.#argb + this.#theme + 'Color')
             .digest('hex');
     }
+
+    /**
+     * Implement cloning.
+     */
+    public clone(): Color {
+        const clone = new Color(this.#argb, this.isSupervisor);
+        clone.#theme = this.#theme;
+        return clone;
+    }
 }

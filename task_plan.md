@@ -44,7 +44,13 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
     - [x] Implement `RichText` and `Run` classes. <!-- id: 25 -->
     - [x] Port core Style classes (Font, Alignment, NumberFormat). <!-- id: 26 -->
     - [x] Implement applyFromArray across style classes and add tests. <!-- id: 28 -->
-    - [ ] Implement Cell Style (Xf) management in Workbook. <!-- id: 27 -->
+    - [x] Implement Cell Style (Xf) management in Workbook (Style Supervisor). <!-- id: 27 -->
+
+- [ ] Phase 11: Parity Refinement & Robustness <!-- id: 29 -->
+    - [x] Systematic Parity Review against PHP source. <!-- id: 30 -->
+    - [x] Refactor FormulaToken for better encapsulation. <!-- id: 31 -->
+    - [ ] Implement missing Worksheet PageSetup/Margins. <!-- id: 32 -->
+    - [ ] Resolve remaining LSP errors in Calculation modules. <!-- id: 33 -->
 
 ## Decisions
 - Use native private members (`#`) for internal state.
