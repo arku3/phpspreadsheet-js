@@ -175,8 +175,8 @@ export class Worksheet {
     public getCell(coordinate: string): Cell {
         let cell = this.#cellCollection.get(coordinate);
         if (!cell) {
-            const [col, row] = Coordinate.coordinateFromString(coordinate);
-            cell = new Cell(null, DataType.TYPE_NULL, this, col, row);
+            const [colIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
+            cell = new Cell(null, DataType.TYPE_NULL, this, Coordinate.stringFromColumnIndex(colIndex), rowIndex);
             this.#cellCollection.add(coordinate, cell);
         }
         return cell;
@@ -764,6 +764,17 @@ export class Worksheet {
     }
 
     /**
+     * Get highest worksheet column that contains data.
+     *
+     * @param row Return the highest data column for the specified row,
+     *            or the highest data column of any row if no row number is passed
+     * @returns Highest column name that contains data
+     */
+    public getHighestDataColumn(row: number | null = null): string {
+        return this.#cellCollection.getHighestColumn(row);
+    }
+
+    /**
      * Get highest worksheet row.
      *
      * @param column Return the highest data row for the specified column,
@@ -772,5 +783,156 @@ export class Worksheet {
      */
     public getHighestRow(column: string | null = null): number {
         return this.#cellCollection.getHighestRow(column);
+    }
+
+    /**
+     * Get highest worksheet row that contains data.
+     *
+     * @param column Return the highest data row for the specified column,
+     *               or the highest row of any column if no column letter is passed
+     * @returns Highest row number that contains data
+     */
+    public getHighestDataRow(column: string | null = null): number {
+        return this.#cellCollection.getHighestRow(column);
+    }
+
+    /**
+     * Get highest worksheet column and highest row that have cell records.
+     *
+     * @returns Highest column name and highest row number
+     */
+    public getHighestRowAndColumn(): { row: number; column: string } {
+        return this.#cellCollection.getHighestRowAndColumn();
+    }
+
+    /**
+     * Import data from an array into the worksheet.
+     *
+     * @param source The source data
+     * @param nullValue The value in the array that should be treated as a null/empty cell
+     * @param startCell The top-left coordinate where insertion begins
+     * @param strictNullComparison If true, uses strict comparison for nullValue
+     */
+    public fromArray(
+        source: any[],
+        nullValue: any = null,
+        startCell: string = 'A1',
+        strictNullComparison: boolean = false
+    ): this {
+        // 1D to 2D conversion if needed
+        const data = Array.isArray(source[0]) ? source : [source];
+        const [startColIndex, startRowIndex] = Coordinate.indexesFromString(startCell);
+        let currentStartRow = startRowIndex;
+
+        for (const rowData of data) {
+            let currentColIndex = startColIndex;
+            for (const cellValue of rowData) {
+                const matchesNull = strictNullComparison 
+                    ? cellValue === nullValue 
+                    : cellValue == nullValue;
+                
+                if (!matchesNull) {
+                    const coord = `${Coordinate.stringFromColumnIndex(currentColIndex)}${currentStartRow}`;
+                    this.getCell(coord).setValue(cellValue);
+                }
+                currentColIndex++;
+            }
+            currentStartRow++;
+        }
+        return this;
+    }
+
+    /**
+     * Extract a range of cell values into a 2D array.
+     *
+     * @param range Cell range (e.g. 'A1:C5')
+     * @param nullValue Value to return if a cell is empty or doesn't exist
+     * @param calculateFormulas Whether to evaluate formulas
+     * @param formatData Whether to apply number formatting (Currently ignored - logic not implemented)
+     * @param returnCellRef If true, return array with cell coordinates as keys
+     * @param ignoreHidden If true, skip hidden rows and columns
+     */
+    public rangeToArray(
+        range: string,
+        nullValue: any = null,
+        calculateFormulas: boolean = true,
+        formatData: boolean = true,
+        returnCellRef: boolean = false,
+        ignoreHidden: boolean = false
+    ): any {
+        const [[minCol, minRow], [maxCol, maxRow]] = Coordinate.rangeBoundaries(range);
+        const returnValue: any = returnCellRef ? {} : [];
+
+        for (let row = minRow; row <= maxRow; row++) {
+            if (ignoreHidden && this.rowDimensionExists(row) && !this.getRowDimension(row).getVisible()) {
+                continue;
+            }
+
+            const rowRef = returnCellRef ? row.toString() : (row - minRow);
+            const rowData: any = returnCellRef ? {} : [];
+
+            for (let col = minCol; col <= maxCol; col++) {
+                const colStr = Coordinate.stringFromColumnIndex(col);
+                if (ignoreHidden && this.columnDimensionExists(colStr) && !this.getColumnDimension(colStr).getVisible()) {
+                    continue;
+                }
+
+                const colRef = returnCellRef ? colStr : (col - minCol);
+                const cell = this.#cellCollection.get(colStr + row);
+                const value = this.#cellToArray(cell, calculateFormulas, formatData, nullValue);
+                
+                if (returnCellRef) {
+                    (rowData as any)[colRef] = value;
+                } else {
+                    (rowData as any).push(value);
+                }
+            }
+            
+            if (returnCellRef) {
+                (returnValue as any)[rowRef] = rowData;
+            } else {
+                (returnValue as any).push(rowData);
+            }
+        }
+
+        return returnValue;
+    }
+
+    /**
+     * Helper method for rangeToArray to process individual cell values.
+     */
+    #cellToArray(
+        cell: Cell | undefined,
+        calculateFormulas: boolean,
+        _formatData: boolean,
+        nullValue: any
+    ): any {
+        if (!cell || cell.getValue() === null) {
+            return nullValue;
+        }
+
+        const cellValue = cell.getValue();
+
+        if (calculateFormulas && cell.getDataType() === DataType.TYPE_FORMULA) {
+            return cell.getCalculatedValue();
+        }
+
+        // TODO: Implement formatting logic when NumberFormat engine is ready
+        return cellValue;
+    }
+
+    /**
+     * Extract the full worksheet range into a 2D array.
+     */
+    public toArray(
+        nullValue: any = null,
+        calculateFormulas: boolean = true,
+        formatData: boolean = true,
+        returnCellRef: boolean = false,
+        ignoreHidden: boolean = false
+    ): any {
+        const highest = this.getHighestRowAndColumn();
+        const range = `A1:${highest.column}${highest.row}`;
+        return this.rangeToArray(range, nullValue, calculateFormulas, formatData, returnCellRef, ignoreHidden);
     }
 }

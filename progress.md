@@ -1,8 +1,13 @@
-# Progress - Calculation Engine Evaluation
+# Progress - Systematic Parity Review & Fixes
 
 ## Session Log
 - [2026-01-30] Aligned Color API with PHP tint behavior, fixed Style export array, and adjusted XLSX writer fill colors.
 - [2026-01-30] Updated worksheet row breaks handling and verify scripts; verified XLSX output with PhpSpreadsheet.
+- [2026-01-30] Conducted deep systematic parity audit of Core, Style, I/O, and Calculation modules.
+- [2026-01-30] Created `review/parity-check.md` documenting ~40 specific implementation gaps.
+- [2026-01-30] Refactored `Cell` and `CellCollection` to resolve circular dependencies and improve type safety.
+- [2026-01-30] Implemented `getHighestRow/Column` and `getHighestDataRow/Column` in `Worksheet`.
+- [2026-01-30] Implemented `toArray`, `fromArray`, and `rangeToArray` in `Worksheet` with formula calculation support.
 - [2026-01-29] Started implementing `src/calculation/calculation.ts`.
 - [2026-01-29] Fixed LSP errors regarding mixed `private` and `#` usage.
 - [2026-01-29] Basic arithmetic operators (+, -, *, /) implemented in `Calculation`.
@@ -54,13 +59,9 @@
 - [2026-01-29] Conducted Systematic Writer Parity Review: fixed theme/tint preservation in `applyFromArray` and `exportArray`.
 
 ## Completed Tasks
-- Main `Calculation` class structure created.
-...
 - Comprehensive PHP-to-TS parity audit and roadmap update.
+- Fixed `Cell` and `CellCollection` architecture and resolved circular dependencies.
+- Implemented `Worksheet` data bound and array import/export parity.
 - Worksheet Interactivity (Freeze Panes, Zoom, Views) and XLSX Writer support.
 - Workbook Security (Passwords, Hashing) and UI settings with XLSX Writer support.
 - Conditional Formatting and Themes/Tinting infrastructure.
-
-
-
-

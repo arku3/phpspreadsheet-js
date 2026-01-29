@@ -1,5 +1,6 @@
-import { Cell } from './cell.ts';
+import { Worksheet } from './worksheet.ts';
 import { Coordinate } from '../utils/coordinate.ts';
+import { Cell } from './cell.ts';
 
 /**
  * Collection of cells for a Worksheet.

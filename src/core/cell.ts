@@ -1,6 +1,5 @@
 import { Worksheet } from './worksheet.ts';
 import { Coordinate } from '../utils/coordinate.ts';
-import { RichText } from '../rich-text/rich-text.ts';
 import { Style } from '../style/style.ts';
 
 /**
@@ -16,7 +15,6 @@ export const DataType = {
     TYPE_ERROR: 'e',
 } as const;
 
-
 export type TDataType = typeof DataType[keyof typeof DataType];
 
 /**
@@ -31,12 +29,16 @@ export class Cell {
     #row: number;
     #xfIndex: number = 0;
 
-    constructor(value: any, dataType: TDataType, worksheet: Worksheet, column: number, row: number) {
+    constructor(value: any, dataType: TDataType, worksheet: Worksheet, column: string | number, row: number) {
         this.#value = value;
         this.#dataType = dataType;
         this.#worksheet = worksheet;
-        this.#column = column;
-        this.#row = row;
+        if (typeof column === 'string') {
+            this.#column = Coordinate.columnIndexFromString(column) - 1;
+        } else {
+            this.#column = column;
+        }
+        this.#row = row - 1; // Internal storage is 0-indexed
     }
 
     /**
@@ -134,7 +136,7 @@ export class Cell {
     }
 
     /**
-     * Set parent worksheet.
+     * Get parent worksheet.
      */
     public getWorksheet(): Worksheet {
         return this.#worksheet;

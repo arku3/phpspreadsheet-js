@@ -12,8 +12,8 @@ Complete systematic parity fixes identified in the review and implement the XLSX
     - [ ] **Parity Fixes (Mandatory before Reader)** <!-- id: 58 -->
         - [ ] **Core Module Fixes**
             - [x] Implement `Worksheet.getHighestRow()` and `Worksheet.getHighestColumn()`.
-            - [ ] Implement `Worksheet.getHighestDataRow()` and `Worksheet.getHighestDataColumn()`.
-            - [ ] Implement `Worksheet.toArray()`, `fromArray()`, and `rangeToArray()`.
+            - [x] Implement `Worksheet.getHighestDataRow()` and `Worksheet.getHighestDataColumn()`.
+            - [x] Implement `Worksheet.toArray()`, `fromArray()`, and `rangeToArray()`.
             - [ ] Implement Row/Column manipulation: `insertNewRowBefore`, `insertNewColumnBefore`, `removeRow`, `removeColumn`.
             - [ ] Implement Worksheet management: `duplicateWorksheetByTitle`, `removeSheetByIndex`, `sheetNameExists`.
             - [ ] Implement Active Sheet management: `setActiveSheetIndex`, `setActiveSheetIndexByName`.
