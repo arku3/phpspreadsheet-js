@@ -113,6 +113,10 @@ As the project grows, follow this intended structure:
    - Run relevant `bun test` commands.
    - If no tests exist for the feature, write them.
 
+### Persistence & Saving
+- **Save Progress:** Always save your progress (e.g., via `git commit`) after completing a significant task or sub-task to ensure a clean state and prevent data loss.
+- **Commit Messages:** Use descriptive, conventional commit messages (e.g., `feat:`, `fix:`, `docs:`) that reflect the work done.
+
 ### Parallelism & Subagents
 - **Subagents:** For complex tasks with independent sub-tasks (e.g., refactoring multiple files, performing multiple parity reviews), proactively use the `task` tool with `subagent_type: "general"` or `"explore"` to execute them in parallel.
 - **Task Decomposition:** Break down large requests into smaller, actionable tasks that can be delegated to subagents.

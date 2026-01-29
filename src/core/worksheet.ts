@@ -6,6 +6,8 @@ import { Style } from '../style/style.ts';
 import { Table } from '../worksheet/table.ts';
 import { PageSetup } from '../worksheet/page-setup.ts';
 import { PageMargins } from '../worksheet/page-margins.ts';
+import { ColumnDimension } from '../worksheet/column-dimension.ts';
+import { RowDimension } from '../worksheet/row-dimension.ts';
 
 /**
  * Worksheet in a Spreadsheet.
@@ -25,12 +27,34 @@ export class Worksheet {
     #pageSetup: PageSetup;
     #pageMargins: PageMargins;
 
+    /**
+     * Column dimensions.
+     */
+    #columnDimensions: Map<string, ColumnDimension> = new Map();
+
+    /**
+     * Default column dimension.
+     */
+    #defaultColumnDimension: ColumnDimension;
+
+    /**
+     * Row dimensions.
+     */
+    #rowDimensions: Map<number, RowDimension> = new Map();
+
+    /**
+     * Default row dimension.
+     */
+    #defaultRowDimension: RowDimension;
+
     constructor(parent: Spreadsheet, title: string = 'Worksheet') {
         this.#parent = parent;
         this.#title = title;
         this.#cellCollection = new CellCollection();
         this.#pageSetup = new PageSetup();
         this.#pageMargins = new PageMargins();
+        this.#defaultColumnDimension = new ColumnDimension(null);
+        this.#defaultRowDimension = new RowDimension(null);
     }
 
     /**
@@ -176,6 +200,90 @@ export class Worksheet {
     public setPageMargins(pageMargins: PageMargins): this {
         this.#pageMargins = pageMargins;
         return this;
+    }
+
+    /**
+     * Get row dimensions.
+     */
+    public getRowDimensions(): Map<number, RowDimension> {
+        return this.#rowDimensions;
+    }
+
+    /**
+     * Get default row dimension.
+     */
+    public getDefaultRowDimension(): RowDimension {
+        return this.#defaultRowDimension;
+    }
+
+    /**
+     * Get row dimension.
+     *
+     * @param row Numeric row index
+     */
+    public getRowDimension(row: number): RowDimension {
+        let dimension = this.#rowDimensions.get(row);
+        if (!dimension) {
+            dimension = new RowDimension(row);
+            this.#rowDimensions.set(row, dimension);
+        }
+        return dimension;
+    }
+
+    /**
+     * Check if row dimension exists.
+     *
+     * @param row Numeric row index
+     */
+    public rowDimensionExists(row: number): boolean {
+        return this.#rowDimensions.has(row);
+    }
+
+    /**
+     * Get column dimensions.
+     */
+    public getColumnDimensions(): Map<string, ColumnDimension> {
+        return this.#columnDimensions;
+    }
+
+    /**
+     * Get default column dimension.
+     */
+    public getDefaultColumnDimension(): ColumnDimension {
+        return this.#defaultColumnDimension;
+    }
+
+    /**
+     * Get column dimension.
+     *
+     * @param column Column index (e.g. 'A')
+     */
+    public getColumnDimension(column: string): ColumnDimension {
+        column = column.toUpperCase();
+        let dimension = this.#columnDimensions.get(column);
+        if (!dimension) {
+            dimension = new ColumnDimension(column);
+            this.#columnDimensions.set(column, dimension);
+        }
+        return dimension;
+    }
+
+    /**
+     * Get column dimension by numeric index.
+     *
+     * @param columnIndex Numeric column index (1-based)
+     */
+    public getColumnDimensionByColumn(columnIndex: number): ColumnDimension {
+        return this.getColumnDimension(Coordinate.stringFromColumnIndex(columnIndex));
+    }
+
+    /**
+     * Check if column dimension exists.
+     *
+     * @param column Column index (e.g. 'A')
+     */
+    public columnDimensionExists(column: string): boolean {
+        return this.#columnDimensions.has(column.toUpperCase());
     }
 
     /**
