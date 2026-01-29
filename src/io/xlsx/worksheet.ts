@@ -220,17 +220,13 @@ export class Worksheet extends WriterPart {
      * Write Merge Cells.
      */
     private writeMergeCells(root: any, worksheet: CoreWorksheet): void {
-        // TODO: Implement merge cells logic in Worksheet core and then here.
-        // For now, it's a placeholder as requested.
-        /*
-        const mergeCells = worksheet.getMergeCells();
+        const mergeCells = Object.keys(worksheet.getMergeCells());
         if (mergeCells.length > 0) {
             const mergeCellsEle = root.ele('mergeCells', { count: mergeCells.length });
             for (const mergeCell of mergeCells) {
                 mergeCellsEle.ele('mergeCell', { ref: mergeCell });
             }
         }
-        */
     }
 
     /**

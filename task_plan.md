@@ -46,7 +46,7 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
     - [x] Implement applyFromArray across style classes and add tests. <!-- id: 28 -->
     - [x] Implement Cell Style (Xf) management in Workbook (Style Supervisor). <!-- id: 27 -->
 
-- [ ] Phase 11: Parity Refinement & Robustness <!-- id: 29 -->
+- [x] Phase 11: Parity Refinement & Robustness <!-- id: 29 -->
     - [x] Systematic Parity Review against PHP source. <!-- id: 30 -->
     - [x] Refactor FormulaToken for better encapsulation. <!-- id: 31 -->
     - [x] Implement missing Worksheet PageSetup/Margins. <!-- id: 32 -->
@@ -54,13 +54,18 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
     - [x] Implement Worksheet dimensions (Row/Column). <!-- id: 34 -->
     - [x] Implement Spreadsheet.garbageCollect(). <!-- id: 35 -->
 
-- [ ] Phase 12: XLSX Writer Implementation <!-- id: 36 -->
-    - [ ] Set up XLSX writer infrastructure (IO module, ZIP container). <!-- id: 37 -->
-    - [ ] Implement ContentTypes and Rels generation. <!-- id: 38 -->
-    - [ ] Implement Workbook and Worksheet XML generation. <!-- id: 39 -->
-    - [ ] Implement Styles XML generation (CellXf, Fonts, Fills, Borders). <!-- id: 40 -->
-    - [ ] Implement SharedStrings (SST) support. <!-- id: 41 -->
-    - [ ] Integrate with `archiver` for .xlsx packaging. <!-- id: 42 -->
+- [x] Phase 12: XLSX Writer Implementation <!-- id: 36 -->
+    - [x] Set up XLSX writer infrastructure (IO module, ZIP container). <!-- id: 37 -->
+    - [x] Implement ContentTypes and Rels generation. <!-- id: 38 -->
+    - [x] Implement Workbook and Worksheet XML generation. <!-- id: 39 -->
+    - [x] Implement Styles XML generation (CellXf, Fonts, Fills, Borders). <!-- id: 40 -->
+    - [x] Implement SharedStrings (SST) support. <!-- id: 41 -->
+    - [x] Integrate with `archiver` for .xlsx packaging. <!-- id: 42 -->
+
+- [ ] Phase 13: Advanced Features & Round-tripping <!-- id: 43 -->
+    - [ ] Implement Merged Cells logic in Worksheet and Writer. <!-- id: 44 -->
+    - [ ] Implement Xlsx Reader. <!-- id: 45 -->
+    - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
 
 ## Decisions
 - Use native private members (`#`) for internal state.

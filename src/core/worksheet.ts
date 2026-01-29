@@ -18,6 +18,11 @@ export class Worksheet {
     public static readonly SHEETSTATE_HIDDEN = 'hidden';
     public static readonly SHEETSTATE_VERYHIDDEN = 'veryHidden';
 
+    // Merge cell behaviour constants
+    public static readonly MERGE_CELL_CONTENT_EMPTY = 'empty';
+    public static readonly MERGE_CELL_CONTENT_HIDE = 'hide';
+    public static readonly MERGE_CELL_CONTENT_MERGE = 'merge';
+
     #parent: Spreadsheet;
     #title: string;
     #cellCollection: CellCollection;
@@ -26,6 +31,11 @@ export class Worksheet {
     #tables: Table[] = [];
     #pageSetup: PageSetup;
     #pageMargins: PageMargins;
+
+    /**
+     * Merge cells array.
+     */
+    #mergeCells: Record<string, string> = {};
 
     /**
      * Column dimensions.
@@ -311,5 +321,76 @@ export class Worksheet {
         for (const coord of coordinates) {
             this.#cellCollection.get(coord)?.clearCalculationCache();
         }
+    }
+
+    /**
+     * Merge cells.
+     *
+     * @param range A simple string containing a Cell range like 'A1:E10'
+     * @param behaviour Merge cell behaviour
+     */
+    public mergeCells(range: string, behaviour: string = Worksheet.MERGE_CELL_CONTENT_EMPTY): this {
+        range = range.toUpperCase();
+        if (!range.includes(':')) {
+            range = `${range}:${range}`;
+        }
+
+        const match = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+        if (!match) {
+            throw new Error('Merge must be on a valid range of cells.');
+        }
+
+        const [, startCol, startRowStr, endCol, endRowStr] = match;
+        const startRow = parseInt(startRowStr!, 10);
+        const endRow = parseInt(endRowStr!, 10);
+        const startColIndex = Coordinate.columnIndexFromString(startCol!);
+        const endColIndex = Coordinate.columnIndexFromString(endCol!);
+
+        if (startRow === endRow && startColIndex === endColIndex) {
+            return this;
+        }
+
+        this.#mergeCells[range] = range;
+
+        // create upper left cell if it does not already exist
+        const upperLeft = `${startCol}${startRow}`;
+        this.getCell(upperLeft);
+
+        if (behaviour !== Worksheet.MERGE_CELL_CONTENT_HIDE) {
+            // Blank out the rest of the cells in the range
+            for (let row = startRow; row <= endRow; row++) {
+                for (let col = startColIndex; col <= endColIndex; col++) {
+                    const coordinate = `${Coordinate.stringFromColumnIndex(col)}${row}`;
+                    if (coordinate !== upperLeft) {
+                        this.getCell(coordinate).setValue(null);
+                    }
+                }
+            }
+        }
+
+        return this;
+    }
+
+    /**
+     * Unmerge cells.
+     *
+     * @param range A simple string containing a Cell range like 'A1:E10'
+     */
+    public unmergeCells(range: string): this {
+        range = range.toUpperCase();
+        if (this.#mergeCells[range]) {
+            delete this.#mergeCells[range];
+        } else {
+            throw new Error(`Cell range ${range} not known as merged.`);
+        }
+
+        return this;
+    }
+
+    /**
+     * Get merge cells array.
+     */
+    public getMergeCells(): Record<string, string> {
+        return this.#mergeCells;
     }
 }

@@ -25,12 +25,18 @@
 - [2026-01-29] Performed systematic parity review of Styles, Core, Calculation, and Rich Text modules.
 - [2026-01-29] Refactored FormulaToken to use private properties and explicit getters/setters.
 - [2026-01-29] Aligned Spreadsheet and Worksheet constants (visibility, sheet states) with PHP.
+- [2026-01-29] Implemented Worksheet PageSetup and PageMargins.
+- [2026-01-29] Implemented Worksheet ColumnDimension and RowDimension.
+- [2026-01-29] Implemented Spreadsheet.garbageCollect() for Xf index pruning.
+- [2026-01-29] Implemented fully functional XLSX Writer with style, dimension, and formula support.
+- [2026-01-29] Verified XLSX writer output using PhpSpreadsheet.
+- [2026-01-29] Implemented Merged Cells support in Worksheet and XLSX Writer.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.
 ...
-- applyFromArray support across style classes.
-- Style Supervisor implementation and Xf reuse logic.
-- Systematic parity review and alignment for Style and Rich Text modules.
-- Refactored FormulaToken for encapsulation.
+- XLSX Writer (modular parts, SST, Styles, Rels, ZIP packaging).
+- Worksheet Merged Cells support and Writer integration.
+
+
 
