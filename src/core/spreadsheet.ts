@@ -275,6 +275,13 @@ export class Spreadsheet {
     }
 
     /**
+     * Get sheet count.
+     */
+    public getSheetCount(): number {
+        return this.#workSheetCollection.length;
+    }
+
+    /**
      * Garbage collect.
      */
     public garbageCollect(): void {
