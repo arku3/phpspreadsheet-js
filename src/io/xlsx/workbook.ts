@@ -26,14 +26,15 @@ export class Workbook extends WriterPart {
 
         // workbookPr
         root.ele('workbookPr', {
-            codeName: 'ThisWorkbook'
+            codeName: 'ThisWorkbook',
+            defaultThemeVersion: '124226'
         });
 
+        // workbookProtection
+        this.#writeWorkbookProtection(root, spreadsheet);
+
         // bookViews
-        const bookViews = root.ele('bookViews');
-        bookViews.ele('workbookView', {
-            activeTab: 0 // TODO: Get from spreadsheet
-        });
+        this.#writeBookViews(root, spreadsheet);
 
         // sheets
         const sheets = root.ele('sheets');
@@ -55,5 +56,83 @@ export class Workbook extends WriterPart {
         });
 
         return root.end({ prettyPrint: true });
+    }
+
+    /**
+     * Write workbook protection.
+     */
+    #writeWorkbookProtection(root: any, spreadsheet: Spreadsheet): void {
+        const security = spreadsheet.getSecurity();
+        if (security.isSecurityEnabled()) {
+            const protection = root.ele('workbookProtection');
+            if (security.getLockRevision()) {
+                protection.att('lockRevision', '1');
+            }
+            if (security.getLockStructure()) {
+                protection.att('lockStructure', '1');
+            }
+            if (security.getLockWindows()) {
+                protection.att('lockWindows', '1');
+            }
+
+            if (security.getWorkbookPassword() !== '') {
+                protection.att('workbookPassword', security.getWorkbookPassword());
+            }
+
+            if (security.getRevisionsPassword() !== '') {
+                protection.att('revisionsPassword', security.getRevisionsPassword());
+            }
+
+            if (security.advancedPassword()) {
+                protection.att('workbookAlgorithmName', security.getWorkbookAlgorithmName());
+                protection.att('workbookHashValue', security.getWorkbookHashValue());
+                protection.att('workbookSaltValue', security.getWorkbookSaltValue());
+                protection.att('workbookSpinCount', security.getWorkbookSpinCount().toString());
+            }
+
+            if (security.advancedRevisionsPassword()) {
+                protection.att('revisionsAlgorithmName', security.getRevisionsAlgorithmName());
+                protection.att('revisionsHashValue', security.getRevisionsHashValue());
+                protection.att('revisionsSaltValue', security.getRevisionsSaltValue());
+                protection.att('revisionsSpinCount', security.getRevisionsSpinCount().toString());
+            }
+        }
+    }
+
+    /**
+     * Write book views.
+     */
+    #writeBookViews(root: any, spreadsheet: Spreadsheet): void {
+        const bookViews = root.ele('bookViews');
+        const attributes: any = {
+            activeTab: spreadsheet.getActiveSheetIndex().toString()
+        };
+
+        if (spreadsheet.getAutoFilterDateGrouping() === false) {
+            attributes.autoFilterDateGrouping = '0';
+        }
+        if (spreadsheet.getFirstSheetIndex() > 0) {
+            attributes.firstSheetIndex = spreadsheet.getFirstSheetIndex().toString();
+        }
+        if (spreadsheet.getMinimized()) {
+            attributes.minimized = '1';
+        }
+        if (spreadsheet.getShowHorizontalScroll() === false) {
+            attributes.showHorizontalScroll = '0';
+        }
+        if (spreadsheet.getShowSheetTabs() === false) {
+            attributes.showSheetTabs = '0';
+        }
+        if (spreadsheet.getShowVerticalScroll() === false) {
+            attributes.showVerticalScroll = '0';
+        }
+        if (spreadsheet.getTabRatio() !== 600) {
+            attributes.tabRatio = spreadsheet.getTabRatio().toString();
+        }
+        if (spreadsheet.getVisibility() !== Spreadsheet.VISIBILITY_VISIBLE) {
+            attributes.visibility = spreadsheet.getVisibility();
+        }
+
+        bookViews.ele('workbookView', attributes);
     }
 }

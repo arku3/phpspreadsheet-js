@@ -35,9 +35,9 @@ export abstract class Coordinate {
     }
 
     /**
-     * Convert string coordinate to [column index, row index] (1-indexed).
+     * Convert string coordinate to [column, row] (1-indexed).
      * @param cellAddress eg: 'A1'
-     * @returns [column index, row index] (1-indexed)
+     * @returns [column, row] (1-indexed)
      */
     public static indexesFromString(cellAddress: string): [number, number] {
         const [col, row] = this.coordinateFromString(cellAddress);
@@ -98,5 +98,25 @@ export abstract class Coordinate {
         const [startCol, startRow] = this.indexesFromString(start!);
         const [endCol, endRow] = this.indexesFromString(end!);
         return [[startCol, startRow], [endCol, endRow]];
+    }
+
+    /**
+     * Split range.
+     *
+     * @param range Range (e.g. 'A1:C5,D6:E10')
+     */
+    public static splitRange(range: string): [string, string][][] {
+        const parts = range.split(',');
+        return parts.map(part => {
+            const [start, end] = part.includes(':') ? part.split(':') : [part, part];
+            return [[start!, end!]];
+        });
+    }
+
+    /**
+     * Resolve union and intersection.
+     */
+    public static resolveUnionAndIntersection(cellCoordinate: string, separator: string = ' '): string {
+        return cellCoordinate.replace(/,/g, separator);
     }
 }

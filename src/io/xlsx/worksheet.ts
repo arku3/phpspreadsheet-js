@@ -44,6 +44,9 @@ export class Worksheet extends WriterPart {
         // autoFilter
         this.writeAutoFilter(root, worksheet);
 
+        // conditionalFormatting
+        this.writeConditionalFormatting(root, worksheet);
+
         // pageMargins
         const margins = worksheet.getPageMargins();
         root.ele('pageMargins', {
@@ -409,6 +412,51 @@ export class Worksheet extends WriterPart {
             const mergeCellsEle = root.ele('mergeCells', { count: mergeCells.length });
             for (const mergeCell of mergeCells) {
                 mergeCellsEle.ele('mergeCell', { ref: mergeCell });
+            }
+        }
+    }
+
+    /**
+     * Write ConditionalFormatting.
+     */
+    private writeConditionalFormatting(root: any, worksheet: CoreWorksheet): void {
+        const stylesCollection = worksheet.getConditionalStylesCollection();
+        if (stylesCollection.size === 0) {
+            return;
+        }
+
+        let id = 0;
+        for (const styles of stylesCollection.values()) {
+            for (const conditional of styles) {
+                id = Math.max(id, conditional.getPriority());
+            }
+        }
+
+        for (const [cellCoordinate, styles] of stylesCollection) {
+            const cf = root.ele('conditionalFormatting', {
+                sqref: Coordinate.resolveUnionAndIntersection(cellCoordinate.replace(/\$/g, ''), ' ')
+            });
+
+            for (const conditional of styles) {
+                const rule = cf.ele('cfRule', {
+                    type: conditional.getConditionType(),
+                    priority: conditional.getPriority() || ++id
+                });
+
+                const dxfId = this.getParentWriter().getStylesConditionalHashTable().getIndexForHashCode(conditional.getHashCode());
+                rule.att('dxfId', String(dxfId));
+
+                if (conditional.getOperatorType() !== '') {
+                    rule.att('operator', conditional.getOperatorType());
+                }
+
+                if (conditional.getStopIfTrue()) {
+                    rule.att('stopIfTrue', '1');
+                }
+
+                for (const condition of conditional.getConditions()) {
+                    rule.ele('formula').txt(String(condition));
+                }
             }
         }
     }

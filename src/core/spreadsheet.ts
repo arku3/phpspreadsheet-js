@@ -6,6 +6,8 @@ import { NamedRange } from './named-range.ts';
 import type { IValueBinder } from './i-value-binder.ts';
 import { DefaultValueBinder } from './default-value-binder.ts';
 import { Properties } from '../document/properties.ts';
+import { Security } from '../document/security.ts';
+import { Theme } from '../style/theme.ts';
 
 /**
  * Spreadsheet workbook.
@@ -25,11 +27,25 @@ export class Spreadsheet {
     #definedNames: DefinedName[] = [];
     #valueBinder: IValueBinder;
     #properties: Properties;
+    #security: Security;
+    #theme: Theme;
+
+    // Workbook view properties
+    #autoFilterDateGrouping: boolean = true;
+    #firstSheetIndex: number = 0;
+    #minimized: boolean = false;
+    #showHorizontalScroll: boolean = true;
+    #showSheetTabs: boolean = true;
+    #showVerticalScroll: boolean = true;
+    #tabRatio: number = 600;
+    #visibility: string = Spreadsheet.VISIBILITY_VISIBLE;
 
     constructor() {
         this.#calculationEngine = new Calculation();
         this.#valueBinder = new DefaultValueBinder();
         this.#properties = new Properties();
+        this.#security = new Security();
+        this.#theme = new Theme();
         
         // Initialise worksheet collection and add one worksheet
         const initialSheet = new Worksheet(this, 'Worksheet 1');
@@ -387,6 +403,13 @@ export class Spreadsheet {
     }
 
     /**
+     * Get theme.
+     */
+    public getTheme(): Theme {
+        return this.#theme;
+    }
+
+    /**
      * Get properties.
      */
     public getProperties(): Properties {
@@ -398,6 +421,20 @@ export class Spreadsheet {
      */
     public setProperties(properties: Properties): void {
         this.#properties = properties;
+    }
+
+    /**
+     * Get security.
+     */
+    public getSecurity(): Security {
+        return this.#security;
+    }
+
+    /**
+     * Set security.
+     */
+    public setSecurity(security: Security): void {
+        this.#security = security;
     }
 
     /**
@@ -428,5 +465,117 @@ export class Spreadsheet {
     public addCellStyleXf(style: Style): void {
         this.#cellStyleXfCollection.push(style);
         style.setIndex(this.#cellStyleXfCollection.length - 1);
+    }
+
+    /**
+     * Get auto filter date grouping.
+     */
+    public getAutoFilterDateGrouping(): boolean {
+        return this.#autoFilterDateGrouping;
+    }
+
+    /**
+     * Set auto filter date grouping.
+     */
+    public setAutoFilterDateGrouping(value: boolean): void {
+        this.#autoFilterDateGrouping = value;
+    }
+
+    /**
+     * Get first sheet index.
+     */
+    public getFirstSheetIndex(): number {
+        return this.#firstSheetIndex;
+    }
+
+    /**
+     * Set first sheet index.
+     */
+    public setFirstSheetIndex(value: number): void {
+        this.#firstSheetIndex = value;
+    }
+
+    /**
+     * Get minimized.
+     */
+    public getMinimized(): boolean {
+        return this.#minimized;
+    }
+
+    /**
+     * Set minimized.
+     */
+    public setMinimized(value: boolean): void {
+        this.#minimized = value;
+    }
+
+    /**
+     * Get show horizontal scroll.
+     */
+    public getShowHorizontalScroll(): boolean {
+        return this.#showHorizontalScroll;
+    }
+
+    /**
+     * Set show horizontal scroll.
+     */
+    public setShowHorizontalScroll(value: boolean): void {
+        this.#showHorizontalScroll = value;
+    }
+
+    /**
+     * Get show sheet tabs.
+     */
+    public getShowSheetTabs(): boolean {
+        return this.#showSheetTabs;
+    }
+
+    /**
+     * Set show sheet tabs.
+     */
+    public setShowSheetTabs(value: boolean): void {
+        this.#showSheetTabs = value;
+    }
+
+    /**
+     * Get show vertical scroll.
+     */
+    public getShowVerticalScroll(): boolean {
+        return this.#showVerticalScroll;
+    }
+
+    /**
+     * Set show vertical scroll.
+     */
+    public setShowVerticalScroll(value: boolean): void {
+        this.#showVerticalScroll = value;
+    }
+
+    /**
+     * Get tab ratio.
+     */
+    public getTabRatio(): number {
+        return this.#tabRatio;
+    }
+
+    /**
+     * Set tab ratio.
+     */
+    public setTabRatio(value: number): void {
+        this.#tabRatio = value;
+    }
+
+    /**
+     * Get visibility.
+     */
+    public getVisibility(): string {
+        return this.#visibility;
+    }
+
+    /**
+     * Set visibility.
+     */
+    public setVisibility(value: string): void {
+        this.#visibility = value;
     }
 }

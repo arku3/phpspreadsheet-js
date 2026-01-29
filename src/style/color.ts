@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Supervisor } from './supervisor.ts';
+import { RgbTint } from './rgb-tint.ts';
 
 /**
  * Color style.
@@ -90,6 +91,7 @@ export class Color extends Supervisor {
 
     #argb: string;
     #theme: number = -1;
+    #tint: number = 0;
 
     constructor(colorValue: string = Color.COLOR_BLACK, isSupervisor: boolean = false) {
         super(isSupervisor);
@@ -164,6 +166,60 @@ export class Color extends Supervisor {
         this.setARGB(colorValue);
     }
 
+    /**
+     * Get theme color from workbook theme.
+     */
+    public getThemeColor(): string | null {
+        if (this.#theme < 0) {
+            return null;
+        }
+
+        let themeColors: string[] = [];
+        const spreadsheet = (this.parent as any)?.getActiveSheet()?.getParent() || (this.parent as any)?.getParent();
+        if (spreadsheet) {
+            themeColors = spreadsheet.getTheme().getThemeColors();
+        }
+
+        if (themeColors[this.#theme]) {
+            return themeColors[this.#theme]!;
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve color to ARGB (considering theme and tint).
+     */
+    public resolveColor(): string {
+        let argb = this.getARGB();
+        const themeColor = this.getThemeColor();
+
+        if (themeColor) {
+            argb = themeColor;
+        }
+
+        if (this.#tint !== 0) {
+            argb = Color.changeBrightness(argb, this.#tint);
+        }
+
+        return argb;
+    }
+
+    /**
+     * Change brightness of a color.
+     */
+    public static changeBrightness(hexColorValue: string, adjustPercentage: number): string {
+        const rgba = hexColorValue.length === 8;
+        const percentage = Math.max(-1.0, Math.min(1.0, adjustPercentage));
+
+        const red = parseInt(hexColorValue.substring(rgba ? 2 : 0, rgba ? 4 : 2), 16);
+        const green = parseInt(hexColorValue.substring(rgba ? 4 : 2, rgba ? 6 : 4), 16);
+        const blue = parseInt(hexColorValue.substring(rgba ? 6 : 4, rgba ? 8 : 6), 16);
+
+        const tint = RgbTint.rgbAndTintToRgb(red, green, blue, percentage);
+        return (rgba ? 'FF' : '') + tint;
+    }
+
     public getTheme(): number {
         if (this.isSupervisor) {
             return this.getSharedComponent().getTheme();
@@ -180,12 +236,28 @@ export class Color extends Supervisor {
         }
     }
 
+    public getTint(): number {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getTint();
+        }
+        return this.#tint;
+    }
+
+    public setTint(tint: number): void {
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ tint: tint });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#tint = tint;
+        }
+    }
+
     /**
      * Apply styles from array.
      *
      * @param styleArray Array containing style information
      */
-    public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number }): this {
+    public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number; tint?: number }): this {
         if (this.isSupervisor) {
             const styleArrayLocal = this.getStyleArray(styleArray);
             (this.parent as any).applyFromArray(styleArrayLocal);
@@ -200,6 +272,9 @@ export class Color extends Supervisor {
         }
         if (styleArray.theme !== undefined) {
             this.setTheme(styleArray.theme);
+        }
+        if (styleArray.tint !== undefined) {
+            this.setTint(styleArray.tint);
         }
         return this;
     }

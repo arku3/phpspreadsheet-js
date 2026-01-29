@@ -38,12 +38,21 @@
 - [2026-01-29] Updated `AGENTS.md` with persistence guidelines and subagent parity mandates.
 - [2026-01-29] Implemented `AutoFilter.showHideRows()` with support for simple, custom, dynamic, and top-ten filters; verified with unit tests.
 - [2026-01-29] Implemented Document Properties (Metadata) system with support for custom properties and XLSX writing; verified with PHP bridge.
+- [2026-01-29] Implemented `PasswordHasher` utility for legacy and ISO password hashing; verified with unit tests and PHP.
+- [2026-01-29] Implemented Workbook Security and Protection with XLSX Writer integration.
+- [2026-01-29] Enhanced Spreadsheet core with workbook view properties (showSheetTabs, tabRatio, etc.).
+- [2026-01-29] Verified Workbook Security and XLSX writing with unit tests.
+- [2026-01-29] Implemented Conditional Formatting support in Worksheet and XLSX Writer (DXF, rules).
+- [2026-01-29] Implemented Theme writer and integrated it into XLSX export process.
+- [2026-01-29] Enhanced Color class with theme and tint resolution support.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.
 ...
 - Comprehensive PHP-to-TS parity audit and roadmap update.
 - Worksheet Interactivity (Freeze Panes, Zoom, Views) and XLSX Writer support.
+- Workbook Security (Passwords, Hashing) and UI settings with XLSX Writer support.
+- Conditional Formatting and Themes/Tinting infrastructure.
 
 
 

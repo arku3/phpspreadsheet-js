@@ -3,6 +3,7 @@ import { CellCollection } from './cell-collection.ts';
 import { Cell, DataType } from './cell.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Style } from '../style/style.ts';
+import { Conditional } from '../style/conditional.ts';
 import { Table } from '../worksheet/table.ts';
 import { PageSetup } from '../worksheet/page-setup.ts';
 import { PageMargins } from '../worksheet/page-margins.ts';
@@ -72,6 +73,11 @@ export class Worksheet {
      * Column dimensions.
      */
     #columnDimensions: Map<string, ColumnDimension> = new Map();
+
+    /**
+     * Conditional styles.
+     */
+    #conditionalStylesCollection: Map<string, Conditional[]> = new Map();
 
     /**
      * Default column dimension.
@@ -703,5 +709,41 @@ export class Worksheet {
     public setRightToLeft(rightToLeft: boolean): this {
         this.#rightToLeft = rightToLeft;
         return this;
+    }
+
+    /**
+     * Set conditional styles.
+     *
+     * @param range Range (e.g. 'A1:A10')
+     * @param styles Array of conditional styles
+     */
+    public setConditionalStyles(range: string, styles: Conditional[]): this {
+        this.#conditionalStylesCollection.set(range.toUpperCase(), styles);
+        return this;
+    }
+
+    /**
+     * Get conditional styles.
+     *
+     * @param range Range (e.g. 'A1:A10')
+     */
+    public getConditionalStyles(range: string): Conditional[] {
+        return this.#conditionalStylesCollection.get(range.toUpperCase()) ?? [];
+    }
+
+    /**
+     * Get conditional styles collection.
+     */
+    public getConditionalStylesCollection(): Map<string, Conditional[]> {
+        return this.#conditionalStylesCollection;
+    }
+
+    /**
+     * Check if conditional styles exist for a range.
+     *
+     * @param range Range (e.g. 'A1:A10')
+     */
+    public hasConditionalStyles(range: string): boolean {
+        return this.#conditionalStylesCollection.has(range.toUpperCase());
     }
 }

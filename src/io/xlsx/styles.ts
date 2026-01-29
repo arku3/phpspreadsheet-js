@@ -88,8 +88,10 @@ export class Styles extends WriterPart {
 
         // dxfs
         const conditionalHashTable = writer.getStylesConditionalHashTable();
-        root.ele('dxfs', { count: conditionalHashTable.count() });
-        // TODO: implement dxfs
+        const dxfs = root.ele('dxfs', { count: conditionalHashTable.count() });
+        conditionalHashTable.getAll().forEach((conditional) => {
+            this.writeCellStyleDxf(dxfs, conditional.getStyle(), spreadsheet);
+        });
 
         // tableStyles
         root.ele('tableStyles', {
@@ -125,8 +127,11 @@ export class Styles extends WriterPart {
 
         if (font.getSize() !== null) f.ele('sz', { val: font.getSize() });
         
-        if (font.getColor().getARGB()) {
-            f.ele('color', { rgb: font.getColor().getARGB().substring(2) });
+        const color = font.getColor();
+        if (color.getTheme() >= 0) {
+            f.ele('color', { theme: color.getTheme() });
+        } else if (color.getARGB()) {
+            f.ele('color', { rgb: color.getARGB() });
         }
 
         if (font.getName() !== null) {
@@ -145,14 +150,14 @@ export class Styles extends WriterPart {
             });
             gf.ele('stop', { position: 0 }).ele('color', { rgb: fill.getStartColor().getARGB() });
             gf.ele('stop', { position: 1 }).ele('color', { rgb: fill.getEndColor().getARGB() });
-        } else {
+        } else if (fillType !== null) {
             const pf = f.ele('patternFill', { patternType: fillType || 'none' });
-            if (fillType && fillType !== 'none') {
+            if (fillType !== 'none') {
                 if (fill.getStartColor().getARGB()) {
-                    pf.ele('fgColor', { rgb: fill.getStartColor().getARGB().substring(2) });
+                    pf.ele('fgColor', { rgb: fill.getStartColor().getARGB() });
                 }
                 if (fill.getEndColor().getARGB()) {
-                    pf.ele('bgColor', { rgb: fill.getEndColor().getARGB().substring(2) });
+                    pf.ele('bgColor', { rgb: fill.getEndColor().getARGB() });
                 }
             }
         }
@@ -161,6 +166,17 @@ export class Styles extends WriterPart {
     private writeBorder(parent: any, borders: Borders): void {
         const b = parent.ele('border');
         
+        if (borders.getDiagonalDirection() === Borders.DIAGONAL_UP) {
+            b.att('diagonalUp', 'true');
+            b.att('diagonalDown', 'false');
+        } else if (borders.getDiagonalDirection() === Borders.DIAGONAL_DOWN) {
+            b.att('diagonalUp', 'false');
+            b.att('diagonalDown', 'true');
+        } else if (borders.getDiagonalDirection() === Borders.DIAGONAL_BOTH) {
+            b.att('diagonalUp', 'true');
+            b.att('diagonalDown', 'true');
+        }
+
         this.writeBorderPr(b, 'left', borders.getLeft());
         this.writeBorderPr(b, 'right', borders.getRight());
         this.writeBorderPr(b, 'top', borders.getTop());
@@ -179,6 +195,14 @@ export class Styles extends WriterPart {
                 el.ele('color', { rgb: border.getColor().getARGB() });
             }
         }
+    }
+
+    private writeCellStyleDxf(parent: any, style: InternalStyle, spreadsheet: Spreadsheet): void {
+        const dxf = parent.ele('dxf');
+        this.writeFont(dxf, style.getFont(), spreadsheet);
+        this.writeNumFmt(dxf, style.getNumberFormat(), 0); // PHP doesn't pass ID for DXF numFmt?
+        this.writeFill(dxf, style.getFill());
+        this.writeBorder(dxf, style.getBorders());
     }
 
     private writeCellStyleXf(parent: any, style: InternalStyle, spreadsheet: Spreadsheet, defaultAlignHash: string): void {
@@ -236,7 +260,16 @@ export class Styles extends WriterPart {
      * Get all conditional styles.
      */
     public allConditionalStyles(spreadsheet: Spreadsheet): any[] {
-        return []; // TODO: implement
+        const styles: any[] = [];
+        const sheetCount = spreadsheet.getSheetCount();
+        for (let i = 0; i < sheetCount; i++) {
+            for (const conditionalStyles of spreadsheet.getSheet(i).getConditionalStylesCollection().values()) {
+                for (const conditionalStyle of conditionalStyles) {
+                    styles.push(conditionalStyle);
+                }
+            }
+        }
+        return styles;
     }
 
     /**

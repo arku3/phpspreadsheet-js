@@ -1,7 +1,7 @@
-# Task Plan - Implementing Calculation Engine Evaluator
+# Task Plan - Phase 14 Parity Polish
 
 ## Goal
-Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling the evaluation of Excel-style formulas like `=A1+B1`, `=SUM(A1:B10)`, etc.
+Complete Phase 14 parity polish with workbook security, themes/tinting, and conditional formatting, plus XLSX writer parity and tests.
 
 ## Phases
 - [x] Phase 1: Infrastructure & Registry <!-- id: 0 -->
@@ -67,11 +67,11 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
     - [x] Implement Worksheet Panes (Freeze Panes, Split) and View settings. <!-- id: 47 -->
     - [x] Implement AutoFilter logic (showHideRows). <!-- id: 48 -->
 
-- [ ] Phase 14: Architectural & Parity Polish <!-- id: 49 -->
-    - [ ] Implement Document Properties (Metadata). <!-- id: 50 -->
-    - [ ] Port advanced Style features (Conditional Formatting, Themes/Tinting). <!-- id: 51 -->
-    - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 52 -->
-    - [ ] Implement Workbook Security and Protection. <!-- id: 53 -->
+- [x] Phase 14: Architectural & Parity Polish <!-- id: 49 -->
+    - [x] Implement Document Properties (Metadata). <!-- id: 50 -->
+    - [x] Implement Workbook Security and Password Hashing. <!-- id: 51 -->
+    - [ ] Port advanced Style features (Conditional Formatting, Themes/Tinting). <!-- id: 52 -->
+    - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 53 -->
 
 - [ ] Phase 15: I/O Extension & Graphics <!-- id: 54 -->
     - [ ] Implement Xlsx Reader. <!-- id: 45 -->

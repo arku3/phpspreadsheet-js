@@ -1,20 +1,13 @@
-# Findings - Calculation Engine
+# Findings - Phase 14 Parity Polish
 
 ## Current State
-- `FormulaParser` is implemented and can tokenize strings.
-- `Stack` is implemented for managing tokens during evaluation.
-- `FormulaToken` defines the token types and subtypes using `const` objects.
-- `Coordinate` utility exists for A1 <-> Row/Col conversion.
+- Implemented workbook security with legacy XOR and ISO SHA-256 write-protection hashing.
+- Added Theme (Office defaults + font substitution) and RgbTint using Excel HLS tint algorithm.
+- Updated Color to support theme + tint and applyFromArray.
+- Added base Conditional class for conditional formatting types/operators.
 
-## Key Logic to Port (from PHP)
-- `processTokenStack`: The loop that consumes tokens and manages the evaluation stack.
-- `executeBinaryOperator`: Handling math and comparison.
-- `executeFunction`: Dispatching to registered function implementations.
-
-## Function Registry Structure
-- Should allow easy addition of new functions.
-- Functions should receive arguments as an array of values (resolved from references).
-
-## Reference Resolution
-- Needs access to the `Worksheet` or `Spreadsheet` instance to fetch cell values.
-- Must handle circular references (eventually).
+## Key Integration Gaps
+- Worksheet needs conditional formatting storage with ranges.
+- Theme resolution helper needed (theme + tint -> ARGB) for styles and writer.
+- XLSX writer needs conditional formatting XML output and theme1.xml generation.
+- Tests needed for RgbTint and worksheet conditional formatting rules.
