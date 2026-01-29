@@ -122,6 +122,7 @@ As the project grows, follow this intended structure:
 - **Subagents:** For complex tasks with independent sub-tasks (e.g., refactoring multiple files, performing multiple parity reviews), proactively use the `task` tool with `subagent_type: "general"` or `"explore"` to execute them in parallel.
 - **Task Decomposition:** Break down large requests into smaller, actionable tasks that can be delegated to subagents.
 - **Reporting:** Ensure subagents provide a clear summary of their work and any identified issues.
+- **PHP Parity:** When delegating tasks to subagents, ALWAYS remind them to check the original implementation with the PHP counterpart in `php-src/src/PhpSpreadsheet/` to ensure parity and review logic.
 
 ### Documentation
 - Use JSDoc for all public classes and methods. Include `@param`, `@returns`, and `@throws` where applicable.

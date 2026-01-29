@@ -33,6 +33,9 @@
 - [2026-01-29] Implemented Merged Cells support in Worksheet and XLSX Writer.
 - [2026-01-29] Conducted comprehensive parity review; identified critical gaps in UI controls, Metadata, and Memory management.
 - [2026-01-29] Implemented Worksheet Interactivity (Freeze Panes, Zoom, View settings) and updated XLSX Writer.
+- [2026-01-29] Configured `bunfig.toml` and restricted tests to the `tests/` directory.
+- [2026-01-29] Fixed `PageSetup` print area insertion logic and verified with unit tests.
+- [2026-01-29] Updated `AGENTS.md` with persistence guidelines and subagent parity mandates.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.

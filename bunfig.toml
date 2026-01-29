@@ -1,0 +1,3 @@
+[test]
+# Only look for test files in the tests/ directory
+root = "tests"

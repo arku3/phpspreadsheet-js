@@ -465,9 +465,9 @@ export class PageSetup {
             } else {
                 const printAreas = (this.#printArea ?? '').split(',');
                 if (index < 0) {
-                    index = Math.abs(index) - 1;
+                    index = printAreas.length + index + 1;
                 }
-                if (index > printAreas.length) {
+                if (index < 0 || index > printAreas.length) {
                     throw new Error('Invalid index for setting print range.');
                 }
                 printAreas.splice(index, 0, value);
