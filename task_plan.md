@@ -76,11 +76,14 @@ Complete Phase 14 parity polish with workbook security, themes/tinting, and cond
         - [x] Full Theme/Tint support in Styles writer (Fills/Borders).
         - [x] Conditional Formatting Wizards (Parity with PHP).
         - [x] Conditional Formatting Matcher/Assessor for Calculation Engine.
-    - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 53 -->
 
 - [ ] Phase 15: I/O Extension & Graphics <!-- id: 54 -->
+    - [x] Systematic Writer Parity Review and Verification against PHP. <!-- id: 56 -->
     - [ ] Implement Xlsx Reader. <!-- id: 45 -->
     - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
+
+- [ ] Phase 16: Performance & Scalability <!-- id: 55 -->
+    - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 53 -->
 
 ## Decisions
 - Use native private members (`#`) for internal state.

@@ -320,8 +320,16 @@ export class Style extends Supervisor {
             fill: {
                 fillType: fill.getFillType(),
                 rotation: fill.getRotation(),
-                startColor: { argb: fill.getStartColor().getARGB() },
-                endColor: { argb: fill.getEndColor().getARGB() },
+                startColor: {
+                    argb: fill.getStartColor().getARGB(),
+                    theme: fill.getStartColor().getTheme(),
+                    tint: fill.getStartColor().getTint(),
+                },
+                endColor: {
+                    argb: fill.getEndColor().getARGB(),
+                    theme: fill.getEndColor().getTheme(),
+                    tint: fill.getEndColor().getTint(),
+                },
             },
             font: {
                 name: font.getName(),
@@ -332,29 +340,53 @@ export class Style extends Supervisor {
                 subscript: font.getSubscript(),
                 underline: font.getUnderline(),
                 strikethrough: font.getStrikethrough(),
-                color: { argb: font.getColor().getARGB() },
+                color: {
+                    argb: font.getColor().getARGB(),
+                    theme: font.getColor().getTheme(),
+                    tint: font.getColor().getTint(),
+                },
                 scheme: font.getScheme(),
             },
             borders: {
                 left: {
                     borderStyle: borders.getLeft().getBorderStyle(),
-                    color: { argb: borders.getLeft().getColor().getARGB() },
+                    color: {
+                        argb: borders.getLeft().getColor().getARGB(),
+                        theme: borders.getLeft().getColor().getTheme(),
+                        tint: borders.getLeft().getColor().getTint(),
+                    },
                 },
                 right: {
                     borderStyle: borders.getRight().getBorderStyle(),
-                    color: { argb: borders.getRight().getColor().getARGB() },
+                    color: {
+                        argb: borders.getRight().getColor().getARGB(),
+                        theme: borders.getRight().getColor().getTheme(),
+                        tint: borders.getRight().getColor().getTint(),
+                    },
                 },
                 top: {
                     borderStyle: borders.getTop().getBorderStyle(),
-                    color: { argb: borders.getTop().getColor().getARGB() },
+                    color: {
+                        argb: borders.getTop().getColor().getARGB(),
+                        theme: borders.getTop().getColor().getTheme(),
+                        tint: borders.getTop().getColor().getTint(),
+                    },
                 },
                 bottom: {
                     borderStyle: borders.getBottom().getBorderStyle(),
-                    color: { argb: borders.getBottom().getColor().getARGB() },
+                    color: {
+                        argb: borders.getBottom().getColor().getARGB(),
+                        theme: borders.getBottom().getColor().getTheme(),
+                        tint: borders.getBottom().getColor().getTint(),
+                    },
                 },
                 diagonal: {
                     borderStyle: borders.getDiagonal().getBorderStyle(),
-                    color: { argb: borders.getDiagonal().getColor().getARGB() },
+                    color: {
+                        argb: borders.getDiagonal().getColor().getARGB(),
+                        theme: borders.getDiagonal().getColor().getTheme(),
+                        tint: borders.getDiagonal().getColor().getTint(),
+                    },
                 },
                 diagonalDirection: borders.getDiagonalDirection(),
             },

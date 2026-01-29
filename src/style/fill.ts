@@ -137,7 +137,13 @@ export class Fill extends Supervisor {
      */
     public setStartColor(color: Color): this {
         if (this.isSupervisor) {
-            const styleArray = this.getStyleArray({ startColor: { argb: color.getARGB() } });
+            const styleArray = this.getStyleArray({
+                startColor: {
+                    argb: color.getARGB(),
+                    theme: color.getTheme(),
+                    tint: color.getTint(),
+                }
+            });
             (this.parent as any).applyFromArray(styleArray);
         } else {
             this.#startColor = color;
@@ -157,7 +163,13 @@ export class Fill extends Supervisor {
      */
     public setEndColor(color: Color): this {
         if (this.isSupervisor) {
-            const styleArray = this.getStyleArray({ endColor: { argb: color.getARGB() } });
+            const styleArray = this.getStyleArray({
+                endColor: {
+                    argb: color.getARGB(),
+                    theme: color.getTheme(),
+                    tint: color.getTint(),
+                }
+            });
             (this.parent as any).applyFromArray(styleArray);
         } else {
             this.#endColor = color;

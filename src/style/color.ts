@@ -319,6 +319,7 @@ export class Color extends Supervisor {
     public clone(): Color {
         const clone = new Color(this.#argb, this.isSupervisor);
         clone.#theme = this.#theme;
+        clone.#tint = this.#tint;
         return clone;
     }
 }

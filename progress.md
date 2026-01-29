@@ -49,6 +49,7 @@
 - [2026-01-29] Implemented Conditional Formatting Wizards (CellValue, TextValue, DateValue, Duplicates, Unique, Errors, Blanks, Expression).
 - [2026-01-29] Created unit tests for all Conditional Formatting Wizards.
 - [2026-01-29] Developed CellMatcher, StyleMerger, and CellStyleAssessor for Calculation Engine integration.
+- [2026-01-29] Conducted Systematic Writer Parity Review: fixed theme/tint preservation in `applyFromArray` and `exportArray`.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.
