@@ -32,7 +32,7 @@ Bun provides a fast, built-in test runner compatible with Jest/Vitest.
 ## 2. Code Style & Patterns
 
 ### TypeScript & Strictness
-- **Strict Mode:** The project enforces `"strict": true` in `tsconfig.json`. Do not use `any` unless absolutely necessary (prefer `unknown`).
+- **Strict Mode:** The project enforces `"strict": true` in `tsconfig.json`. Do not use `any` unless absolutely necessary (prefer `unknown`). Never modify `tsconfig.json` to relax type-checking or exclude directories to hide errors.
 - **No Enums:** NEVER use TypeScript `enum`. Use `const` objects with `as const` or string literal types instead.
 - **Types vs Interfaces:** 
   - Use `interface` for public APIs and object shapes that might be extended.

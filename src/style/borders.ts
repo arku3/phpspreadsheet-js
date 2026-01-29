@@ -43,6 +43,31 @@ export class Borders extends Supervisor {
     #diagonalDirection: number = Borders.DIAGONAL_NONE;
 
     /**
+     * All borders pseudo-border. Only applies to supervisor.
+     */
+    #allBorders: Border | null = null;
+
+    /**
+     * Outline pseudo-border. Only applies to supervisor.
+     */
+    #outline: Border | null = null;
+
+    /**
+     * Inside pseudo-border. Only applies to supervisor.
+     */
+    #inside: Border | null = null;
+
+    /**
+     * Vertical pseudo-border. Only applies to supervisor.
+     */
+    #vertical: Border | null = null;
+
+    /**
+     * Horizontal pseudo-border. Only applies to supervisor.
+     */
+    #horizontal: Border | null = null;
+
+    /**
      * Create a new Borders.
      */
     constructor(isSupervisor: boolean = false) {
@@ -54,11 +79,22 @@ export class Borders extends Supervisor {
         this.#diagonal = new Border(isSupervisor);
 
         if (isSupervisor) {
+            this.#allBorders = new Border(true);
+            this.#outline = new Border(true);
+            this.#inside = new Border(true);
+            this.#vertical = new Border(true);
+            this.#horizontal = new Border(true);
+
             this.#left.bindParent(this, 'left');
             this.#right.bindParent(this, 'right');
             this.#top.bindParent(this, 'top');
             this.#bottom.bindParent(this, 'bottom');
             this.#diagonal.bindParent(this, 'diagonal');
+            this.#allBorders.bindParent(this, 'allBorders');
+            this.#outline.bindParent(this, 'outline');
+            this.#inside.bindParent(this, 'inside');
+            this.#vertical.bindParent(this, 'vertical');
+            this.#horizontal.bindParent(this, 'horizontal');
         }
     }
 
@@ -112,6 +148,56 @@ export class Borders extends Supervisor {
      */
     public getDiagonal(): Border {
         return this.#diagonal;
+    }
+
+    /**
+     * Get AllBorders (pseudo-border). Only applies to supervisor.
+     */
+    public getAllBorders(): Border {
+        if (!this.isSupervisor || !this.#allBorders) {
+            throw new Error('Can only get pseudo-border for supervisor.');
+        }
+        return this.#allBorders;
+    }
+
+    /**
+     * Get Outline (pseudo-border). Only applies to supervisor.
+     */
+    public getOutline(): Border {
+        if (!this.isSupervisor || !this.#outline) {
+            throw new Error('Can only get pseudo-border for supervisor.');
+        }
+        return this.#outline;
+    }
+
+    /**
+     * Get Inside (pseudo-border). Only applies to supervisor.
+     */
+    public getInside(): Border {
+        if (!this.isSupervisor || !this.#inside) {
+            throw new Error('Can only get pseudo-border for supervisor.');
+        }
+        return this.#inside;
+    }
+
+    /**
+     * Get Vertical (pseudo-border). Only applies to supervisor.
+     */
+    public getVertical(): Border {
+        if (!this.isSupervisor || !this.#vertical) {
+            throw new Error('Can only get pseudo-border for supervisor.');
+        }
+        return this.#vertical;
+    }
+
+    /**
+     * Get Horizontal (pseudo-border). Only applies to supervisor.
+     */
+    public getHorizontal(): Border {
+        if (!this.isSupervisor || !this.#horizontal) {
+            throw new Error('Can only get pseudo-border for supervisor.');
+        }
+        return this.#horizontal;
     }
 
     /**
