@@ -71,6 +71,11 @@ Complete Phase 14 parity polish with workbook security, themes/tinting, and cond
     - [x] Implement Document Properties (Metadata). <!-- id: 50 -->
     - [x] Implement Workbook Security and Password Hashing. <!-- id: 51 -->
     - [x] Port advanced Style features (Conditional Formatting, Themes/Tinting). <!-- id: 52 -->
+        - [x] Basic Conditional Formatting classes and XLSX writing.
+        - [x] Theme class and theme1.xml writing.
+        - [x] Full Theme/Tint support in Styles writer (Fills/Borders).
+        - [x] Conditional Formatting Wizards (Parity with PHP).
+        - [x] Conditional Formatting Matcher/Assessor for Calculation Engine.
     - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 53 -->
 
 - [ ] Phase 15: I/O Extension & Graphics <!-- id: 54 -->

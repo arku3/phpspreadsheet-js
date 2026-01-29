@@ -127,12 +127,7 @@ export class Styles extends WriterPart {
 
         if (font.getSize() !== null) f.ele('sz', { val: font.getSize() });
         
-        const color = font.getColor();
-        if (color.getTheme() >= 0) {
-            f.ele('color', { theme: color.getTheme() });
-        } else if (color.getARGB()) {
-            f.ele('color', { rgb: color.getARGB() });
-        }
+        this.writeColor(f, font.getColor());
 
         if (font.getName() !== null) {
             f.ele('name', { val: font.getName() });
@@ -148,16 +143,18 @@ export class Styles extends WriterPart {
                 type: fillType,
                 degree: fill.getRotation()
             });
-            gf.ele('stop', { position: 0 }).ele('color', { rgb: fill.getStartColor().getARGB() });
-            gf.ele('stop', { position: 1 }).ele('color', { rgb: fill.getEndColor().getARGB() });
+            const stop0 = gf.ele('stop', { position: 0 });
+            this.writeColor(stop0, fill.getStartColor());
+            const stop1 = gf.ele('stop', { position: 1 });
+            this.writeColor(stop1, fill.getEndColor());
         } else if (fillType !== null) {
             const pf = f.ele('patternFill', { patternType: fillType || 'none' });
             if (fillType !== 'none') {
                 if (fill.getStartColor().getARGB()) {
-                    pf.ele('fgColor', { rgb: fill.getStartColor().getARGB() });
+                    this.writeColor(pf, fill.getStartColor(), 'fgColor');
                 }
                 if (fill.getEndColor().getARGB()) {
-                    pf.ele('bgColor', { rgb: fill.getEndColor().getARGB() });
+                    this.writeColor(pf, fill.getEndColor(), 'bgColor');
                 }
             }
         }
@@ -192,8 +189,20 @@ export class Styles extends WriterPart {
         if (style !== 'none') {
             el.att('style', style);
             if (border.getColor().getARGB()) {
-                el.ele('color', { rgb: border.getColor().getARGB() });
+                this.writeColor(el, border.getColor());
             }
+        }
+    }
+
+    private writeColor(parent: any, color: any, name: string = 'color'): void {
+        const el = parent.ele(name);
+        if (color.getTheme() >= 0) {
+            el.att('theme', String(color.getTheme()));
+            if (color.getTint() !== 0) {
+                el.att('tint', String(color.getTint()));
+            }
+        } else if (color.getARGB()) {
+            el.att('rgb', color.getARGB());
         }
     }
 

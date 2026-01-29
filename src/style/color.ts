@@ -287,7 +287,7 @@ export class Color extends Supervisor {
             return this.getSharedComponent().getHashCode();
         }
         return createHash('md5')
-            .update(this.#argb + this.#theme + 'Color')
+            .update(this.#argb + this.#theme + this.#tint + 'Color')
             .digest('hex');
     }
 

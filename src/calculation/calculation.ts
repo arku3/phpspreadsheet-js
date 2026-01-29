@@ -38,6 +38,13 @@ export class Calculation {
     }
 
     /**
+     * Flush calculation cache.
+     */
+    public flushInstance(): void {
+        this.clearCache();
+    }
+
+    /**
      * Clear calculation cache.
      */
     public clearCache(): void {

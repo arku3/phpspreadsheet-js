@@ -101,15 +101,36 @@ export abstract class Coordinate {
     }
 
     /**
+     * Convert string coordinate to absolute coordinate (eg: 'A1' -> '$A$1').
+     */
+    public static absoluteCoordinate(coordinate: string): string {
+        if (coordinate.includes(':')) {
+            const [start, end] = coordinate.split(':');
+            return `${this.absoluteCoordinate(start!)}:${this.absoluteCoordinate(end!)}`;
+        }
+        const matches = coordinate.match(this.A1_COORDINATE_REGEX);
+        if (!matches || !matches.groups) {
+            return coordinate;
+        }
+        let col = matches.groups['col']!;
+        let row = matches.groups['row']!;
+        if (!col.startsWith('$')) col = `$${col}`;
+        if (!row.startsWith('$')) row = `$${row}`;
+        return `${col}${row}`;
+    }
+
+    /**
      * Split range.
      *
      * @param range Range (e.g. 'A1:C5,D6:E10')
      */
-    public static splitRange(range: string): [string, string][][] {
+    public static splitRange(range: string): string[][] {
         const parts = range.split(',');
         return parts.map(part => {
-            const [start, end] = part.includes(':') ? part.split(':') : [part, part];
-            return [[start!, end!]];
+            if (part.includes(':')) {
+                return part.split(':');
+            }
+            return [part];
         });
     }
 

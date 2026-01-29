@@ -45,6 +45,10 @@
 - [2026-01-29] Implemented Conditional Formatting support in Worksheet and XLSX Writer (DXF, rules).
 - [2026-01-29] Implemented Theme writer and integrated it into XLSX export process.
 - [2026-01-29] Enhanced Color class with theme and tint resolution support.
+- [2026-01-29] Refactored XLSX Styles writer for full Theme/Tint parity.
+- [2026-01-29] Implemented Conditional Formatting Wizards (CellValue, TextValue, DateValue, Duplicates, Unique, Errors, Blanks, Expression).
+- [2026-01-29] Created unit tests for all Conditional Formatting Wizards.
+- [2026-01-29] Developed CellMatcher, StyleMerger, and CellStyleAssessor for Calculation Engine integration.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.
