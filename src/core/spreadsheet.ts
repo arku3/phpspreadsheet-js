@@ -1,5 +1,6 @@
 import { Worksheet } from './worksheet.ts';
 import { Style } from '../style/style.ts';
+import { Calculation } from '../calculation/calculation.ts';
 
 /**
  * Spreadsheet workbook.
@@ -9,8 +10,10 @@ export class Spreadsheet {
     #activeSheetIndex: number = 0;
     #cellXfCollection: Style[] = [];
     #cellStyleXfCollection: Style[] = [];
+    #calculationEngine: Calculation;
 
     constructor() {
+        this.#calculationEngine = new Calculation();
         // Initialise worksheet collection and add one worksheet
         const initialSheet = new Worksheet(this, 'Worksheet 1');
         this.#workSheetCollection.push(initialSheet);
@@ -19,6 +22,22 @@ export class Spreadsheet {
         // Create the default style
         this.addCellXf(new Style());
         this.addCellStyleXf(new Style());
+    }
+
+    /**
+     * Get calculation engine.
+     */
+    public getCalculationEngine(): Calculation {
+        return this.#calculationEngine;
+    }
+
+    /**
+     * Clear calculation cache.
+     */
+    public clearCalculationCache(): void {
+        for (const worksheet of this.#workSheetCollection) {
+            worksheet.clearCalculationCache();
+        }
     }
 
     /**

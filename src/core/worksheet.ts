@@ -57,6 +57,7 @@ export class Worksheet {
     public setCellValue(coordinate: string, value: any): Worksheet {
         const cell = this.getCell(coordinate);
         cell.setValue(value);
+        this.#parent.clearCalculationCache();
         // Basic type detection could be added here
         if (typeof value === 'number') {
             cell.setDataType(DataType.TYPE_NUMERIC);
@@ -79,5 +80,15 @@ export class Worksheet {
      */
     public getCellCollection(): CellCollection {
         return this.#cellCollection;
+    }
+
+    /**
+     * Clear calculation cache.
+     */
+    public clearCalculationCache(): void {
+        const coordinates = this.#cellCollection.getCoordinates();
+        for (const coord of coordinates) {
+            this.#cellCollection.get(coord)?.clearCalculationCache();
+        }
     }
 }

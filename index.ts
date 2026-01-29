@@ -1,23 +1,16 @@
 import { Spreadsheet } from './src/core/spreadsheet.ts';
-import { Coordinate } from './src/utils/coordinate.ts';
 
 const spreadsheet = new Spreadsheet();
 const sheet = spreadsheet.getActiveSheet();
 
-sheet.setCellValue('A1', 'Hello');
-sheet.setCellValue('B1', 'World');
-sheet.setCellValue('C1', 123);
-sheet.setCellValue('D1', '=SUM(A1:C1)');
+sheet.setCellValue('A1', 10);
+sheet.setCellValue('A2', 20);
+sheet.setCellValue('A3', 30);
+sheet.setCellValue('B1', '=SUM(A1:A3)');
+sheet.setCellValue('B2', '=IF(A1>5, "High", "Low")');
+sheet.setCellValue('B3', '=COUNT(A1:A3, "test", 40)');
 
-console.log(`Sheet: ${sheet.getTitle()}`);
-const coordinates = sheet.getCellCollection().getCoordinates();
-
-for (const coord of coordinates) {
-    const cell = sheet.getCell(coord);
-    console.log(`Cell ${coord}: value=${cell.getValue()}, type=${cell.getDataType()}`);
-}
-
-// Test coordinate utility
-const [col, row] = Coordinate.coordinateFromString('Z10');
-console.log(`Z10 -> Col: ${col}, Row: ${row}`);
-console.log(`Col ${col}, Row ${row} -> ${Coordinate.stringFromCoordinate(col, row)}`);
+console.log(`A1: ${sheet.getCell('A1').getValue()}`);
+console.log(`B1: ${sheet.getCell('B1').getValue()}`);
+console.log(`B2: ${sheet.getCell('B2').getValue()}`);
+console.log(`B3: ${sheet.getCell('B3').getValue()}`);
