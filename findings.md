@@ -1,31 +1,20 @@
-# Findings - Conditional Formatting & XLSX Writer
+# Findings - Parity Review (TS vs PHP)
 
-## Current State of `src/io/xlsx/worksheet.ts`
-- XML generation for Conditional Formatting is partially implemented.
-- TypeScript errors:
-    - `cellRange[0][0]` in `writeConditionalFormatting` is `[string, string]`, but expected `string` (first cell of first range).
-    - `dxfId !== ''` comparison is invalid as `dxfId` is a number (hash table index).
-    - `topLeftCell` passed to `writeTextCondElements` and `writeOtherCondElements` is `[string, string]` instead of `string`.
-    - `conditional` properties like `getColorScale()`, `getDataBar()`, `getIconSet()` are being used on `any` type (need proper typing).
+## 1. Style Module
+- **Font**: Missing theme-specific properties (Latin, EastAsian, etc.).
+- **NumberFormat**: Missing `toFormattedString` rendering engine. Currently only a data container.
+- **Color**: `setTint` removed for I/O parity, but PHP maintains it internally.
 
-## Coordinate Handling
-- `Coordinate.splitRange(range)` returns `[string, string][][]`.
-    - Example: `A1:B2,C3:D4` -> `[[['A1', 'B2']], [['C3', 'D4']]]`? 
-    - Wait, let me re-read `Coordinate.splitRange`:
-      ```typescript
-      public static splitRange(range: string): [string, string][][] {
-          const parts = range.split(',');
-          return parts.map(part => {
-              const [start, end] = part.includes(':') ? part.split(':') : [part, part];
-              return [[start!, end!]];
-          });
-      }
-      ```
-      So `A1:B2` returns `[[['A1', 'B2']]]`.
-      `cellRange[0]` is `[['A1', 'B2']]`.
-      `cellRange[0][0]` is `['A1', 'B2']`.
-      The first cell of the first range is `cellRange[0][0][0]`.
+## 2. Core Module
+- **Worksheet**: Missing `getHighestRow`/`getHighestColumn` and row/column manipulation (insert/delete).
+- **Cell**: Missing merged cell state (`isInMergeRange`), data validation, and hyperlinks.
+- **Memory**: Circular reference management (PHP `disconnect` logic) is absent in TS.
 
-## Conditional Formatting Logic
-- DataBar, ColorScale, and IconSet logic needs to be verified against PHP implementation.
-- `dxfId` handling for styles needs to be correct (it's a 0-based index in `dxfs` section of `styles.xml`).
+## 3. I/O Module (XLSX Writer)
+- **Missing Parts**: Charts, Drawings, Tables, and Comments are not implemented.
+- **Shared Strings**: Missing control character sanitization (`controlCharacterPHP2OOXML`).
+- **Extensibility**: Relationship IDs are hardcoded, making it difficult to add new parts.
+
+## 4. Calculation Module
+- **Engine**: Parser and Tokenizer are high-parity.
+- **Functions**: Only ~15% coverage (Core subset). Missing ~300+ functions (Financial, Engineering, Statistical).
