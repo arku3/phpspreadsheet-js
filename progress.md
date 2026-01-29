@@ -19,12 +19,14 @@
 - [2026-01-29] Ported Style components (Alignment, NumberFormat, Fill, Border, Borders).
 - [2026-01-29] Updated Cell and DefaultValueBinder to support RichText (TYPE_INLINE).
 - [2026-01-29] Added unit tests for Rich Text and verified with Bun.
+- [2026-01-29] Implemented Style and Protection classes with applyFromArray support across styles.
+- [2026-01-29] Added applyFromArray unit tests for Style components.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.
 ...
 - Multi-dimensional Array Constant support.
 - Rich Text infrastructure (TextElement, Run, RichText).
-- Style components (Alignment, NumberFormat).
+- Style components (Alignment, NumberFormat, Fill, Border, Borders, Protection, Style).
 - Value Binder support for RichText.
-
+- applyFromArray support across style classes.

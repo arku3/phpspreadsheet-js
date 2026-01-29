@@ -81,6 +81,24 @@ export class Color {
     }
 
     /**
+     * Apply styles from array.
+     *
+     * @param styleArray Array containing style information
+     */
+    public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number }): this {
+        if (styleArray.rgb !== undefined) {
+            this.setRGB(styleArray.rgb);
+        }
+        if (styleArray.argb !== undefined) {
+            this.setARGB(styleArray.argb);
+        }
+        if (styleArray.theme !== undefined) {
+            this.setTheme(styleArray.theme);
+        }
+        return this;
+    }
+
+    /**
      * Get hash code.
      */
     public getHashCode(): string {

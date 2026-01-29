@@ -76,6 +76,21 @@ export class Border {
     }
 
     /**
+     * Apply styles from array.
+     *
+     * @param styleArray Array containing style information
+     */
+    public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (styleArray.borderStyle !== undefined) {
+            this.setBorderStyle(styleArray.borderStyle as string | boolean);
+        }
+        if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
+            this.getColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
+        }
+        return this;
+    }
+
+    /**
      * Get hash code.
      */
     public getHashCode(): string {

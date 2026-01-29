@@ -117,6 +117,31 @@ export class Fill {
     }
 
     /**
+     * Apply styles from array.
+     *
+     * @param styleArray Array containing style information
+     */
+    public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (styleArray.fillType !== undefined) {
+            this.setFillType(String(styleArray.fillType));
+        }
+        if (styleArray.rotation !== undefined) {
+            this.setRotation(Number(styleArray.rotation));
+        }
+        if (styleArray.startColor !== undefined && typeof styleArray.startColor === 'object') {
+            this.getStartColor().applyFromArray(styleArray.startColor as { rgb?: string; argb?: string; theme?: number });
+        }
+        if (styleArray.endColor !== undefined && typeof styleArray.endColor === 'object') {
+            this.getEndColor().applyFromArray(styleArray.endColor as { rgb?: string; argb?: string; theme?: number });
+        }
+        if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
+            this.getStartColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
+            this.getEndColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
+        }
+        return this;
+    }
+
+    /**
      * Get hash code.
      */
     public getHashCode(): string {

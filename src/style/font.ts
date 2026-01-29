@@ -32,6 +32,7 @@ export class Font {
 
     public setName(name: string): this {
         this.#name = name || 'Calibri';
+        this.#scheme = '';
         return this;
     }
 
@@ -119,6 +120,45 @@ export class Font {
 
     public setScheme(scheme: string): this {
         this.#scheme = scheme;
+        return this;
+    }
+
+    /**
+     * Apply styles from array.
+     *
+     * @param styleArray Array containing style information
+     */
+    public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (styleArray.name !== undefined) {
+            this.setName(String(styleArray.name));
+        }
+        if (styleArray.bold !== undefined) {
+            this.setBold(Boolean(styleArray.bold));
+        }
+        if (styleArray.italic !== undefined) {
+            this.setItalic(Boolean(styleArray.italic));
+        }
+        if (styleArray.superscript !== undefined) {
+            this.setSuperscript(Boolean(styleArray.superscript));
+        }
+        if (styleArray.subscript !== undefined) {
+            this.setSubscript(Boolean(styleArray.subscript));
+        }
+        if (styleArray.underline !== undefined) {
+            this.setUnderline(String(styleArray.underline));
+        }
+        if (styleArray.strikethrough !== undefined) {
+            this.setStrikethrough(Boolean(styleArray.strikethrough));
+        }
+        if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
+            this.getColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
+        }
+        if (styleArray.size !== undefined) {
+            this.setSize(Number(styleArray.size));
+        }
+        if (styleArray.scheme !== undefined) {
+            this.setScheme(String(styleArray.scheme));
+        }
         return this;
     }
 

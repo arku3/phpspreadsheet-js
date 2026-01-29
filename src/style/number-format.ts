@@ -92,6 +92,18 @@ export class NumberFormat {
     }
 
     /**
+     * Apply styles from array.
+     *
+     * @param styleArray Array containing style information
+     */
+    public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (styleArray.formatCode !== undefined) {
+            this.setFormatCode(String(styleArray.formatCode));
+        }
+        return this;
+    }
+
+    /**
      * Get hash code.
      */
     public getHashCode(): string {

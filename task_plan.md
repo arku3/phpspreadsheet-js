@@ -43,6 +43,7 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
 - [x] Phase 10: Rich Text & Formatting Infrastructure <!-- id: 24 -->
     - [x] Implement `RichText` and `Run` classes. <!-- id: 25 -->
     - [x] Port core Style classes (Font, Alignment, NumberFormat). <!-- id: 26 -->
+    - [x] Implement applyFromArray across style classes and add tests. <!-- id: 28 -->
     - [ ] Implement Cell Style (Xf) management in Workbook. <!-- id: 27 -->
 
 ## Decisions

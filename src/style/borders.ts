@@ -103,6 +103,40 @@ export class Borders {
     }
 
     /**
+     * Apply styles from array.
+     *
+     * @param styleArray Array containing style information
+     */
+    public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (styleArray.left !== undefined && typeof styleArray.left === 'object') {
+            this.getLeft().applyFromArray(styleArray.left as Record<string, unknown>);
+        }
+        if (styleArray.right !== undefined && typeof styleArray.right === 'object') {
+            this.getRight().applyFromArray(styleArray.right as Record<string, unknown>);
+        }
+        if (styleArray.top !== undefined && typeof styleArray.top === 'object') {
+            this.getTop().applyFromArray(styleArray.top as Record<string, unknown>);
+        }
+        if (styleArray.bottom !== undefined && typeof styleArray.bottom === 'object') {
+            this.getBottom().applyFromArray(styleArray.bottom as Record<string, unknown>);
+        }
+        if (styleArray.diagonal !== undefined && typeof styleArray.diagonal === 'object') {
+            this.getDiagonal().applyFromArray(styleArray.diagonal as Record<string, unknown>);
+        }
+        if (styleArray.diagonalDirection !== undefined) {
+            this.setDiagonalDirection(Number(styleArray.diagonalDirection));
+        }
+        if (styleArray.allBorders !== undefined && typeof styleArray.allBorders === 'object') {
+            const allBorders = styleArray.allBorders as Record<string, unknown>;
+            this.getLeft().applyFromArray(allBorders);
+            this.getRight().applyFromArray(allBorders);
+            this.getTop().applyFromArray(allBorders);
+            this.getBottom().applyFromArray(allBorders);
+        }
+        return this;
+    }
+
+    /**
      * Get hash code.
      */
     public getHashCode(): string {

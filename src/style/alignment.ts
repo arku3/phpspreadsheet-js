@@ -187,6 +187,43 @@ export class Alignment {
     }
 
     /**
+     * Apply styles from array.
+     *
+     * @param styleArray Array containing style information
+     */
+    public applyFromArray(styleArray: Record<string, unknown>): this {
+        if (styleArray.horizontal !== undefined) {
+            let horizontal = String(styleArray.horizontal).toLowerCase();
+            if (horizontal === 'centercontinuous') {
+                horizontal = Alignment.HORIZONTAL_CENTER_CONTINUOUS;
+            }
+            this.setHorizontal(horizontal);
+        }
+        if (styleArray.vertical !== undefined) {
+            this.setVertical(String(styleArray.vertical).toLowerCase());
+        }
+        if (styleArray.textRotation !== undefined) {
+            this.setTextRotation(Number(styleArray.textRotation));
+        }
+        if (styleArray.wrapText !== undefined) {
+            this.setWrapText(Boolean(styleArray.wrapText));
+        }
+        if (styleArray.shrinkToFit !== undefined) {
+            this.setShrinkToFit(Boolean(styleArray.shrinkToFit));
+        }
+        if (styleArray.indent !== undefined) {
+            this.setIndent(Number(styleArray.indent));
+        }
+        if (styleArray.readOrder !== undefined) {
+            this.setReadOrder(Number(styleArray.readOrder));
+        }
+        if (styleArray.justifyLastLine !== undefined) {
+            this.setJustifyLastLine(Boolean(styleArray.justifyLastLine));
+        }
+        return this;
+    }
+
+    /**
      * Get hash code.
      */
     public getHashCode(): string {
