@@ -66,14 +66,16 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
     - [x] Implement Merged Cells logic in Worksheet and Writer. <!-- id: 44 -->
     - [x] Implement Worksheet Panes (Freeze Panes, Split) and View settings. <!-- id: 47 -->
     - [x] Implement AutoFilter logic (showHideRows). <!-- id: 48 -->
-    - [ ] Implement Xlsx Reader. <!-- id: 45 -->
-    - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
 
 - [ ] Phase 14: Architectural & Parity Polish <!-- id: 49 -->
     - [ ] Implement Document Properties (Metadata). <!-- id: 50 -->
     - [ ] Port advanced Style features (Conditional Formatting, Themes/Tinting). <!-- id: 51 -->
     - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 52 -->
     - [ ] Implement Workbook Security and Protection. <!-- id: 53 -->
+
+- [ ] Phase 15: I/O Extension & Graphics <!-- id: 54 -->
+    - [ ] Implement Xlsx Reader. <!-- id: 45 -->
+    - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
 
 ## Decisions
 - Use native private members (`#`) for internal state.

@@ -8,6 +8,7 @@ import { StringTable } from './xlsx/string-table.ts';
 import { Workbook } from './xlsx/workbook.ts';
 import { Worksheet } from './xlsx/worksheet.ts';
 import { Styles } from './xlsx/styles.ts';
+import { DocProps } from './xlsx/doc-props.ts';
 import { HashTable } from '../common/hash-table.ts';
 import { Font } from '../style/font.ts';
 import { Fill } from '../style/fill.ts';
@@ -38,6 +39,7 @@ export class XlsxWriter implements IWriter {
     #writerPartWorkbook: Workbook;
     #writerPartWorksheet: Worksheet;
     #writerPartStyles: Styles;
+    #writerPartDocProps: DocProps;
 
     constructor(spreadsheet: Spreadsheet) {
         this.#spreadsheet = spreadsheet;
@@ -48,6 +50,7 @@ export class XlsxWriter implements IWriter {
         this.#writerPartWorkbook = new Workbook(this);
         this.#writerPartWorksheet = new Worksheet(this);
         this.#writerPartStyles = new Styles(this);
+        this.#writerPartDocProps = new DocProps(this);
     }
 
     public getFontHashTable(): HashTable<Font> {
@@ -147,6 +150,14 @@ export class XlsxWriter implements IWriter {
 
             // 5. Add styles
             archive.append(this.#writerPartStyles.writeStyles(this.#spreadsheet), { name: 'xl/styles.xml' });
+
+            // 5a. Add metadata
+            archive.append(this.#writerPartDocProps.writeDocPropsApp(this.#spreadsheet), { name: 'docProps/app.xml' });
+            archive.append(this.#writerPartDocProps.writeDocPropsCore(this.#spreadsheet), { name: 'docProps/core.xml' });
+            const customProps = this.#writerPartDocProps.writeDocPropsCustom(this.#spreadsheet);
+            if (customProps) {
+                archive.append(customProps, { name: 'docProps/custom.xml' });
+            }
 
             // 6. Add workbook
             archive.append(this.#writerPartWorkbook.writeWorkbook(this.#spreadsheet, this.#preCalculateFormulas), { name: 'xl/workbook.xml' });

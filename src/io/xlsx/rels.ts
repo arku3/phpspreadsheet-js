@@ -23,6 +23,11 @@ export class Rels extends WriterPart {
         // Relationship docProps/app.xml
         this.writeRelationship(root, 3, 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties', 'docProps/app.xml');
 
+        // Relationship docProps/custom.xml
+        if (spreadsheet.getProperties().getCustomProperties().length > 0) {
+            this.writeRelationship(root, 4, 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties', 'docProps/custom.xml');
+        }
+
         return root.end({ prettyPrint: true });
     }
 

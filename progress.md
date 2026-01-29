@@ -37,8 +37,7 @@
 - [2026-01-29] Fixed `PageSetup` print area insertion logic and verified with unit tests.
 - [2026-01-29] Updated `AGENTS.md` with persistence guidelines and subagent parity mandates.
 - [2026-01-29] Implemented `AutoFilter.showHideRows()` with support for simple, custom, dynamic, and top-ten filters; verified with unit tests.
-- [2026-01-29] Established `verify-php/` directory for cross-language validation; updated `AGENTS.md` and `.gitignore`.
-- [2026-01-29] Implemented `Shadow` class for Drawing infrastructure.
+- [2026-01-29] Implemented Document Properties (Metadata) system with support for custom properties and XLSX writing; verified with PHP bridge.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.

@@ -5,6 +5,7 @@ import { DefinedName } from './defined-name.ts';
 import { NamedRange } from './named-range.ts';
 import type { IValueBinder } from './i-value-binder.ts';
 import { DefaultValueBinder } from './default-value-binder.ts';
+import { Properties } from '../document/properties.ts';
 
 /**
  * Spreadsheet workbook.
@@ -23,10 +24,12 @@ export class Spreadsheet {
     #calculationEngine: Calculation;
     #definedNames: DefinedName[] = [];
     #valueBinder: IValueBinder;
+    #properties: Properties;
 
     constructor() {
         this.#calculationEngine = new Calculation();
         this.#valueBinder = new DefaultValueBinder();
+        this.#properties = new Properties();
         
         // Initialise worksheet collection and add one worksheet
         const initialSheet = new Worksheet(this, 'Worksheet 1');
@@ -381,6 +384,20 @@ export class Spreadsheet {
      */
     public getIndex(worksheet: Worksheet): number {
         return this.#workSheetCollection.indexOf(worksheet);
+    }
+
+    /**
+     * Get properties.
+     */
+    public getProperties(): Properties {
+        return this.#properties;
+    }
+
+    /**
+     * Set properties.
+     */
+    public setProperties(properties: Properties): void {
+        this.#properties = properties;
     }
 
     /**
