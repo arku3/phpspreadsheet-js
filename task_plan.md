@@ -4,16 +4,45 @@
 Complete systematic parity fixes identified in the review and implement the XLSX Reader.
 
 ## Phases
-... (Phases 1-14 identical to original) ...
 
 - [ ] Phase 15: I/O Extension & Graphics <!-- id: 54 -->
     - [x] Systematic Writer Parity Review and Verification against PHP. <!-- id: 56 -->
     - [x] Align Style and Worksheet API with PhpSpreadsheet (API Parity). <!-- id: 57 -->
+    
     - [ ] **Parity Fixes (Mandatory before Reader)** <!-- id: 58 -->
-        - [ ] Implement `Worksheet.getHighestRow()` and `Worksheet.getHighestColumn()`.
-        - [ ] Implement `SharedStrings.controlCharacterPHP2OOXML` sanitization.
-        - [ ] Add `isInMergeRange` and `getFormattedValue` to `Cell`.
-        - [ ] Add basic row/column insertion/deletion to `Worksheet`.
+        - [ ] **Core Module Fixes**
+            - [x] Implement `Worksheet.getHighestRow()` and `Worksheet.getHighestColumn()`.
+            - [ ] Implement `Worksheet.getHighestDataRow()` and `Worksheet.getHighestDataColumn()`.
+            - [ ] Implement `Worksheet.toArray()`, `fromArray()`, and `rangeToArray()`.
+            - [ ] Implement Row/Column manipulation: `insertNewRowBefore`, `insertNewColumnBefore`, `removeRow`, `removeColumn`.
+            - [ ] Implement Worksheet management: `duplicateWorksheetByTitle`, `removeSheetByIndex`, `sheetNameExists`.
+            - [ ] Implement Active Sheet management: `setActiveSheetIndex`, `setActiveSheetIndexByName`.
+            - [ ] Implement `Spreadsheet.getSheetNames()`, `getSheetByCodeName()`.
+            - [ ] Implement `Cell.isInMergeRange()`, `getMergeRange()`, and `getFormattedValue()`.
+            - [ ] Implement `Cell.isFormula()`, `isLocked()`, `isHiddenOnFormulaBar()`.
+            - [ ] Implement `Cell.getHyperlink()` and `getDataValidation()` support.
+        
+        - [ ] **Style Module Fixes**
+            - [ ] Add missing Font properties: Latin, EastAsian, ComplexScript, StrikeType, Cap, BaseLine.
+            - [ ] Add `Alignment` rotation range validation (-90 to 90, 255).
+            - [ ] Add `NumberFormat.toFormattedString()` rendering engine (Complex Task).
+            - [ ] Add `Color.setHyperlinkTheme()` and `hasChanged` tracking.
+
+        - [ ] **Calculation Engine Fixes**
+            - [ ] Implement missing categories: `DateTimeExcel`, `Financial`, `Engineering`, `Statistical`.
+            - [ ] Add support for R1C1 reference conversion.
+            - [ ] Implement `Calculation.getFunctions()` metadata retrieval.
+            - [ ] Implement intersection (` `) and union (`,`) operator evaluation parity.
+        
+        - [ ] **I/O Module (Writer) Fixes**
+            - [ ] Implement `SharedStrings.controlCharacterPHP2OOXML` sanitization.
+            - [ ] Refactor Relationship IDs (`rId`) in `Workbook.ts` to be dynamic.
+            - [ ] Support multiple `cellStyleXfs` instead of one hardcoded entry.
+            - [ ] Fix Rich Text superscript/subscript parity between Styles and StringTable.
+        
+        - [ ] **Memory & Disposal**
+            - [ ] Implement `disconnectWorksheets()` and `disconnectCells()` circular reference breaking.
+
     - [ ] Implement Xlsx Reader. <!-- id: 45 -->
     - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
 
