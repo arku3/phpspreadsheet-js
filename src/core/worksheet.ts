@@ -753,11 +753,24 @@ export class Worksheet {
     }
 
     /**
-     * Check if conditional styles exist for a range.
+     * Get highest worksheet column.
      *
-     * @param range Range (e.g. 'A1:A10')
+     * @param row Return the data highest column for the specified row,
+     *            or the highest column of any row if no row number is passed
+     * @returns Highest column name
      */
-    public hasConditionalStyles(range: string): boolean {
-        return this.#conditionalStylesCollection.has(range.toUpperCase());
+    public getHighestColumn(row: number | null = null): string {
+        return this.#cellCollection.getHighestColumn(row);
+    }
+
+    /**
+     * Get highest worksheet row.
+     *
+     * @param column Return the highest data row for the specified column,
+     *               or the highest row of any column if no column letter is passed
+     * @returns Highest row number
+     */
+    public getHighestRow(column: string | null = null): number {
+        return this.#cellCollection.getHighestRow(column);
     }
 }

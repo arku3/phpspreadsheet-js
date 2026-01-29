@@ -1,4 +1,5 @@
 import { Cell } from './cell.ts';
+import { Coordinate } from '../utils/coordinate.ts';
 
 /**
  * Collection of cells for a Worksheet.
@@ -50,9 +51,78 @@ export class CellCollection {
     }
 
     /**
-     * Get total cell count.
+     * Get highest worksheet column and highest row that have cell records.
+     *
+     * @returns Highest column name and highest row number
      */
-    public count(): number {
-        return this.#cells.size;
+    public getHighestRowAndColumn(): { row: number; column: string } {
+        let maxRow = 1;
+        let maxColumnIndex = 1;
+
+        for (const coordinate of this.#cells.keys()) {
+            const [columnIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
+            if (rowIndex > maxRow) {
+                maxRow = rowIndex;
+            }
+            if (columnIndex > maxColumnIndex) {
+                maxColumnIndex = columnIndex;
+            }
+        }
+
+        return {
+            row: maxRow,
+            column: Coordinate.stringFromColumnIndex(maxColumnIndex),
+        };
+    }
+
+    /**
+     * Get highest worksheet column.
+     *
+     * @param row Return the highest column for the specified row,
+     *            or the highest column of any row if no row number is passed
+     * @returns Highest column name
+     */
+    public getHighestColumn(row: number | null = null): string {
+        if (row === null) {
+            return this.getHighestRowAndColumn().column;
+        }
+
+        let maxColumnIndex = 1;
+        for (const [coordinate] of this.#cells.entries()) {
+            const [columnIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
+            if (rowIndex === row) {
+                if (columnIndex > maxColumnIndex) {
+                    maxColumnIndex = columnIndex;
+                }
+            }
+        }
+
+        return Coordinate.stringFromColumnIndex(maxColumnIndex);
+    }
+
+    /**
+     * Get highest worksheet row.
+     *
+     * @param column Return the highest row for the specified column,
+     *               or the highest row of any column if no column letter is passed
+     * @returns Highest row number
+     */
+    public getHighestRow(column: string | null = null): number {
+        if (column === null) {
+            return this.getHighestRowAndColumn().row;
+        }
+
+        const columnIndexToMatch = Coordinate.columnIndexFromString(column);
+        let maxRow = 1;
+        for (const coordinate of this.#cells.keys()) {
+            const [columnIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
+            if (columnIndex === columnIndexToMatch) {
+                if (rowIndex > maxRow) {
+                    maxRow = rowIndex;
+                }
+            }
+        }
+
+        return maxRow;
     }
 }
