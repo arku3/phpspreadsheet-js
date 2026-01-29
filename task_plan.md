@@ -34,8 +34,16 @@ Implement the main formula evaluation engine for `phpspreadsheet-js`, enabling t
 - [ ] Phase 8: Advanced Excel Parity <!-- id: 15 -->
     - [x] Implement Calculation Caching. <!-- id: 16 -->
     - [x] Implement Structured References (Excel Tables). <!-- id: 17 -->
-    - [ ] Implement Spill Operator (#) support. <!-- id: 18 -->
-    - [ ] Implement Matrix/Array Constant refinements. <!-- id: 19 -->
+    - [x] Implement Spill Operator (#) support. <!-- id: 18 -->
+    - [x] Implement Matrix/Array Constant refinements. <!-- id: 19 -->
+- [x] Phase 9: Value Binding & Data Type Parity <!-- id: 20 -->
+    - [x] Implement `IValueBinder` interface and `DefaultValueBinder`. <!-- id: 21 -->
+    - [x] Implement `AdvancedValueBinder` for automatic type detection (dates, percentages). <!-- id: 22 -->
+    - [x] Integrate Value Binder into `Worksheet.setCellValue`. <!-- id: 23 -->
+- [x] Phase 10: Rich Text & Formatting Infrastructure <!-- id: 24 -->
+    - [x] Implement `RichText` and `Run` classes. <!-- id: 25 -->
+    - [x] Port core Style classes (Font, Alignment, NumberFormat). <!-- id: 26 -->
+    - [ ] Implement Cell Style (Xf) management in Workbook. <!-- id: 27 -->
 
 ## Decisions
 - Use native private members (`#`) for internal state.

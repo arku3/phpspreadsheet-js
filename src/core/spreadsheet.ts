@@ -3,6 +3,8 @@ import { Style } from '../style/style.ts';
 import { Calculation } from '../calculation/calculation.ts';
 import { DefinedName } from './defined-name.ts';
 import { NamedRange } from './named-range.ts';
+import type { IValueBinder } from './i-value-binder.ts';
+import { DefaultValueBinder } from './default-value-binder.ts';
 
 /**
  * Spreadsheet workbook.
@@ -14,9 +16,12 @@ export class Spreadsheet {
     #cellStyleXfCollection: Style[] = [];
     #calculationEngine: Calculation;
     #definedNames: DefinedName[] = [];
+    #valueBinder: IValueBinder;
 
     constructor() {
         this.#calculationEngine = new Calculation();
+        this.#valueBinder = new DefaultValueBinder();
+        
         // Initialise worksheet collection and add one worksheet
         const initialSheet = new Worksheet(this, 'Worksheet 1');
         this.#workSheetCollection.push(initialSheet);
@@ -25,6 +30,20 @@ export class Spreadsheet {
         // Create the default style
         this.addCellXf(new Style());
         this.addCellStyleXf(new Style());
+    }
+
+    /**
+     * Get value binder.
+     */
+    public getValueBinder(): IValueBinder {
+        return this.#valueBinder;
+    }
+
+    /**
+     * Set value binder.
+     */
+    public setValueBinder(binder: IValueBinder): void {
+        this.#valueBinder = binder;
     }
 
     /**

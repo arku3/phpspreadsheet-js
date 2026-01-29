@@ -83,20 +83,6 @@ export class Worksheet {
         const cell = this.getCell(coordinate);
         cell.setValue(value);
         this.#spreadsheet.clearCalculationCache();
-        // Basic type detection could be added here
-        if (typeof value === 'number') {
-            cell.setDataType(DataType.TYPE_NUMERIC);
-        } else if (typeof value === 'string') {
-            if (value.startsWith('=')) {
-                cell.setDataType(DataType.TYPE_FORMULA);
-            } else {
-                cell.setDataType(DataType.TYPE_STRING);
-            }
-        } else if (value === null) {
-            cell.setDataType(DataType.TYPE_NULL);
-        } else if (typeof value === 'boolean') {
-            cell.setDataType(DataType.TYPE_BOOL);
-        }
         return this;
     }
 

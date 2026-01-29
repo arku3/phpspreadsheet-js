@@ -1,5 +1,6 @@
 import { Worksheet } from './worksheet.ts';
 import { Coordinate } from '../utils/coordinate.ts';
+import { RichText } from '../rich-text/rich-text.ts';
 
 /**
  * Cell data types.
@@ -13,6 +14,7 @@ export const DataType = {
     TYPE_INLINE: 'inlineStr',
     TYPE_ERROR: 'e',
 } as const;
+
 
 export type TDataType = typeof DataType[keyof typeof DataType];
 
@@ -71,7 +73,16 @@ export class Cell {
      * Set value.
      */
     public setValue(value: any): void {
+        const binder = this.#worksheet.getParent().getValueBinder();
+        binder.bindValue(this, value);
+    }
+
+    /**
+     * Set value explicit.
+     */
+    public setValueExplicit(value: any, dataType: TDataType): void {
         this.#value = value;
+        this.#dataType = dataType;
         this.#calculatedValue = undefined;
     }
 

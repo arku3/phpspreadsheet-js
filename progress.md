@@ -15,20 +15,16 @@
 - [2026-01-29] Implemented Structured References (Excel Tables).
 - [2026-01-29] Implemented Spill Operator (#) via ANCHORARRAY transformation.
 - [2026-01-29] Implemented Matrix/Array Constant refinements ({1,2;3,4}).
+- [2026-01-29] Implemented Rich Text infrastructure (TextElement, Run, RichText).
+- [2026-01-29] Ported Style components (Alignment, NumberFormat).
+- [2026-01-29] Updated Cell and DefaultValueBinder to support RichText (TYPE_INLINE).
+- [2026-01-29] Added unit tests for Rich Text and verified with Bun.
 
 ## Completed Tasks
 - Main `Calculation` class structure created.
-- `processTokenStack` loop implemented with operator precedence.
-- Basic operand processing (Numbers, Logicals, Strings).
-- Subexpression handling (parentheses).
-- Function calls and argument count validation.
-- Range resolution (A1:B2) into 2D arrays.
-- Branch Pruning (Lazy evaluation for IF).
-- Cross-Sheet References (Sheet1!A1).
-- Standardized Excel Error Codes.
-- Circular Reference detection.
-- Named Range and Named Formula evaluation.
-- Calculation Caching for performance.
-- Structured Reference (Excel Table) support.
-- Spill Operator (#) support (ANCHORARRAY).
+...
 - Multi-dimensional Array Constant support.
+- Rich Text infrastructure (TextElement, Run, RichText).
+- Style components (Alignment, NumberFormat).
+- Value Binder support for RichText.
+
