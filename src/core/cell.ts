@@ -67,7 +67,7 @@ export class Cell {
      * Get coordinate.
      */
     public getCoordinate(): string {
-        return Coordinate.stringFromCoordinate(this.#column, this.#row);
+        return Coordinate.stringFromCoordinate(this.#column + 1, this.#row + 1);
     }
 
     /**

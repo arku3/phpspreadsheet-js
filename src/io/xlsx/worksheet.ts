@@ -297,7 +297,7 @@ export class Worksheet extends WriterPart {
         const sortedRows = Array.from(rowIndices).sort((a, b) => a - b);
 
         for (const row of sortedRows) {
-            const rowEle = sheetData.ele('row', { r: row });
+            const rowEle = sheetData.ele('row', { r: row + 1 });
             
             // Row dimensions
             if (worksheet.rowDimensionExists(row)) {

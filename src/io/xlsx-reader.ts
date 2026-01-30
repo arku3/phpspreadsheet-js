@@ -1,6 +1,7 @@
 import type { IReader, WorksheetInfo } from './i-reader.ts';
 import { Spreadsheet } from '../core/spreadsheet.ts';
 import { open } from 'node:fs/promises';
+import unzipper from 'unzipper';
 
 /**
  * XLSX file reader.
@@ -50,8 +51,53 @@ export class XlsxReader implements IReader {
      * List worksheet names in the file without loading the whole spreadsheet.
      */
     async listWorksheetNames(filename: string): Promise<string[]> {
-        // TODO: Parse workbook.xml to extract sheet names
-        return [];
+        try {
+            const zip = await unzipper.Open.file(filename);
+            const relsFile = zip.files.find(f => f.path === '_rels/.rels');
+            if (!relsFile) {
+                throw new Error('Invalid XLSX file: missing _rels/.rels');
+            }
+            
+            const relsContent = await relsFile.buffer();
+            const relsXml = relsContent.toString('utf-8');
+            
+            // Extract workbook path from rels
+            const workbookMatch = relsXml.match(/Target="([^"]*workbook\.xml)"/);
+            if (!workbookMatch) {
+                throw new Error('Invalid XLSX file: cannot find workbook.xml in _rels/.rels');
+            }
+            
+            const workbookPath = (workbookMatch[1] ?? '').replace(/^\//, '');
+            if (!workbookPath) {
+                throw new Error('Invalid XLSX file: cannot determine workbook path');
+            }
+            const workbookFile = zip.files.find(f => f.path === workbookPath);
+            if (!workbookFile) {
+                throw new Error(`Invalid XLSX file: missing ${workbookPath}`);
+            }
+            
+            const workbookContent = await workbookFile.buffer();
+            const workbookXml = workbookContent.toString('utf-8');
+            
+            // Extract sheet names
+            const sheetNames: string[] = [];
+            const sheetMatches = workbookXml.match(/<sheet[^>]*name="([^"]+)"/g);
+            if (sheetMatches) {
+                for (const match of sheetMatches) {
+                    const nameMatch = match.match(/name="([^"]+)"/);
+                    if (nameMatch && nameMatch[1]) {
+                        sheetNames.push(nameMatch[1]);
+                    }
+                }
+            }
+            
+            return sheetNames;
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Failed to read XLSX file: ${error.message}`);
+            }
+            throw new Error('Failed to read XLSX file');
+        }
     }
 
     /**
@@ -66,20 +112,193 @@ export class XlsxReader implements IReader {
      * Loads a Spreadsheet from file.
      */
     async load(filename: string): Promise<Spreadsheet> {
-        const spreadsheet = new Spreadsheet();
-        
-        // TODO: Implement full XLSX loading logic
-        // 1. Open ZIP archive
-        // 2. Read [Content_Types].xml
-        // 3. Read _rels/.rels
-        // 4. Read xl/_rels/workbook.xml.rels
-        // 5. Read xl/workbook.xml
-        // 6. Read xl/styles.xml
-        // 7. Read xl/sharedStrings.xml
-        // 8. Read each worksheet
-        // 9. Apply styles, merge cells, etc.
-        
-        return spreadsheet;
+        try {
+            const zip = await unzipper.Open.file(filename);
+            
+            // Find workbook path
+            const relsFile = zip.files.find(f => f.path === '_rels/.rels');
+            if (!relsFile) {
+                throw new Error('Invalid XLSX file: missing _rels/.rels');
+            }
+            
+            const relsContent = await relsFile.buffer();
+            const relsXml = relsContent.toString('utf-8');
+            
+            const workbookMatch = relsXml.match(/Target="([^"]*workbook\.xml)"/);
+            if (!workbookMatch) {
+                throw new Error('Invalid XLSX file: cannot find workbook.xml');
+            }
+            
+            const workbookPath = (workbookMatch[1] ?? '').replace(/^\//, '');
+            if (!workbookPath) {
+                throw new Error('Invalid XLSX file: cannot determine workbook path');
+            }
+            
+            const workbookRelPath = workbookPath.replace('xl/', 'xl/_rels/').replace('.xml', '.xml.rels');
+            
+            // Parse workbook relationships to find worksheets and shared strings
+            const workbookRelsFile = zip.files.find(f => f.path === workbookRelPath);
+            const worksheetPaths: Map<string, string> = new Map();
+            let sharedStringsPath: string | null = null;
+            
+            if (workbookRelsFile) {
+                const relsContent = await workbookRelsFile.buffer();
+                const relsXml = relsContent.toString('utf-8');
+                
+                // Find worksheet relationships
+                const worksheetMatches = relsXml.matchAll(/<Relationship[^>]*Id="([^"]+)"[^>]*Type="[^"]*worksheet"[^>]*Target="([^"]+)"/g);
+                for (const match of worksheetMatches) {
+                    const rId = match[1];
+                    const target = match[2];
+                    if (rId && target) {
+                        const cleanTarget = target.replace(/^\//, '');
+                        worksheetPaths.set(rId, cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`);
+                    }
+                }
+                
+                // Find shared strings
+                const sharedStringsMatch = relsXml.match(/<Relationship[^>]*Type="[^"]*sharedStrings"[^>]*Target="([^"]+)"/);
+                if (sharedStringsMatch && sharedStringsMatch[1]) {
+                    const ssPath = sharedStringsMatch[1].replace(/^\//, '');
+                    if (!ssPath.startsWith('xl/')) {
+                        sharedStringsPath = `xl/${ssPath}`;
+                    } else {
+                        sharedStringsPath = ssPath;
+                    }
+                }
+            }
+            
+            // Read shared strings if present
+            const sharedStrings: string[] = [];
+            if (sharedStringsPath) {
+                const ssFile = zip.files.find(f => f.path === sharedStringsPath);
+                if (ssFile) {
+                    const ssContent = await ssFile.buffer();
+                    const ssXml = ssContent.toString('utf-8');
+                    const siMatches = ssXml.matchAll(/<si>(.*?)<\/si>/gs);
+                    for (const match of siMatches) {
+                        const textContent = match[1];
+                        if (textContent) {
+                            // Extract text from <t> tags
+                            const textMatch = textContent.match(/<t>([^<]*)<\/t>/);
+                            sharedStrings.push(textMatch && textMatch[1] ? textMatch[1] : '');
+                        } else {
+                            sharedStrings.push('');
+                        }
+                    }
+                }
+            }
+            
+            // Read workbook.xml to get sheet information
+            const workbookFile = zip.files.find(f => f.path === workbookPath);
+            if (!workbookFile) {
+                throw new Error(`Invalid XLSX file: missing ${workbookPath}`);
+            }
+            
+            const workbookContent = await workbookFile.buffer();
+            const workbookXml = workbookContent.toString('utf-8');
+            
+            // Create spreadsheet
+            const spreadsheet = new Spreadsheet();
+            let defaultSheetUsed = false;
+            
+            // Parse sheets from workbook.xml
+            const sheetMatches = workbookXml.matchAll(/<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"[^>]*r:id="([^"]+)"/g);
+            const sheets: { name: string; rId: string }[] = [];
+            for (const match of sheetMatches) {
+                const name = match[1];
+                const rId = match[3];
+                if (name && rId) {
+                    sheets.push({ name, rId });
+                }
+            }
+            
+            // Load each worksheet
+            for (const sheetInfo of sheets) {
+                // Apply read filter if set
+                if (this.#readFilter && !this.#readFilter(sheetInfo.name)) {
+                    continue;
+                }
+                
+                const worksheetPath = worksheetPaths.get(sheetInfo.rId);
+                if (!worksheetPath) {
+                    continue;
+                }
+                
+                // Get or create worksheet - reuse default sheet for first sheet
+                let worksheet = spreadsheet.getSheetByName(sheetInfo.name);
+                if (!worksheet) {
+                    if (!defaultSheetUsed && spreadsheet.getSheetCount() === 1) {
+                        // Reuse the default sheet
+                        worksheet = spreadsheet.getSheet(0);
+                        if (worksheet) {
+                            worksheet.setTitle(sheetInfo.name);
+                            defaultSheetUsed = true;
+                        }
+                    } else {
+                        worksheet = spreadsheet.createSheet();
+                        worksheet.setTitle(sheetInfo.name);
+                    }
+                }
+                
+                // Read worksheet XML
+                const wsFile = zip.files.find(f => f.path === worksheetPath);
+                if (!wsFile) {
+                    continue;
+                }
+                
+                const wsContent = await wsFile.buffer();
+                const wsXml = wsContent.toString('utf-8');
+                
+                // Parse cells from worksheet - parse cell elements directly
+                const cellMatches = wsXml.matchAll(/<c[^>]*r="([A-Z]+\d+)"[^>]*>([\s\S]*?)<\/c>/g);
+                for (const cellMatch of cellMatches) {
+                    const cellRef = cellMatch[1];
+                    const cellContent = cellMatch[2];
+                    if (!cellRef || !cellContent) continue;
+                    
+                    // Determine cell type and value
+                    const typeMatch = cellContent.match(/<v>([^<]*)<\/v>/);
+                    const formulaMatch = cellContent.match(/<f>([^<]*)<\/f>/);
+                    
+                    const cell = worksheet.getCell(cellRef);
+                    
+                    if (formulaMatch && formulaMatch[1]) {
+                        cell.setValue('=' + formulaMatch[1]);
+                    } else if (typeMatch && typeMatch[1]) {
+                        const value = typeMatch[1];
+                        // Check if it's a shared string reference by looking at parent <c> tag
+                        const fullCellMatch = wsXml.match(new RegExp(`<c[^>]*r="${cellRef}"[^>]*>`));
+                        const isSharedString = fullCellMatch && fullCellMatch[0].includes('t="s"');
+                        
+                        if (isSharedString) {
+                            const ssIndex = parseInt(value, 10);
+                            if (!isNaN(ssIndex) && ssIndex >= 0 && ssIndex < sharedStrings.length) {
+                                const ssValue = sharedStrings[ssIndex];
+                                if (ssValue !== undefined) {
+                                    cell.setValue(ssValue);
+                                }
+                            }
+                        } else {
+                            // Try to parse as number
+                            const numValue = parseFloat(value);
+                            if (!isNaN(numValue)) {
+                                cell.setValue(numValue);
+                            } else {
+                                cell.setValue(value);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return spreadsheet;
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Failed to load XLSX file: ${error.message}`);
+            }
+            throw new Error('Failed to load XLSX file');
+        }
     }
 
     /**
