@@ -535,6 +535,39 @@ export class XlsxReader implements IReader {
                             }
                         }
                     }
+                    
+                    // Parse hyperlinks
+                    const hyperlinksMatch = wsXml.match(/<hyperlinks[^>]*>([\s\S]*?)<\/hyperlinks>/);
+                    if (hyperlinksMatch && hyperlinksMatch[1]) {
+                        const hyperlinksContent = hyperlinksMatch[1];
+                        const hyperlinkMatches = hyperlinksContent.matchAll(/<hyperlink[^>]*ref="([^"]*)"[^>]*r:id="([^"]*)"(?:[^>]*location="([^"]*)")?[^>]*\/>/g);
+                        for (const linkMatch of hyperlinkMatches) {
+                            const cellRef = linkMatch[1];
+                            const rId = linkMatch[2];
+                            const location = linkMatch[3];
+                            
+                            if (cellRef && rId) {
+                                // Resolve rId to actual URL
+                                const hyperlinkRelPath = worksheetPath.replace('worksheets/', '_rels/worksheets/').replace('.xml', '.xml.rels');
+                                const hyperlinkRelsFile = zip.files.find(f => f.path === hyperlinkRelPath);
+                                
+                                if (hyperlinkRelsFile) {
+                                    const relsContent = await hyperlinkRelsFile.buffer();
+                                    const relsXml = relsContent.toString('utf-8');
+                                    const urlMatch = relsXml.match(new RegExp(`<Relationship[^>]*Id="${rId}"[^>]*Target="([^"]*)"`));
+                                    
+                                    if (urlMatch && urlMatch[1]) {
+                                        const url = urlMatch[1];
+                                        const cell = worksheet.getCell(cellRef);
+                                        cell.getHyperlink().setUrl(url);
+                                        if (location) {
+                                            cell.getHyperlink().setLocation(location);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
             
