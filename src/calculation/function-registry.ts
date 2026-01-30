@@ -5,6 +5,7 @@ import { TextData } from './functions/text-data.ts';
 import { LookupRef } from './functions/lookup-ref.ts';
 import { DateTime } from './functions/datetime.ts';
 import { Financial } from './functions/financial.ts';
+import { Engineering } from './functions/engineering.ts';
 
 export type FunctionImplementation = (args: any[]) => any;
 
@@ -59,5 +60,6 @@ export class FunctionRegistry {
         new LookupRef().register(this);
         new DateTime().register(this);
         new Financial().register(this);
+        new Engineering().register(this);
     }
 }

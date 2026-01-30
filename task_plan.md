@@ -31,7 +31,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [ ] **Calculation Engine Fixes**
             - [x] Implement `DateTimeExcel` category (TODAY, NOW, DATE, YEAR, MONTH, DAY, WEEKDAY, TIME, HOUR, MINUTE, DATEDIF, EOMONTH, EDATE).
             - [x] Implement `Financial` category (FV, PV, PMT, NPER, RATE, NPV, IRR).
-            - [ ] Implement `Engineering` category.
+            - [x] Implement `Engineering` category (COMPLEX, IMAGINARY, IMREAL, IMABS, IMARGUMENT, IMCONJUGATE, IMSUM, IMPRODUCT, CONVERT, DEC2BIN, BIN2DEC, DEC2HEX, HEX2DEC).
             - [ ] Implement additional `Statistical` functions.
             - [ ] Add support for R1C1 reference conversion.
             - [ ] Implement `Calculation.getFunctions()` metadata retrieval.
