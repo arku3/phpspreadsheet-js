@@ -699,4 +699,35 @@ export class Spreadsheet {
         this.#activeSheetIndex = 0;
     }
 
+    /**
+     * Set the active sheet index.
+     *
+     * @param index The index to set as active
+     * @returns This spreadsheet for chaining
+     */
+    public setActiveSheetIndex(index: number): this {
+        if (index < 0 || index >= this.#workSheetCollection.length) {
+            throw new Error(`Sheet index ${index} is out of bounds.`);
+        }
+        this.#activeSheetIndex = index;
+        return this;
+    }
+
+    /**
+     * Set the active sheet index by name.
+     *
+     * @param sheetName The name of the sheet to activate
+     * @returns This spreadsheet for chaining
+     */
+    public setActiveSheetIndexByName(sheetName: string): this {
+        const sheet = this.getSheetByName(sheetName);
+        if (!sheet) {
+            throw new Error(`Sheet "${sheetName}" does not exist.`);
+        }
+        
+        const index = this.#workSheetCollection.indexOf(sheet);
+        this.#activeSheetIndex = index;
+        return this;
+    }
+
 }
