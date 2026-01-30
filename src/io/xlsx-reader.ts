@@ -548,7 +548,7 @@ export class XlsxReader implements IReader {
                             
                             if (cellRef && rId) {
                                 // Resolve rId to actual URL
-                                const hyperlinkRelPath = worksheetPath.replace('worksheets/', '_rels/worksheets/').replace('.xml', '.xml.rels');
+                                const hyperlinkRelPath = worksheetPath.replace('worksheets/', 'worksheets/_rels/').replace('.xml', '.xml.rels');
                                 const hyperlinkRelsFile = zip.files.find(f => f.path === hyperlinkRelPath);
                                 
                                 if (hyperlinkRelsFile) {

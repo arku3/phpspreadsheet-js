@@ -456,8 +456,11 @@ export class Calculation {
             const [startCol, startRow] = Coordinate.coordinateFromString(start);
             const [endCol, endRow] = Coordinate.coordinateFromString(end);
 
-            const minCol = Math.min(startCol, endCol);
-            const maxCol = Math.max(startCol, endCol);
+            const startColIndex = Coordinate.columnIndexFromString(startCol);
+            const endColIndex = Coordinate.columnIndexFromString(endCol);
+
+            const minCol = Math.min(startColIndex, endColIndex);
+            const maxCol = Math.max(startColIndex, endColIndex);
             const minRow = Math.min(startRow, endRow);
             const maxRow = Math.max(startRow, endRow);
 

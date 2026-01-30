@@ -139,11 +139,11 @@ describe('I/O Module Writer Fixes', () => {
             const richText = new RichText();
             const run1 = new Run();
             run1.setText('E=');
-            run1.getFont().setSuperscript(false);
+            run1.getFontOrThrow().setSuperscript(false);
             
             const run2 = new Run();
             run2.setText('mc²');
-            run2.getFont().setSuperscript(true);
+            run2.getFontOrThrow().setSuperscript(true);
             
             richText.addText(run1);
             richText.addText(run2);
@@ -151,7 +151,7 @@ describe('I/O Module Writer Fixes', () => {
             worksheet.getCell('A1').setValue(richText);
             
             // Verify font properties
-            expect(run2.getFont().getSuperscript()).toBe(true);
+            expect(run2.getFontOrThrow().getSuperscript()).toBe(true);
         });
 
         it('should write subscript formatting for RichText runs', () => {
@@ -162,12 +162,12 @@ describe('I/O Module Writer Fixes', () => {
             const richText = new RichText();
             const run = new Run();
             run.setText('H₂O');
-            run.getFont().setSubscript(true);
+            run.getFontOrThrow().setSubscript(true);
             
             richText.addText(run);
             worksheet.getCell('A1').setValue(richText);
             
-            expect(run.getFont().getSubscript()).toBe(true);
+            expect(run.getFontOrThrow().getSubscript()).toBe(true);
         });
 
         it('should handle mixed formatting in RichText', () => {
@@ -175,25 +175,25 @@ describe('I/O Module Writer Fixes', () => {
             
             const normalRun = new Run();
             normalRun.setText('Normal');
-            normalRun.getFont().setSuperscript(false);
-            normalRun.getFont().setSubscript(false);
+            normalRun.getFontOrThrow().setSuperscript(false);
+            normalRun.getFontOrThrow().setSubscript(false);
             
             const superRun = new Run();
             superRun.setText('Superscript');
-            superRun.getFont().setSuperscript(true);
+            superRun.getFontOrThrow().setSuperscript(true);
             
             const subRun = new Run();
             subRun.setText('Subscript');
-            subRun.getFont().setSubscript(true);
+            subRun.getFontOrThrow().setSubscript(true);
             
             richText.addText(normalRun);
             richText.addText(superRun);
             richText.addText(subRun);
             
-            expect(normalRun.getFont().getSuperscript()).toBe(false);
-            expect(normalRun.getFont().getSubscript()).toBe(false);
-            expect(superRun.getFont().getSuperscript()).toBe(true);
-            expect(subRun.getFont().getSubscript()).toBe(true);
+            expect(normalRun.getFontOrThrow().getSuperscript()).toBe(false);
+            expect(normalRun.getFontOrThrow().getSubscript()).toBe(false);
+            expect(superRun.getFontOrThrow().getSuperscript()).toBe(true);
+            expect(subRun.getFontOrThrow().getSubscript()).toBe(true);
         });
     });
 
@@ -223,7 +223,7 @@ describe('I/O Module Writer Fixes', () => {
             const richText = new RichText();
             const run = new Run();
             run.setText('Formula: x²');
-            run.getFont().setSuperscript(true);
+            run.getFontOrThrow().setSuperscript(true);
             richText.addText(run);
             
             worksheet.getCell('A1').setValue(richText);

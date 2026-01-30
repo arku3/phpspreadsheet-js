@@ -81,8 +81,12 @@ export class Table {
 
     public getRangeBoundaries(): [[number, number], [number, number]] {
         const [start, end] = this.#range.split(':');
-        const [startCol, startRow] = Coordinate.coordinateFromString(start!);
-        const [endCol, endRow] = Coordinate.coordinateFromString(end!);
+        const [startColRaw, startRow] = Coordinate.coordinateFromString(start!);
+        const [endColRaw, endRow] = Coordinate.coordinateFromString(end!);
+
+        const startCol = Coordinate.columnIndexFromString(startColRaw);
+        const endCol = Coordinate.columnIndexFromString(endColRaw);
+
         return [[startCol, startRow], [endCol, endRow]];
     }
 }

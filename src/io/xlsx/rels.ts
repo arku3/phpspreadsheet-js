@@ -2,6 +2,7 @@ import { create } from 'xmlbuilder2';
 import { Spreadsheet } from '../../core/spreadsheet.ts';
 import { Worksheet } from '../../core/worksheet.ts';
 import { WriterPart } from './writer-part.ts';
+import { Coordinate } from '../../utils/coordinate.ts';
 
 /**
  * Represents a relationship entry.
@@ -132,12 +133,44 @@ export class Rels extends WriterPart {
     public writeWorksheetRelationships(worksheet: Worksheet, worksheetId: number): string | null {
         this.resetRId();
         const tables = worksheet.getTables();
-        
-        if (tables.length === 0) {
-            return null;
-        }
 
         const relationships: Relationship[] = [];
+
+        // Hyperlinks
+        const cells = worksheet.getCellCollection().getCells();
+        const externalLinks: { ref: string; url: string }[] = [];
+        for (const cell of cells) {
+            if (!('hasHyperlink' in cell) || typeof (cell as any).hasHyperlink !== 'function') {
+                continue;
+            }
+            if (!(cell as any).hasHyperlink()) {
+                continue;
+            }
+
+            const hyperlink = (cell as any).getHyperlink();
+            const url = String(hyperlink.getUrl?.() ?? '');
+            if (url === '') {
+                continue;
+            }
+
+            externalLinks.push({ ref: (cell as any).getCoordinate(), url });
+        }
+
+        externalLinks.sort((a, b) => {
+            const [aCol, aRow] = Coordinate.indexesFromString(a.ref);
+            const [bCol, bRow] = Coordinate.indexesFromString(b.ref);
+            if (aRow !== bRow) return aRow - bRow;
+            return aCol - bCol;
+        });
+
+        for (const link of externalLinks) {
+            relationships.push({
+                id: this.getNextRId(),
+                type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink',
+                target: link.url,
+                targetMode: 'External',
+            });
+        }
 
         for (let i = 0; i < tables.length; i++) {
             relationships.push({
@@ -145,6 +178,10 @@ export class Rels extends WriterPart {
                 type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/table',
                 target: `../tables/table${i + 1}.xml`
             });
+        }
+
+        if (relationships.length === 0) {
+            return null;
         }
 
         return this.writeRelationshipsXml(relationships);

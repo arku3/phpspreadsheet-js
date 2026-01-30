@@ -2,6 +2,7 @@ import { Worksheet } from './worksheet.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Style } from '../style/style.ts';
 import { Protection } from '../style/protection.ts';
+import { Hyperlink } from './hyperlink.ts';
 
 /**
  * Cell data types.
@@ -29,6 +30,8 @@ export class Cell {
     #column: number;
     #row: number;
     #xfIndex: number = 0;
+
+    #hyperlink: Hyperlink | null = null;
 
     constructor(value: any, dataType: TDataType, worksheet: Worksheet, column: string | number, row: number) {
         this.#value = value;
@@ -307,9 +310,17 @@ export class Cell {
      * @returns The hyperlink object or null if no hyperlink
      */
     public getHyperlink(): any {
-        // TODO: Implement full Hyperlink support
-        // For now, return null as placeholder
-        return null;
+        if (this.#hyperlink === null) {
+            this.#hyperlink = new Hyperlink();
+        }
+        return this.#hyperlink;
+    }
+
+    /**
+     * True if a real hyperlink is present.
+     */
+    public hasHyperlink(): boolean {
+        return this.#hyperlink !== null && !this.#hyperlink.isEmpty();
     }
 
     /**

@@ -428,8 +428,11 @@ export class Style extends Supervisor {
         const [startColRaw, startRowRaw] = Coordinate.coordinateFromString(start);
         const [endColRaw, endRowRaw] = Coordinate.coordinateFromString(end);
 
-        const startCol = Math.min(startColRaw, endColRaw);
-        const endCol = Math.max(startColRaw, endColRaw);
+        const startColIndex = Coordinate.columnIndexFromString(startColRaw);
+        const endColIndex = Coordinate.columnIndexFromString(endColRaw);
+
+        const startCol = Math.min(startColIndex, endColIndex);
+        const endCol = Math.max(startColIndex, endColIndex);
         const startRow = Math.min(startRowRaw, endRowRaw);
         const endRow = Math.max(startRowRaw, endRowRaw);
 

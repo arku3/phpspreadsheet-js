@@ -54,6 +54,9 @@ export class Worksheet extends WriterPart {
         // dataValidations
         this.writeDataValidations(root, worksheet);
 
+        // hyperlinks
+        this.writeHyperlinks(root, worksheet);
+
         // pageMargins
         const margins = worksheet.getPageMargins();
         root.ele('pageMargins', {
@@ -477,12 +480,84 @@ export class Worksheet extends WriterPart {
                 
                 // Formulas
                 if (dv.getFormula1() !== '') {
-                    dvEle.ele('formula1', dv.getFormula1());
+                    dvEle.ele('formula1').txt(dv.getFormula1());
                 }
                 if (dv.getFormula2() !== '') {
-                    dvEle.ele('formula2', dv.getFormula2());
+                    dvEle.ele('formula2').txt(dv.getFormula2());
                 }
             }
+        }
+    }
+
+    /**
+     * Write Hyperlinks.
+     */
+    private writeHyperlinks(root: any, worksheet: CoreWorksheet): void {
+        const cellCollection = worksheet.getCellCollection();
+        const cells = cellCollection.getCells();
+
+        type ExternalHyperlink = { ref: string; url: string; location: string };
+        type InternalHyperlink = { ref: string; location: string };
+
+        const externalLinks: ExternalHyperlink[] = [];
+        const internalLinks: InternalHyperlink[] = [];
+
+        for (const cell of cells) {
+            // Avoid creating hyperlink objects unless one is present.
+            if (!('hasHyperlink' in cell) || typeof (cell as any).hasHyperlink !== 'function') {
+                continue;
+            }
+
+            if (!(cell as any).hasHyperlink()) {
+                continue;
+            }
+
+            const hyperlink = (cell as any).getHyperlink();
+            const ref = (cell as any).getCoordinate();
+            const url = String(hyperlink.getUrl?.() ?? '');
+            const location = String(hyperlink.getLocation?.() ?? '');
+
+            if (url !== '') {
+                externalLinks.push({ ref, url, location });
+            } else if (location !== '') {
+                internalLinks.push({ ref, location });
+            }
+        }
+
+        if (externalLinks.length === 0 && internalLinks.length === 0) {
+            return;
+        }
+
+        const sortByCellRef = (a: { ref: string }, b: { ref: string }): number => {
+            const [aCol, aRow] = Coordinate.indexesFromString(a.ref);
+            const [bCol, bRow] = Coordinate.indexesFromString(b.ref);
+            if (aRow !== bRow) return aRow - bRow;
+            return aCol - bCol;
+        };
+
+        externalLinks.sort(sortByCellRef);
+        internalLinks.sort(sortByCellRef);
+
+        const hyperlinksEle = root.ele('hyperlinks');
+
+        // Relationship ids must match xl/worksheets/_rels/sheetN.xml.rels.
+        let rId = 1;
+        for (const link of externalLinks) {
+            const attrs: Record<string, string> = {
+                ref: link.ref,
+                'r:id': `rId${rId++}`,
+            };
+            if (link.location !== '') {
+                attrs.location = link.location;
+            }
+            hyperlinksEle.ele('hyperlink', attrs);
+        }
+
+        for (const link of internalLinks) {
+            hyperlinksEle.ele('hyperlink', {
+                ref: link.ref,
+                location: link.location,
+            });
         }
     }
 

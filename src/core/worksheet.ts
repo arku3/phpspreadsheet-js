@@ -76,9 +76,24 @@ export class Worksheet {
     #rowDimensions: Map<number, RowDimension> = new Map();
 
     /**
+     * Collection of conditional styles.
+     */
+    #conditionalStylesCollection: Map<string, Conditional[]> = new Map();
+
+    /**
      * Collection of data validations.
      */
     #dataValidationCollection: Map<string, DataValidation> = new Map();
+
+    /**
+     * Default column dimension.
+     */
+    #defaultColumnDimension: ColumnDimension;
+
+    /**
+     * Collection of column dimensions.
+     */
+    #columnDimensions: Map<string, ColumnDimension> = new Map();
 
     /**
      * Default row dimension.

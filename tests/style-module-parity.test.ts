@@ -143,62 +143,68 @@ describe('Style Module Parity Fixes', () => {
     });
 
     describe('NumberFormat toFormattedString', () => {
+        const makeFormat = (formatCode: string): NumberFormat => {
+            const format = new NumberFormat();
+            format.setFormatCode(formatCode);
+            return format;
+        };
+
         it('should format number with General format', () => {
-            const format = new NumberFormat(NumberFormat.FORMAT_GENERAL);
+            const format = makeFormat(NumberFormat.FORMAT_GENERAL);
             
             expect(format.toFormattedString(123)).toBe('123');
             expect(format.toFormattedString(123.456)).toBe('123.456');
         });
 
         it('should format number with fixed decimals', () => {
-            const format = new NumberFormat('0.00');
+            const format = makeFormat('0.00');
             
             expect(format.toFormattedString(123.456)).toBe('123.46');
             expect(format.toFormattedString(123)).toBe('123.00');
         });
 
         it('should format number with thousands separator', () => {
-            const format = new NumberFormat('#,##0');
+            const format = makeFormat('#,##0');
             
             expect(format.toFormattedString(1234567)).toBe('1,234,567');
         });
 
         it('should format currency', () => {
-            const format = new NumberFormat('$#,##0.00');
+            const format = makeFormat('$#,##0.00');
             
             expect(format.toFormattedString(1234.5)).toBe('$1,234.50');
             expect(format.toFormattedString(-1234.5)).toBe('-$1,234.50');
         });
 
         it('should format percentage', () => {
-            const format = new NumberFormat('0.00%');
+            const format = makeFormat('0.00%');
             
             expect(format.toFormattedString(0.1234)).toBe('12.34%');
         });
 
         it('should format Excel date serial number', () => {
-            const format = new NumberFormat('yyyy-mm-dd');
+            const format = makeFormat('yyyy-mm-dd');
             
             // Excel date serial number for 2024-01-15
             expect(format.toFormattedString(45276)).toContain('2024');
         });
 
         it('should format Excel time fraction', () => {
-            const format = new NumberFormat('h:mm:ss');
+            const format = makeFormat('h:mm:ss');
             
             // 0.5 = 12:00:00 noon
             expect(format.toFormattedString(0.5)).toBe('12:00:00');
         });
 
         it('should handle null and undefined values', () => {
-            const format = new NumberFormat(NumberFormat.FORMAT_GENERAL);
+            const format = makeFormat(NumberFormat.FORMAT_GENERAL);
             
             expect(format.toFormattedString(null)).toBe('');
             expect(format.toFormattedString(undefined)).toBe('');
         });
 
         it('should handle non-numeric strings', () => {
-            const format = new NumberFormat(NumberFormat.FORMAT_GENERAL);
+            const format = makeFormat(NumberFormat.FORMAT_GENERAL);
             
             expect(format.toFormattedString('hello')).toBe('hello');
         });
