@@ -5,6 +5,7 @@ import { RichText } from '../../rich-text/rich-text.ts';
 import { Run } from '../../rich-text/run.ts';
 import { Font } from '../../style/font.ts';
 import { WriterPart } from './writer-part.ts';
+import { controlCharacterPHP2OOXML } from '../../utils/string-helper.ts';
 
 /**
  * Generates sharedStrings.xml.
@@ -58,7 +59,7 @@ export class StringTable extends WriterPart {
         for (const textElement of stringTable) {
             const si = root.ele('si');
             if (!(textElement instanceof RichText)) {
-                const textToWrite = textElement; // TODO: controlCharacterPHP2OOXML
+                const textToWrite = controlCharacterPHP2OOXML(textElement);
                 const t = si.ele('t');
                 if (textToWrite !== textToWrite.trim()) {
                     t.att('xml:space', 'preserve');
@@ -94,7 +95,7 @@ export class StringTable extends WriterPart {
             }
 
             const t = r.ele('t');
-            const text = element.getText();
+            const text = controlCharacterPHP2OOXML(element.getText());
             if (text !== text.trim()) {
                 t.att('xml:space', 'preserve');
             }
