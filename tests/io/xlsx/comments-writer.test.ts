@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { Spreadsheet } from '../../../src/core/spreadsheet.ts';
+import { XlsxReader } from '../../../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../../../src/io/xlsx-writer.ts';
 import unzipper from 'unzipper';
 import fs from 'node:fs';
@@ -68,5 +69,21 @@ describe('XlsxWriter Classic Comments', () => {
         expect(vmlXml).toContain('x:ClientData');
         expect(vmlXml).toContain('<x:Row>0</x:Row>');
         expect(vmlXml).toContain('<x:Column>0</x:Column>');
+    });
+
+    test('XlsxReader loads classic comments unless readDataOnly', async () => {
+        const reader = new XlsxReader();
+        const loaded = await reader.load(testFile);
+        const sheet = loaded.getActiveSheet();
+
+        expect(sheet.hasComment('A1')).toBe(true);
+        expect(sheet.getComment('A1').getAuthor()).toBe('Alice');
+        expect(sheet.getComment('A1').getText().getPlainText()).toBe('');
+
+        const dataOnlyReader = new XlsxReader();
+        dataOnlyReader.setReadDataOnly(true);
+        const loadedDataOnly = await dataOnlyReader.load(testFile);
+        const sheetDataOnly = loadedDataOnly.getActiveSheet();
+        expect(sheetDataOnly.hasComment('A1')).toBe(false);
     });
 });

@@ -2,8 +2,10 @@ import type { IReader, WorksheetInfo } from './i-reader.ts';
 import { Spreadsheet } from '../core/spreadsheet.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { open } from 'node:fs/promises';
+import path from 'node:path';
 import unzipper from 'unzipper';
 import { StylesReader, type StyleData } from './xlsx/styles-reader.ts';
+import { RichText } from '../rich-text/rich-text.ts';
 
 /**
  * XLSX file reader.
@@ -39,6 +41,133 @@ export class XlsxReader implements IReader {
      * Path to styles.xml in the ZIP file.
      */
     private stylesPath: string | null = null;
+
+    static readonly #COMMENTS_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments';
+    static readonly #VMLDRAWING_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing';
+
+    static decodeXmlEntities(value: string): string {
+        // Minimal XML entity decoding.
+        // Supports: named entities (&amp; &lt; &gt; &quot; &apos;) + numeric entities.
+        return value
+            .replace(/&(#x[0-9A-Fa-f]+|#\d+|amp|lt|gt|quot|apos);/g, (m, g1: string) => {
+                switch (g1) {
+                    case 'amp':
+                        return '&';
+                    case 'lt':
+                        return '<';
+                    case 'gt':
+                        return '>';
+                    case 'quot':
+                        return '"';
+                    case 'apos':
+                        return "'";
+                    default: {
+                        const toChar = (codePoint: number): string | null => {
+                            if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
+                                return null;
+                            }
+                            // Exclude UTF-16 surrogate range.
+                            if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
+                                return null;
+                            }
+                            try {
+                                return String.fromCodePoint(codePoint);
+                            } catch {
+                                return null;
+                            }
+                        };
+
+                        if (g1.startsWith('#x')) {
+                            const codePoint = Number.parseInt(g1.slice(2), 16);
+                            return toChar(codePoint) ?? m;
+                        }
+                        if (g1.startsWith('#')) {
+                            const codePoint = Number.parseInt(g1.slice(1), 10);
+                            return toChar(codePoint) ?? m;
+                        }
+                        return m;
+                    }
+                }
+            });
+    }
+
+    static #resolveRelationshipTarget(basePartPath: string, target: string): string {
+        const cleanedTarget = target.replace(/^\//, '');
+        if (target.startsWith('/')) {
+            return cleanedTarget;
+        }
+        const baseDir = path.posix.dirname(basePartPath);
+        return path.posix.normalize(path.posix.join(baseDir, cleanedTarget));
+    }
+
+    static #extractXmlAttribute(tagAttrs: string, attrName: string): string | null {
+        const m = tagAttrs.match(new RegExp(`${attrName}="([^"]*)"`));
+        return m && m[1] !== undefined ? m[1] : null;
+    }
+
+    static #extractTextFromTNodes(xml: string): string {
+        // Extract concatenated text from all <t> elements in document order.
+        // Handles xml:space="preserve" by keeping raw text; for non-preserve, trims indentation newlines.
+        const parts: string[] = [];
+        const tMatches = xml.matchAll(/<t([^>]*)>([\s\S]*?)<\/t>/g);
+        for (const match of tMatches) {
+            const attrs = match[1] ?? '';
+            const raw = match[2] ?? '';
+            const preserve = /xml:space\s*=\s*"preserve"/.test(attrs);
+            const value = preserve ? raw : raw.replace(/^[\r\n\t ]+|[\r\n\t ]+$/g, '');
+            parts.push(XlsxReader.decodeXmlEntities(value));
+        }
+        return parts.join('');
+    }
+
+    static #parseRichTextFromXml(textXml: string): RichText {
+        // Minimal rich text parser: keeps run boundaries, ignores formatting.
+        // If there are <r> nodes, each becomes a text run; otherwise fall back to <t> concatenation.
+        const richText = new RichText();
+
+        const rMatches = [...textXml.matchAll(/<r\b[^>]*>([\s\S]*?)<\/r>/g)];
+        if (rMatches.length > 0) {
+            for (const rMatch of rMatches) {
+                const rInner = rMatch[1] ?? '';
+                const t = XlsxReader.#extractTextFromTNodes(rInner);
+                if (t !== '') {
+                    richText.createTextRun(t);
+                }
+            }
+            return richText;
+        }
+
+        const t = XlsxReader.#extractTextFromTNodes(textXml);
+        if (t !== '') {
+            richText.createText(t);
+        }
+        return richText;
+    }
+
+    static #parseRelationshipsXml(relsXml: string): Array<{ id: string; type: string; target: string; targetMode: string | null }> {
+        const relationships: Array<{ id: string; type: string; target: string; targetMode: string | null }> = [];
+        const relMatches = relsXml.matchAll(/<Relationship\b([^>]*)\/>/g);
+        for (const match of relMatches) {
+            const attrs = match[1] ?? '';
+            const id = XlsxReader.#extractXmlAttribute(attrs, 'Id');
+            const type = XlsxReader.#extractXmlAttribute(attrs, 'Type');
+            const target = XlsxReader.#extractXmlAttribute(attrs, 'Target');
+            const targetMode = XlsxReader.#extractXmlAttribute(attrs, 'TargetMode');
+            if (id && type && target) {
+                relationships.push({ id, type, target, targetMode });
+            }
+        }
+        return relationships;
+    }
+
+    async #readZipTextFile(zip: unzipper.CentralDirectory, zipPath: string): Promise<string | null> {
+        const entry = zip.files.find(f => f.path === zipPath);
+        if (!entry) {
+            return null;
+        }
+        const buf = await entry.buffer();
+        return buf.toString('utf-8');
+    }
 
     /**
      * Can the current reader read the file?
@@ -340,9 +469,8 @@ export class XlsxReader implements IReader {
                     for (const match of siMatches) {
                         const textContent = match[1];
                         if (textContent) {
-                            // Extract text from <t> tags
-                            const textMatch = textContent.match(/<t>([^<]*)<\/t>/);
-                            sharedStrings.push(textMatch && textMatch[1] ? textMatch[1] : '');
+                            // Extract text from all <t> tags (supports rich text <r><t>...)
+                            sharedStrings.push(XlsxReader.#extractTextFromTNodes(textContent));
                         } else {
                             sharedStrings.push('');
                         }
@@ -527,6 +655,75 @@ export class XlsxReader implements IReader {
                                         cell.getHyperlink().setUrl(url);
                                         if (location) {
                                             cell.getHyperlink().setLocation(location);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Parse classic comments (notes)
+                    // - relationships from xl/worksheets/_rels/sheetN.xml.rels
+                    // - xl/commentsN.xml contains authors + commentList
+                    if (!this.#readDataOnly) {
+                        const worksheetRelsPath = worksheetPath
+                            .replace('xl/worksheets/', 'xl/worksheets/_rels/')
+                            .replace('.xml', '.xml.rels');
+                        const relsXml = await this.#readZipTextFile(zip, worksheetRelsPath);
+                        if (relsXml) {
+                            const rels = XlsxReader.#parseRelationshipsXml(relsXml);
+                            const commentsRel = rels.find(r => r.type === XlsxReader.#COMMENTS_REL_TYPE);
+                            const vmlRel = rels.find(r => r.type === XlsxReader.#VMLDRAWING_REL_TYPE);
+
+                            // VML drawings may exist for classic comments; v1 skips geometry but must not crash.
+                            if (vmlRel) {
+                                const _vmlPath = XlsxReader.#resolveRelationshipTarget(worksheetPath, vmlRel.target);
+                                // Intentionally ignored for now.
+                                void _vmlPath;
+                            }
+
+                            if (commentsRel) {
+                                const commentsPath = XlsxReader.#resolveRelationshipTarget(worksheetPath, commentsRel.target);
+                                const commentsXml = await this.#readZipTextFile(zip, commentsPath);
+                                if (commentsXml) {
+                                    const authors: string[] = [];
+                                    const authorsSection = commentsXml.match(/<authors[^>]*>([\s\S]*?)<\/authors>/);
+                                    if (authorsSection && authorsSection[1]) {
+                                        const authorMatches = authorsSection[1].matchAll(/<author[^>]*>([\s\S]*?)<\/author>/g);
+                                        for (const a of authorMatches) {
+                                            const raw = a[1] ?? '';
+                                            authors.push(XlsxReader.decodeXmlEntities(raw));
+                                        }
+                                    }
+
+                                    const commentListSection = commentsXml.match(/<commentList[^>]*>([\s\S]*?)<\/commentList>/);
+                                    const commentListXml = commentListSection?.[1] ?? '';
+                                    const commentMatches = commentListXml.matchAll(/<comment\b([^>]*)>([\s\S]*?)<\/comment>/g);
+                                    for (const c of commentMatches) {
+                                        const attrs = c[1] ?? '';
+                                        const inner = c[2] ?? '';
+
+                                        const ref = XlsxReader.#extractXmlAttribute(attrs, 'ref');
+                                        const authorIdStr = XlsxReader.#extractXmlAttribute(attrs, 'authorId');
+                                        if (!ref) {
+                                            continue;
+                                        }
+
+                                        const authorId = authorIdStr ? Number.parseInt(authorIdStr, 10) : NaN;
+                                        const author = Number.isFinite(authorId) && authorId >= 0 && authorId < authors.length
+                                            ? (authors[authorId] ?? 'Author')
+                                            : 'Author';
+
+                                        const textMatch = inner.match(/<text\b[^>]*>([\s\S]*?)<\/text>/);
+                                        const textXml = textMatch?.[1] ?? '';
+                                        const richText = XlsxReader.#parseRichTextFromXml(textXml);
+
+                                        try {
+                                            const comment = worksheet.getComment(ref);
+                                            comment.setAuthor(author);
+                                            comment.setText(richText);
+                                        } catch {
+                                            // Ignore invalid coordinates.
                                         }
                                     }
                                 }
