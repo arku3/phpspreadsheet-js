@@ -9,7 +9,7 @@ export class Workbook extends WriterPart {
     /**
      * Write workbook to XML format.
      */
-    public writeWorkbook(spreadsheet: Spreadsheet, preCalculateFormulas: boolean = false): string {
+    public writeWorkbook(spreadsheet: Spreadsheet, preCalculateFormulas: boolean = false, rIdMap: Map<string, string>): string {
         const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
             .ele('workbook', {
                 xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
@@ -41,10 +41,12 @@ export class Workbook extends WriterPart {
         const sheetCount = spreadsheet.getSheetCount();
         for (let i = 0; i < sheetCount; i++) {
             const sheet = spreadsheet.getSheet(i);
+            const sheetTarget = `worksheets/sheet${i + 1}.xml`;
+            const rId = rIdMap.get(sheetTarget) ?? `rId${i + 4}`;
             sheets.ele('sheet', {
                 name: sheet.getTitle(),
                 sheetId: i + 1,
-                'r:id': `rId${i + 4}` // rId1-3 are styles, theme, sharedStrings
+                'r:id': rId
             });
         }
 

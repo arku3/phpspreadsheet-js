@@ -146,7 +146,8 @@ export class XlsxWriter implements IWriter {
 
             // 3. Add relationships
             archive.append(this.#writerPartRels.writeRelationships(this.#spreadsheet), { name: '_rels/.rels' });
-            archive.append(this.#writerPartRels.writeWorkbookRelationships(this.#spreadsheet), { name: 'xl/_rels/workbook.xml.rels' });
+            const { xml: workbookRels, rIdMap } = this.#writerPartRels.writeWorkbookRelationships(this.#spreadsheet);
+            archive.append(workbookRels, { name: 'xl/_rels/workbook.xml.rels' });
 
             // 4. Add string table
             archive.append(this.#writerPartStringTable.writeStringTable(this.#stringTable), { name: 'xl/sharedStrings.xml' });
@@ -166,7 +167,7 @@ export class XlsxWriter implements IWriter {
             }
 
             // 6. Add workbook
-            archive.append(this.#writerPartWorkbook.writeWorkbook(this.#spreadsheet, this.#preCalculateFormulas), { name: 'xl/workbook.xml' });
+            archive.append(this.#writerPartWorkbook.writeWorkbook(this.#spreadsheet, this.#preCalculateFormulas, rIdMap), { name: 'xl/workbook.xml' });
 
             // 7. Add worksheets
             for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {

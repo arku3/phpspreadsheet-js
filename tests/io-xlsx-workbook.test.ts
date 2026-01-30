@@ -15,7 +15,7 @@ describe('Workbook Writer Integration', () => {
         
         const writer = new XlsxWriter(spreadsheet);
         const workbookPart = new Workbook(writer);
-        const xml = workbookPart.writeWorkbook(spreadsheet);
+        const xml = workbookPart.writeWorkbook(spreadsheet, false, new Map());
         
         expect(xml).toContain('<workbookProtection');
         expect(xml).toContain('lockStructure="1"');
@@ -37,7 +37,7 @@ describe('Workbook Writer Integration', () => {
         
         const writer = new XlsxWriter(spreadsheet);
         const workbookPart = new Workbook(writer);
-        const xml = workbookPart.writeWorkbook(spreadsheet);
+        const xml = workbookPart.writeWorkbook(spreadsheet, false, new Map());
         
         expect(xml).toContain('workbookAlgorithmName="SHA-512"');
         expect(xml).toContain('workbookSaltValue="');
