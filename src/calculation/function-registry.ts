@@ -3,6 +3,7 @@ import { Logical } from './functions/logical.ts';
 import { Statistical } from './functions/statistical.ts';
 import { TextData } from './functions/text-data.ts';
 import { LookupRef } from './functions/lookup-ref.ts';
+import { DateTime } from './functions/datetime.ts';
 
 export type FunctionImplementation = (args: any[]) => any;
 
@@ -55,5 +56,6 @@ export class FunctionRegistry {
         new Statistical().register(this);
         new TextData().register(this);
         new LookupRef().register(this);
+        new DateTime().register(this);
     }
 }

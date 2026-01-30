@@ -29,7 +29,8 @@ Complete systematic parity fixes identified in the review and implement the XLSX
             - [x] Add `Color.setHyperlinkTheme()` and `hasChanged` tracking.
 
         - [ ] **Calculation Engine Fixes**
-            - [ ] Implement missing categories: `DateTimeExcel`, `Financial`, `Engineering`, `Statistical`.
+            - [x] Implement `DateTimeExcel` category (TODAY, NOW, DATE, YEAR, MONTH, DAY, WEEKDAY, TIME, HOUR, MINUTE, DATEDIF, EOMONTH, EDATE).
+            - [ ] Implement missing categories: `Financial`, `Engineering`, `Statistical`.
             - [ ] Add support for R1C1 reference conversion.
             - [ ] Implement `Calculation.getFunctions()` metadata retrieval.
             - [ ] Implement intersection (` `) and union (`,`) operator evaluation parity.
