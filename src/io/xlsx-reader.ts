@@ -568,6 +568,65 @@ export class XlsxReader implements IReader {
                             }
                         }
                     }
+                    
+                    // Parse data validations
+                    if (!this.#readDataOnly) {
+                        const dataValidationsMatch = wsXml.match(/<dataValidations[^>]*>([\s\S]*?)<\/dataValidations>/);
+                        if (dataValidationsMatch && dataValidationsMatch[1]) {
+                            const dataValidationsContent = dataValidationsMatch[1];
+                            const dataValidationMatches = dataValidationsContent.matchAll(/<dataValidation([^>]*)>([\s\S]*?)<\/dataValidation>/g);
+                            
+                            for (const dvMatch of dataValidationMatches) {
+                                const dvAttrs = dvMatch[1];
+                                const dvContent = dvMatch[2];
+                                
+                                if (!dvAttrs || !dvContent) continue;
+                                
+                                // Parse attributes
+                                const typeMatch = dvAttrs.match(/type="([^"]*)"/);
+                                const errorStyleMatch = dvAttrs.match(/errorStyle="([^"]*)"/);
+                                const operatorMatch = dvAttrs.match(/operator="([^"]*)"/);
+                                const allowBlankMatch = dvAttrs.match(/allowBlank="([^"]*)"/);
+                                const showDropDownMatch = dvAttrs.match(/showDropDown="([^"]*)"/);
+                                const showInputMessageMatch = dvAttrs.match(/showInputMessage="([^"]*)"/);
+                                const showErrorMessageMatch = dvAttrs.match(/showErrorMessage="([^"]*)"/);
+                                const errorTitleMatch = dvAttrs.match(/errorTitle="([^"]*)"/);
+                                const errorMatch = dvAttrs.match(/error="([^"]*)"/);
+                                const promptTitleMatch = dvAttrs.match(/promptTitle="([^"]*)"/);
+                                const promptMatch = dvAttrs.match(/prompt="([^"]*)"/);
+                                const sqrefMatch = dvAttrs.match(/sqref="([^"]*)"/);
+                                
+                                // Parse formulas
+                                const formula1Match = dvContent.match(/<formula1>([^<]*)<\/formula1>/);
+                                const formula2Match = dvContent.match(/<formula2>([^<]*)<\/formula2>/);
+                                
+                                if (sqrefMatch && sqrefMatch[1]) {
+                                    const sqref = sqrefMatch[1];
+                                    
+                                    // Create data validation
+                                    const { DataValidation } = await import('../core/data-validation.ts');
+                                    const dataValidation = new DataValidation();
+                                    
+                                    if (typeMatch && typeMatch[1]) dataValidation.setType(typeMatch[1]);
+                                    if (errorStyleMatch && errorStyleMatch[1]) dataValidation.setErrorStyle(errorStyleMatch[1]);
+                                    if (operatorMatch && operatorMatch[1]) dataValidation.setOperator(operatorMatch[1]);
+                                    if (allowBlankMatch && allowBlankMatch[1]) dataValidation.setAllowBlank(allowBlankMatch[1] === '1');
+                                    if (showDropDownMatch && showDropDownMatch[1]) dataValidation.setShowDropDown(showDropDownMatch[1] === '0'); // Note: inverted
+                                    if (showInputMessageMatch && showInputMessageMatch[1]) dataValidation.setShowInputMessage(showInputMessageMatch[1] === '1');
+                                    if (showErrorMessageMatch && showErrorMessageMatch[1]) dataValidation.setShowErrorMessage(showErrorMessageMatch[1] === '1');
+                                    if (errorTitleMatch && errorTitleMatch[1]) dataValidation.setErrorTitle(errorTitleMatch[1]);
+                                    if (errorMatch && errorMatch[1]) dataValidation.setError(errorMatch[1]);
+                                    if (promptTitleMatch && promptTitleMatch[1]) dataValidation.setPromptTitle(promptTitleMatch[1]);
+                                    if (promptMatch && promptMatch[1]) dataValidation.setPrompt(promptMatch[1]);
+                                    dataValidation.setSqref(sqref);
+                                    if (formula1Match && formula1Match[1]) dataValidation.setFormula1(formula1Match[1]);
+                                    if (formula2Match && formula2Match[1]) dataValidation.setFormula2(formula2Match[1]);
+                                    
+                                    worksheet.setDataValidation(sqref, dataValidation);
+                                }
+                            }
+                        }
+                    }
                 }
             }
             

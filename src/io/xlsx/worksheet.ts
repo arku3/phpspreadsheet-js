@@ -51,6 +51,9 @@ export class Worksheet extends WriterPart {
         // conditionalFormatting
         this.writeConditionalFormatting(root, worksheet);
 
+        // dataValidations
+        this.writeDataValidations(root, worksheet);
+
         // pageMargins
         const margins = worksheet.getPageMargins();
         root.ele('pageMargins', {
@@ -416,6 +419,69 @@ export class Worksheet extends WriterPart {
             const mergeCellsEle = root.ele('mergeCells', { count: mergeCells.length });
             for (const mergeCell of mergeCells) {
                 mergeCellsEle.ele('mergeCell', { ref: mergeCell });
+            }
+        }
+    }
+
+    /**
+     * Write Data Validations.
+     */
+    private writeDataValidations(root: any, worksheet: CoreWorksheet): void {
+        const dataValidationCollection = worksheet.getDataValidationCollection();
+        
+        if (dataValidationCollection.size > 0) {
+            const dataValidationsEle = root.ele('dataValidations', { count: dataValidationCollection.size });
+            
+            for (const [coordinate, dv] of dataValidationCollection) {
+                const dvEle = dataValidationsEle.ele('dataValidation');
+                
+                // Type
+                if (dv.getType() !== '') {
+                    dvEle.att('type', dv.getType());
+                }
+                
+                // Error style
+                if (dv.getErrorStyle() !== '') {
+                    dvEle.att('errorStyle', dv.getErrorStyle());
+                }
+                
+                // Operator
+                if (dv.getOperator() !== '') {
+                    dvEle.att('operator', dv.getOperator());
+                }
+                
+                // Boolean attributes (note: showDropDown is inverted)
+                dvEle.att('allowBlank', dv.getAllowBlank() ? '1' : '0');
+                dvEle.att('showDropDown', dv.getShowDropDown() ? '0' : '1');
+                dvEle.att('showInputMessage', dv.getShowInputMessage() ? '1' : '0');
+                dvEle.att('showErrorMessage', dv.getShowErrorMessage() ? '1' : '0');
+                
+                // Error messages
+                if (dv.getErrorTitle() !== '') {
+                    dvEle.att('errorTitle', dv.getErrorTitle());
+                }
+                if (dv.getError() !== '') {
+                    dvEle.att('error', dv.getError());
+                }
+                
+                // Prompt messages
+                if (dv.getPromptTitle() !== '') {
+                    dvEle.att('promptTitle', dv.getPromptTitle());
+                }
+                if (dv.getPrompt() !== '') {
+                    dvEle.att('prompt', dv.getPrompt());
+                }
+                
+                // Cell reference/range
+                dvEle.att('sqref', dv.getSqref() ?? coordinate);
+                
+                // Formulas
+                if (dv.getFormula1() !== '') {
+                    dvEle.ele('formula1', dv.getFormula1());
+                }
+                if (dv.getFormula2() !== '') {
+                    dvEle.ele('formula2', dv.getFormula2());
+                }
             }
         }
     }
