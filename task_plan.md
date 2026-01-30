@@ -57,7 +57,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [x] **Merge Cells Reading** - Parse <mergeCells> and apply merge ranges.
         - [x] **Hyperlinks Reading** - Parse <hyperlinks>, resolve URLs via relationships.
         - [x] **Data Validation Reading** - FULLY IMPLEMENTED with complete I/O support.
-        - [ ] **Comments Reading** - Parse comments.xml (author/text) and note VML (visibility/geometry where available).
+        - [x] **Comments Reading** - Parse comments.xml (author/text) and note VML (visibility/geometry where available).
     - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
 
 - [x] Phase 15b: Data Validation Infrastructure (COMPLETE) <!-- id: 60 -->

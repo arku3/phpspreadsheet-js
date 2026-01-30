@@ -8,7 +8,7 @@
 ## 2. I/O Module (XLSX)
 - **Drawings / Images**: Worksheet drawings and images are not implemented.
 - **Charts**: Not implemented.
-- **Comments**: Classic comments/notes are implemented for XLSX writing; comments reading is still pending. Threaded comments are not implemented.
+- **Comments**: Classic comments/notes read/write is implemented. Threaded comments are not implemented.
 - **VML pass-through**: If a worksheet contains legacy VML shapes that are not notes, round-trip preservation is not fully implemented.
 
 ## 3. Calculation Module
