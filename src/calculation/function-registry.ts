@@ -7,6 +7,7 @@ import { DateTime } from './functions/datetime.ts';
 import { Financial } from './functions/financial.ts';
 import { Engineering } from './functions/engineering.ts';
 import { Conditional } from './functions/conditional.ts';
+import { Database } from './functions/database.ts';
 
 export type FunctionImplementation = (args: any[]) => any;
 
@@ -63,5 +64,6 @@ export class FunctionRegistry {
         new Financial().register(this);
         new Engineering().register(this);
         new Conditional().register(this);
+        new Database().register(this);
     }
 }
