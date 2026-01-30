@@ -3,6 +3,7 @@ import { Spreadsheet } from '../core/spreadsheet.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { open } from 'node:fs/promises';
 import unzipper from 'unzipper';
+import { StylesReader, type StyleData } from './xlsx/styles-reader.ts';
 
 /**
  * XLSX file reader.
@@ -33,6 +34,11 @@ export class XlsxReader implements IReader {
      * Read filter (optional callback to filter worksheets).
      */
     #readFilter: ((worksheetName: string) => boolean) | null = null;
+
+    /**
+     * Path to styles.xml in the ZIP file.
+     */
+    private stylesPath: string | null = null;
 
     /**
      * Can the current reader read the file?
@@ -300,6 +306,17 @@ export class XlsxReader implements IReader {
                         sharedStringsPath = ssPath;
                     }
                 }
+                
+                // Find styles
+                const stylesMatch = relsXml.match(/<Relationship[^>]*Type="[^"]*styles"[^>]*Target="([^"]+)"/);
+                if (stylesMatch && stylesMatch[1]) {
+                    const stylesPath = stylesMatch[1].replace(/^\//, '');
+                    if (!stylesPath.startsWith('xl/')) {
+                        this.stylesPath = `xl/${stylesPath}`;
+                    } else {
+                        this.stylesPath = stylesPath;
+                    }
+                }
             }
             
             // Read shared strings if present
@@ -323,6 +340,18 @@ export class XlsxReader implements IReader {
                 }
             }
             
+            // Read styles if present and not in data-only mode
+            let styleData: StyleData | null = null;
+            if (!this.#readDataOnly && this.stylesPath) {
+                const stylesFile = zip.files.find(f => f.path === this.stylesPath);
+                if (stylesFile) {
+                    const stylesContent = await stylesFile.buffer();
+                    const stylesXml = stylesContent.toString('utf-8');
+                    const stylesReader = new StylesReader(this);
+                    styleData = await stylesReader.readStyles(stylesXml);
+                }
+            }
+            
             // Read workbook.xml to get sheet information
             const workbookFile = zip.files.find(f => f.path === workbookPath);
             if (!workbookFile) {
@@ -335,6 +364,13 @@ export class XlsxReader implements IReader {
             // Create spreadsheet
             const spreadsheet = new Spreadsheet();
             let defaultSheetUsed = false;
+            
+            // Add styles to spreadsheet if available
+            if (styleData && styleData.cellXfs.length > 0) {
+                for (const cellXf of styleData.cellXfs) {
+                    spreadsheet.addCellXf(cellXf);
+                }
+            }
             
             // Parse sheets from workbook.xml
             const sheetMatches = workbookXml.matchAll(/<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"[^>]*r:id="([^"]+)"/g);
@@ -391,19 +427,80 @@ export class XlsxReader implements IReader {
                     const cellContent = cellMatch[2];
                     if (!cellRef || !cellContent) continue;
                     
+                    // Get the full cell element to extract attributes
+                    const fullCellMatch = wsXml.match(new RegExp(`<c[^>]*r="${cellRef}"([^>]*)>`));
+                    const cellAttrs = fullCellMatch && fullCellMatch[1] ? fullCellMatch[1] : '';
+                    
+                    // Extract style index
+                    const styleMatch = cellAttrs.match(/s="(\d+)"/);
+                    const styleIndex = styleMatch ? parseInt(styleMatch[1]!, 10) : null;
+                    
                     // Determine cell type and value
                     const typeMatch = cellContent.match(/<v>([^<]*)<\/v>/);
                     const formulaMatch = cellContent.match(/<f>([^<]*)<\/f>/);
                     
                     const cell = worksheet.getCell(cellRef);
                     
+                    // Apply style if available and not in data-only mode
+                    if (styleIndex !== null && !this.#readDataOnly && styleData) {
+                        const cellStyle = spreadsheet.getCellXfByIndex(styleIndex);
+                        if (cellStyle) {
+                            // Copy style properties manually since exportArray is private
+                            const targetStyle = cell.getStyle();
+                            targetStyle.getFont().applyFromArray({
+                                name: cellStyle.getFont().getName(),
+                                size: cellStyle.getFont().getSize(),
+                                bold: cellStyle.getFont().getBold(),
+                                italic: cellStyle.getFont().getItalic(),
+                                underline: cellStyle.getFont().getUnderline(),
+                                strikethrough: cellStyle.getFont().getStrikethrough(),
+                                color: { argb: cellStyle.getFont().getColor().getARGB() }
+                            });
+                            targetStyle.getFill().applyFromArray({
+                                fillType: cellStyle.getFill().getFillType(),
+                                startColor: { argb: cellStyle.getFill().getStartColor().getARGB() },
+                                endColor: { argb: cellStyle.getFill().getEndColor().getARGB() }
+                            });
+                            targetStyle.getBorders().applyFromArray({
+                                left: {
+                                    borderStyle: cellStyle.getBorders().getLeft().getBorderStyle(),
+                                    color: { argb: cellStyle.getBorders().getLeft().getColor().getARGB() }
+                                },
+                                right: {
+                                    borderStyle: cellStyle.getBorders().getRight().getBorderStyle(),
+                                    color: { argb: cellStyle.getBorders().getRight().getColor().getARGB() }
+                                },
+                                top: {
+                                    borderStyle: cellStyle.getBorders().getTop().getBorderStyle(),
+                                    color: { argb: cellStyle.getBorders().getTop().getColor().getARGB() }
+                                },
+                                bottom: {
+                                    borderStyle: cellStyle.getBorders().getBottom().getBorderStyle(),
+                                    color: { argb: cellStyle.getBorders().getBottom().getColor().getARGB() }
+                                },
+                                diagonal: {
+                                    borderStyle: cellStyle.getBorders().getDiagonal().getBorderStyle(),
+                                    color: { argb: cellStyle.getBorders().getDiagonal().getColor().getARGB() }
+                                }
+                            });
+                            targetStyle.getAlignment().applyFromArray({
+                                horizontal: cellStyle.getAlignment().getHorizontal(),
+                                vertical: cellStyle.getAlignment().getVertical(),
+                                textRotation: cellStyle.getAlignment().getTextRotation(),
+                                wrapText: cellStyle.getAlignment().getWrapText()
+                            });
+                            targetStyle.getNumberFormat().applyFromArray({
+                                formatCode: cellStyle.getNumberFormat().getFormatCode()
+                            });
+                        }
+                    }
+                    
                     if (formulaMatch && formulaMatch[1]) {
                         cell.setValue('=' + formulaMatch[1]);
                     } else if (typeMatch && typeMatch[1]) {
                         const value = typeMatch[1];
-                        // Check if it's a shared string reference by looking at parent <c> tag
-                        const fullCellMatch = wsXml.match(new RegExp(`<c[^>]*r="${cellRef}"[^>]*>`));
-                        const isSharedString = fullCellMatch && fullCellMatch[0].includes('t="s"');
+                        // Check if it's a shared string reference
+                        const isSharedString = cellAttrs.includes('t="s"');
                         
                         if (isSharedString) {
                             const ssIndex = parseInt(value, 10);

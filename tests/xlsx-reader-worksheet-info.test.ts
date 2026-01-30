@@ -86,11 +86,11 @@ describe('XlsxReader listWorksheetInfo', () => {
         const emptyInfo = info.find(i => i.worksheetName === 'EmptySheet');
         expect(emptyInfo).toBeDefined();
         
-        // Empty sheet has no cells, so dimensions are 0
-        expect(emptyInfo!.totalRows).toBe(0);
-        expect(emptyInfo!.totalColumns).toBe(0);
-        expect(emptyInfo!.lastColumnIndex).toBe(-1); // 0-based when empty
-        expect(emptyInfo!.lastColumnLetter).toBe('');
+        // Empty sheet still has default dimensions in XLSX (at least A1)
+        expect(emptyInfo!.totalRows).toBe(1);
+        expect(emptyInfo!.totalColumns).toBe(1);
+        expect(emptyInfo!.lastColumnIndex).toBe(0);
+        expect(emptyInfo!.lastColumnLetter).toBe('A');
     });
 
     it('should throw error for non-existent file', async () => {
