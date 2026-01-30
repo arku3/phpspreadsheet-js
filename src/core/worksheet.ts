@@ -14,6 +14,7 @@ import { SheetView } from '../worksheet/sheet-view.ts';
 import { Pane } from '../worksheet/pane.ts';
 import { AutoFilter } from '../worksheet/auto-filter.ts';
 import { Comment } from './comment.ts';
+import type { BaseDrawing } from '../worksheet/drawing/base-drawing.ts';
 
 /**
  * Worksheet in a Spreadsheet.
@@ -48,6 +49,11 @@ export class Worksheet {
     #pageMargins: PageMargins;
     #sheetView: SheetView;
     #autoFilter: AutoFilter;
+
+    /**
+     * Sparse collection of worksheet drawings (images/shapes), stored in insertion order.
+     */
+    #drawingCollection: BaseDrawing[] = [];
 
     #freezePane: string | null = null;
     #paneTopLeftCell: string = 'A1';
@@ -116,6 +122,49 @@ export class Worksheet {
         this.#autoFilter = new AutoFilter('', this);
         this.#defaultColumnDimension = new ColumnDimension(null);
         this.#defaultRowDimension = new RowDimension(null);
+    }
+
+    /**
+     * Get a readonly view of all drawings on this worksheet.
+     */
+    public getDrawingCollection(): ReadonlyArray<BaseDrawing> {
+        return this.#drawingCollection;
+    }
+
+    /**
+     * Add a drawing to this worksheet.
+     *
+     * If the drawing is already attached to a different worksheet, this will throw.
+     */
+    public addDrawing(drawing: BaseDrawing): this {
+        const existingWorksheet = drawing.getWorksheet();
+        if (existingWorksheet !== null && existingWorksheet !== this) {
+            throw new Error('A Worksheet has already been assigned. Drawings can only exist on one Worksheet.');
+        }
+
+        if (!this.#drawingCollection.includes(drawing)) {
+            this.#drawingCollection.push(drawing);
+        }
+        drawing.setWorksheet(this);
+
+        // Ensure the anchor cell exists, matching PhpSpreadsheet behavior.
+        // (IO can rely on this later when writing anchors.)
+        this.getCell(drawing.getCoordinates());
+        return this;
+    }
+
+    /**
+     * Remove a drawing from this worksheet.
+     */
+    public removeDrawing(drawing: BaseDrawing): this {
+        const idx = this.#drawingCollection.indexOf(drawing);
+        if (idx >= 0) {
+            this.#drawingCollection.splice(idx, 1);
+        }
+        if (drawing.getWorksheet() === this) {
+            drawing.detach();
+        }
+        return this;
     }
 
     /**
@@ -1657,5 +1706,11 @@ export class Worksheet {
         // Detach other large backrefs where trivial.
         this.#autoFilter.setParent(null);
         this.#tables = [];
+
+        // Detach drawings to break Worksheet <-> Drawing cycles.
+        for (const drawing of this.#drawingCollection) {
+            drawing.detach();
+        }
+        this.#drawingCollection = [];
     }
 }
