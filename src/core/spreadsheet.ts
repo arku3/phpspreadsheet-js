@@ -578,4 +578,134 @@ export class Spreadsheet {
     public setVisibility(value: string): void {
         this.#visibility = value;
     }
+
+    /**
+     * Check if a sheet name exists.
+     *
+     * @param sheetName The name to check
+     * @returns True if the sheet name exists
+     */
+    public sheetNameExists(sheetName: string): boolean {
+        return this.#workSheetCollection.some(sheet => sheet.getTitle() === sheetName);
+    }
+
+    /**
+     * Get all sheet names.
+     *
+     * @returns Array of sheet names
+     */
+    public getSheetNames(): string[] {
+        return this.#workSheetCollection.map(sheet => sheet.getTitle());
+    }
+
+    /**
+     * Get sheet by code name.
+     *
+     * @param codeName The code name (deprecated property, currently uses title)
+     * @returns The worksheet or undefined
+     */
+    public getSheetByCodeName(codeName: string): Worksheet | undefined {
+        // In PHP this uses a separate codeName property, but we'll use title as fallback
+        return this.getSheetByName(codeName);
+    }
+
+    /**
+     * Remove a sheet by index.
+     *
+     * @param index The index of the sheet to remove
+     * @returns This spreadsheet for chaining
+     */
+    public removeSheetByIndex(index: number): this {
+        if (index < 0 || index >= this.#workSheetCollection.length) {
+            throw new Error(`Sheet index ${index} is out of bounds.`);
+        }
+
+        // Remove the sheet
+        this.#workSheetCollection.splice(index, 1);
+
+        // Adjust active sheet index
+        if (this.#activeSheetIndex >= index && this.#activeSheetIndex > 0) {
+            this.#activeSheetIndex--;
+        }
+
+        // Ensure we always have at least one sheet
+        if (this.#workSheetCollection.length === 0) {
+            const newSheet = new Worksheet(this, 'Worksheet 1');
+            this.#workSheetCollection.push(newSheet);
+            this.#activeSheetIndex = 0;
+        }
+
+        return this;
+    }
+
+    /**
+     * Duplicate a worksheet by title.
+     *
+     * @param sheetTitle The title of the sheet to duplicate
+     * @returns The new worksheet
+     */
+    public duplicateWorksheetByTitle(sheetTitle: string): Worksheet {
+        const sourceSheet = this.getSheetByName(sheetTitle);
+        if (!sourceSheet) {
+            throw new Error(`Sheet "${sheetTitle}" does not exist.`);
+        }
+
+        // Generate new title
+        let newTitle = sheetTitle;
+        let counter = 1;
+        while (this.sheetNameExists(newTitle)) {
+            newTitle = `${sheetTitle} (${counter})`;
+            counter++;
+        }
+
+        // Create new sheet with copied data
+        const newSheet = new Worksheet(this, newTitle);
+        
+        // Copy cell values (basic implementation)
+        for (const cell of sourceSheet.getCellCollection().getCells()) {
+            const coord = cell.getCoordinate();
+            const value = cell.getValue();
+            newSheet.getCell(coord).setValue(value);
+        }
+
+        // Copy merge cells
+        const mergeCells = sourceSheet.getMergeCells();
+        for (const range of Object.keys(mergeCells)) {
+            newSheet.mergeCells(range);
+        }
+
+        this.addSheet(newSheet);
+        return newSheet;
+    }
+
+    /**
+     * Set the active sheet index.
+     *
+     * @param index The index to set as active
+     * @returns This spreadsheet for chaining
+     */
+    public setActiveSheetIndex(index: number): this {
+        if (index < 0 || index >= this.#workSheetCollection.length) {
+            throw new Error(`Sheet index ${index} is out of bounds.`);
+        }
+        this.#activeSheetIndex = index;
+        return this;
+    }
+
+    /**
+     * Set the active sheet index by name.
+     *
+     * @param sheetName The name of the sheet to activate
+     * @returns This spreadsheet for chaining
+     */
+    public setActiveSheetIndexByName(sheetName: string): this {
+        const sheet = this.getSheetByName(sheetName);
+        if (!sheet) {
+            throw new Error(`Sheet "${sheetName}" does not exist.`);
+        }
+        
+        const index = this.#workSheetCollection.indexOf(sheet);
+        this.#activeSheetIndex = index;
+        return this;
+    }
 }
