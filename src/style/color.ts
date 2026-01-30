@@ -91,6 +91,7 @@ export class Color extends Supervisor {
 
     #argb: string;
     #theme: number = -1;
+    #hasChanged: boolean = false;
 
     constructor(colorValue: string = Color.COLOR_BLACK, isSupervisor: boolean = false) {
         super(isSupervisor);
@@ -233,11 +234,49 @@ export class Color extends Supervisor {
     }
 
     /**
+     * Check if the color has been changed from default.
+     *
+     * @returns True if color has been modified
+     */
+    public getHasChanged(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getHasChanged();
+        }
+        return this.#hasChanged;
+    }
+
+    /**
+     * Set the hasChanged flag.
+     *
+     * @param value The new value
+     */
+    public setHasChanged(value: boolean): void {
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ hasChanged: value });
+            (this.parent as any).applyFromArray(styleArray);
+        } else {
+            this.#hasChanged = value;
+        }
+    }
+
+    /**
+     * Set the color to hyperlink theme (standard link blue).
+     *
+     * @returns This color for method chaining
+     */
+    public setHyperlinkTheme(): this {
+        // Standard hyperlink blue color
+        this.setARGB('FF0563C1');
+        this.setTheme(10); // Hyperlink theme index
+        return this;
+    }
+
+    /**
      * Apply styles from array.
      *
      * @param styleArray Array containing style information
      */
-    public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number }): this {
+    public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number; hasChanged?: boolean }): this {
         if (this.isSupervisor) {
             const styleArrayLocal = this.getStyleArray(styleArray);
             (this.parent as any).applyFromArray(styleArrayLocal);
@@ -253,6 +292,9 @@ export class Color extends Supervisor {
         if (styleArray.theme !== undefined) {
             this.setTheme(styleArray.theme);
         }
+        if (styleArray.hasChanged !== undefined) {
+            this.setHasChanged(styleArray.hasChanged);
+        }
         return this;
     }
 
@@ -264,7 +306,7 @@ export class Color extends Supervisor {
             return this.getSharedComponent().getHashCode();
         }
         return createHash('md5')
-            .update(this.#argb + this.#theme + 'Color')
+            .update(this.#argb + this.#theme + this.#hasChanged + 'Color')
             .digest('hex');
     }
 
@@ -296,6 +338,7 @@ export class Color extends Supervisor {
     public clone(): Color {
         const clone = new Color(this.#argb, this.isSupervisor);
         clone.#theme = this.#theme;
+        clone.#hasChanged = this.#hasChanged;
         return clone;
     }
 }

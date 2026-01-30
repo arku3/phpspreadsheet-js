@@ -167,8 +167,32 @@ export class NumberFormatter {
      */
     private static formatCustom(value: number, format: string): string {
         // Basic custom format parsing
+        
+        // Handle date formats
+        if (format.includes('yyyy') || format.includes('mm') || format.includes('dd') || 
+            format.includes('m/d') || format.includes('d-mmm')) {
+            return this.formatDate(value);
+        }
+        
+        // Handle time formats
+        if (format.includes('h:') || format.includes('hh:') || format.includes(':mm') || format.includes(':ss')) {
+            return this.formatTime(value);
+        }
+        
+        // Handle percentage
+        if (format.includes('%')) {
+            const decimals = this.countDecimalPlaces(format);
+            return this.formatPercentage(value, decimals);
+        }
+        
+        // Handle currency with $ symbol
+        if (format.includes('$')) {
+            const decimals = this.countDecimalPlaces(format);
+            return this.formatCurrency(value, decimals);
+        }
+        
         // Handle thousands separator
-        if (format.includes('#,##0')) {
+        if (format.includes('#,##0') || format.includes('#,##0.00')) {
             const decimals = this.countDecimalPlaces(format);
             return this.formatNumber(value, decimals, true);
         }
@@ -177,12 +201,6 @@ export class NumberFormatter {
         if (format.includes('0.')) {
             const decimals = this.countDecimalPlaces(format);
             return this.formatNumber(value, decimals, format.includes(','));
-        }
-        
-        // Handle percentage
-        if (format.includes('%')) {
-            const decimals = this.countDecimalPlaces(format);
-            return this.formatPercentage(value, decimals);
         }
         
         // Default to general format

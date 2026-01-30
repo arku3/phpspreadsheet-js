@@ -26,7 +26,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
             - [x] Add `NumberFormat.toFormattedString()` rendering engine (Complex Task).
             - [x] Add missing Font properties: Latin, EastAsian, ComplexScript, StrikeType, Cap, BaseLine.
             - [x] Add `Alignment` rotation range validation (-90 to 90, 255).
-            - [ ] Add `Color.setHyperlinkTheme()` and `hasChanged` tracking.
+            - [x] Add `Color.setHyperlinkTheme()` and `hasChanged` tracking.
 
         - [ ] **Calculation Engine Fixes**
             - [ ] Implement missing categories: `DateTimeExcel`, `Financial`, `Engineering`, `Statistical`.
