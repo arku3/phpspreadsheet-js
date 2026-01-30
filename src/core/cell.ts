@@ -27,10 +27,12 @@ export class Cell {
     #value: any;
     #calculatedValue: any;
     #dataType: TDataType;
-    #worksheet: Worksheet;
+    #worksheet: Worksheet | null;
     #column: number;
     #row: number;
     #xfIndex: number = 0;
+
+    #isDetached: boolean = false;
 
     #hyperlink: Hyperlink | null = null;
 
@@ -57,10 +59,15 @@ export class Cell {
      * Get calculated value.
      */
     public getCalculatedValue(): any {
+        this.#assertAttached('getCalculatedValue');
         if (this.#dataType === DataType.TYPE_FORMULA) {
             if (this.#calculatedValue === undefined) {
-                const calculation = this.#worksheet.getParent().getCalculationEngine();
-                this.#calculatedValue = calculation.calculateFormula(this.#value, this.#worksheet, this.getCoordinate());
+                const worksheet = this.#worksheet;
+                if (!worksheet) {
+                    this.#throwDetached('getCalculatedValue');
+                }
+                const calculation = worksheet.getParent().getCalculationEngine();
+                this.#calculatedValue = calculation.calculateFormula(this.#value, worksheet, this.getCoordinate());
             }
             return this.#calculatedValue;
         }
@@ -78,7 +85,12 @@ export class Cell {
      * Set value.
      */
     public setValue(value: any): void {
-        const binder = this.#worksheet.getParent().getValueBinder();
+        this.#assertAttached('setValue');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('setValue');
+        }
+        const binder = worksheet.getParent().getValueBinder();
         binder.bindValue(this, value);
     }
 
@@ -151,17 +163,44 @@ export class Cell {
      * Get cell style.
      */
     public getStyle(): Style {
+        this.#assertAttached('getStyle');
         // Match PhpSpreadsheet behavior: Cell::getStyle() returns a supervisor style
         // bound to this cell coordinate, so mutations create/update an xf entry and
         // update this cell's xfIndex rather than mutating a shared Style instance.
-        return this.#worksheet.getStyle(this.getCoordinate());
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('getStyle');
+        }
+        return worksheet.getStyle(this.getCoordinate());
     }
 
     /**
      * Get parent worksheet.
      */
     public getWorksheet(): Worksheet {
-        return this.#worksheet;
+        this.#assertAttached('getWorksheet');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('getWorksheet');
+        }
+        return worksheet;
+    }
+
+    /**
+     * Detach this cell from its worksheet.
+     *
+     * This is primarily intended for memory-management cleanup when a worksheet
+     * is being disconnected. A detached cell becomes unusable for worksheet-
+     * dependent operations.
+     */
+    public detach(): void {
+        if (this.#isDetached) {
+            return;
+        }
+
+        this.#isDetached = true;
+        this.#calculatedValue = undefined;
+        this.#worksheet = null;
     }
 
     /**
@@ -314,6 +353,7 @@ export class Cell {
      * @returns The hyperlink object or null if no hyperlink
      */
     public getHyperlink(): any {
+        this.#assertAttached('getHyperlink');
         if (this.#hyperlink === null) {
             this.#hyperlink = new Hyperlink();
         }
@@ -333,9 +373,14 @@ export class Cell {
      * @returns The data validation object or null if no validation
      */
     public getDataValidation(): any {
+        this.#assertAttached('getDataValidation');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('getDataValidation');
+        }
         // Import is handled via type-only to avoid circular dependency issues
         // The actual DataValidation class is available at runtime via the Worksheet
-        return this.#worksheet.getDataValidation(this.getCoordinate());
+        return worksheet.getDataValidation(this.getCoordinate());
     }
 
     /**
@@ -345,7 +390,12 @@ export class Cell {
      * @returns this
      */
     public setDataValidation(dataValidation: any): this {
-        this.#worksheet.setDataValidation(this.getCoordinate(), dataValidation);
+        this.#assertAttached('setDataValidation');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('setDataValidation');
+        }
+        worksheet.setDataValidation(this.getCoordinate(), dataValidation);
         return this;
     }
 
@@ -355,28 +405,58 @@ export class Cell {
      * @param create If true, create and attach a comment when absent
      */
     public getComment(create: boolean = true): Comment {
-        return this.#worksheet.getComment(this.getCoordinate(), create);
+        this.#assertAttached('getComment');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('getComment');
+        }
+        return worksheet.getComment(this.getCoordinate(), create);
     }
 
     /**
      * Try get classic comment for this cell.
      */
     public tryGetComment(): Comment | null {
-        return this.#worksheet.tryGetComment(this.getCoordinate());
+        this.#assertAttached('tryGetComment');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('tryGetComment');
+        }
+        return worksheet.tryGetComment(this.getCoordinate());
     }
 
     /**
      * True if this cell has a classic comment.
      */
     public hasComment(): boolean {
-        return this.#worksheet.hasComment(this.getCoordinate());
+        this.#assertAttached('hasComment');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('hasComment');
+        }
+        return worksheet.hasComment(this.getCoordinate());
     }
 
     /**
      * Remove the classic comment from this cell.
      */
     public removeComment(): this {
-        this.#worksheet.removeComment(this.getCoordinate());
+        this.#assertAttached('removeComment');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('removeComment');
+        }
+        worksheet.removeComment(this.getCoordinate());
         return this;
+    }
+
+    #assertAttached(method: string): void {
+        if (this.#isDetached || this.#worksheet === null) {
+            this.#throwDetached(method);
+        }
+    }
+
+    #throwDetached(method: string): never {
+        throw new Error(`Cell is detached; ${method}() can not be called.`);
     }
 }

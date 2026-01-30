@@ -39,8 +39,10 @@ describe('Memory Management', () => {
             const spreadsheet = new Spreadsheet();
             const worksheet = spreadsheet.getActiveSheet();
 
+            const retainedCell = worksheet.getCell('A1');
+
             // Add some cells
-            worksheet.getCell('A1').setValue('Test 1');
+            retainedCell.setValue('Test 1');
             worksheet.getCell('B2').setValue('Test 2');
             worksheet.getCell('C3').setValue(123);
 
@@ -52,6 +54,11 @@ describe('Memory Management', () => {
 
             // After disconnecting, cells should be cleared
             expect(collection.getCount()).toBe(0);
+
+            // Retained cell should be detached (no backref to worksheet)
+            expect(() => retainedCell.getWorksheet()).toThrow(/detached/i);
+            expect(() => retainedCell.getStyle()).toThrow(/detached/i);
+            expect(() => retainedCell.setValue('x')).toThrow(/detached/i);
         });
     });
 

@@ -10,6 +10,13 @@ export class CellCollection {
     #cells: Map<string, Cell> = new Map();
 
     /**
+     * Iterate over cells without allocating an array.
+     */
+    public values(): IterableIterator<Cell> {
+        return this.#cells.values();
+    }
+
+    /**
      * Add or update a cell.
      */
     public add(coordinate: string, cell: Cell): void {
@@ -166,9 +173,10 @@ export class CellCollection {
 
     /**
      * Clear all cells from the collection.
-     * 
-     * This breaks the references between cells and the worksheet,
-     * allowing garbage collection to clean up the cells.
+     *
+     * Note: this only removes cells from the collection; it does not detach
+     * the cells from their worksheet. Use Worksheet.disconnectCells() when
+     * you need to actively break circular references.
      */
     public clear(): void {
         this.#cells.clear();
