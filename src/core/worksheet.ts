@@ -1,6 +1,7 @@
 import { Spreadsheet } from './spreadsheet.ts';
 import { CellCollection } from './cell-collection.ts';
 import { Cell, DataType } from './cell.ts';
+import { DataValidation } from './data-validation.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Style } from '../style/style.ts';
 import { Conditional } from '../style/conditional.ts';
@@ -70,24 +71,14 @@ export class Worksheet {
     #mergeCells: Record<string, string> = {};
 
     /**
-     * Column dimensions.
-     */
-    #columnDimensions: Map<string, ColumnDimension> = new Map();
-
-    /**
-     * Conditional styles.
-     */
-    #conditionalStylesCollection: Map<string, Conditional[]> = new Map();
-
-    /**
-     * Default column dimension.
-     */
-    #defaultColumnDimension: ColumnDimension;
-
-    /**
-     * Row dimensions.
+     * Collection of row dimensions.
      */
     #rowDimensions: Map<number, RowDimension> = new Map();
+
+    /**
+     * Collection of data validations.
+     */
+    #dataValidationCollection: Map<string, DataValidation> = new Map();
 
     /**
      * Default row dimension.
@@ -736,6 +727,51 @@ export class Worksheet {
      */
     public getConditionalStylesCollection(): Map<string, Conditional[]> {
         return this.#conditionalStylesCollection;
+    }
+
+    /**
+     * Get data validation.
+     *
+     * @param cellCoordinate Cell coordinate (e.g. 'A1')
+     * @returns Data validation for the cell, or null if none
+     */
+    public getDataValidation(cellCoordinate: string): DataValidation | null {
+        const cellAddress = cellCoordinate.toUpperCase();
+        if (this.#dataValidationCollection.has(cellAddress)) {
+            return this.#dataValidationCollection.get(cellAddress) ?? null;
+        }
+        return null;
+    }
+
+    /**
+     * Set data validation.
+     *
+     * @param cellCoordinate Cell coordinate (e.g. 'A1')
+     * @param dataValidation Data validation object
+     * @returns this
+     */
+    public setDataValidation(cellCoordinate: string, dataValidation: DataValidation): this {
+        this.#dataValidationCollection.set(cellCoordinate.toUpperCase(), dataValidation);
+        return this;
+    }
+
+    /**
+     * Check if a cell has data validation.
+     *
+     * @param cellCoordinate Cell coordinate (e.g. 'A1')
+     * @returns True if the cell has data validation
+     */
+    public dataValidationExists(cellCoordinate: string): boolean {
+        return this.#dataValidationCollection.has(cellCoordinate.toUpperCase());
+    }
+
+    /**
+     * Get data validation collection.
+     *
+     * @returns Map of cell coordinates to data validations
+     */
+    public getDataValidationCollection(): Map<string, DataValidation> {
+        return this.#dataValidationCollection;
     }
 
     /**

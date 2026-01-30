@@ -46,8 +46,23 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [ ] **Memory & Disposal**
             - [ ] Implement `disconnectWorksheets()` and `disconnectCells()` circular reference breaking.
 
-    - [ ] Implement Xlsx Reader. <!-- id: 45 -->
+    - [x] **Implement Xlsx Reader** (Completed). <!-- id: 45 -->
+        - [x] Core infrastructure: IReader interface, ZIP reading with unzipper.
+        - [x] `listWorksheetNames()` - Get sheet names without loading.
+        - [x] `listWorksheetInfo()` - Get dimensions without loading.
+        - [x] `load()` - Full spreadsheet loading with cell values, multi-sheet support.
+        - [x] **Styles Reading** - Parse xl/styles.xml, apply fonts, fills, borders, alignment, number formats.
+        - [x] **Merge Cells Reading** - Parse <mergeCells> and apply merge ranges.
+        - [x] **Hyperlinks Reading** - Parse <hyperlinks>, resolve URLs via relationships.
+        - [ ] **Data Validation Reading** - IN PROGRESS (requires core infrastructure).
     - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
+
+- [ ] Phase 15b: Data Validation Infrastructure (New) <!-- id: 60 -->
+    - [ ] Create `DataValidation` class in src/core/. <!-- id: 61 -->
+    - [ ] Add data validation collection to Worksheet. <!-- id: 62 -->
+    - [ ] Implement Cell.getDataValidation() and setDataValidation(). <!-- id: 63 -->
+    - [ ] Implement data validation writing in Xlsx Writer. <!-- id: 64 -->
+    - [ ] Implement data validation reading in Xlsx Reader. <!-- id: 65 -->
 
 - [ ] Phase 16: Performance & Scalability <!-- id: 55 -->
     - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 53 -->

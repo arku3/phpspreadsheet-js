@@ -318,8 +318,19 @@ export class Cell {
      * @returns The data validation object or null if no validation
      */
     public getDataValidation(): any {
-        // TODO: Implement full DataValidation support
-        // For now, return null as placeholder
-        return null;
+        // Import is handled via type-only to avoid circular dependency issues
+        // The actual DataValidation class is available at runtime via the Worksheet
+        return this.#worksheet.getDataValidation(this.getCoordinate());
+    }
+
+    /**
+     * Set the data validation for this cell.
+     * 
+     * @param dataValidation Data validation object
+     * @returns this
+     */
+    public setDataValidation(dataValidation: any): this {
+        this.#worksheet.setDataValidation(this.getCoordinate(), dataValidation);
+        return this;
     }
 }
