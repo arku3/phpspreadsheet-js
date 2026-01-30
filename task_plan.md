@@ -46,7 +46,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
             - [x] Implement classic cell comments (notes) writing (comments*.xml + legacyDrawing + vmlDrawing).
         
         - [ ] **Memory & Disposal**
-            - [ ] Implement `disconnectWorksheets()` and `disconnectCells()` circular reference breaking.
+            - [x] Implement `disconnectWorksheets()` and `disconnectCells()` circular reference breaking.
 
     - [x] **Implement Xlsx Reader** (Completed). <!-- id: 45 -->
         - [x] Core infrastructure: IReader interface, ZIP reading with unzipper.
