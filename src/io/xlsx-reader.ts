@@ -2,8 +2,10 @@ import { open } from 'node:fs/promises';
 import path from 'node:path';
 import unzipper from 'unzipper';
 import { Spreadsheet } from '../core/spreadsheet.ts';
+import type { Worksheet } from '../core/worksheet.ts';
 import { RichText } from '../rich-text/rich-text.ts';
 import { Coordinate } from '../utils/coordinate.ts';
+import { Drawing } from '../worksheet/drawing/drawing.ts';
 import type { IReader, WorksheetInfo } from './i-reader.ts';
 import { StylesReader, type StyleData } from './xlsx/styles-reader.ts';
 
@@ -46,6 +48,10 @@ export class XlsxReader implements IReader {
         'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments';
     static readonly #VMLDRAWING_REL_TYPE =
         'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing';
+    static readonly #DRAWING_REL_TYPE =
+        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing';
+
+    static readonly #EMU_PER_PIXEL = 9525;
 
     static decodeXmlEntities(value: string): string {
         // Minimal XML entity decoding.
@@ -178,6 +184,181 @@ export class XlsxReader implements IReader {
         }
         const buf = await entry.buffer();
         return buf.toString('utf-8');
+    }
+
+    async #readZipBinaryFile(
+        zip: unzipper.CentralDirectory,
+        zipPath: string,
+    ): Promise<Uint8Array | null> {
+        const entry = zip.files.find((f) => f.path === zipPath);
+        if (!entry) {
+            return null;
+        }
+        return new Uint8Array(await entry.buffer());
+    }
+
+    static #emuToPx(emu: number): number {
+        if (!Number.isFinite(emu)) {
+            return 0;
+        }
+        return Math.round(emu / XlsxReader.#EMU_PER_PIXEL);
+    }
+
+    static #mimeTypeFromExtension(ext: string): string {
+        const normalized = ext.toLowerCase();
+        switch (normalized) {
+            case 'png':
+                return 'image/png';
+            case 'jpg':
+            case 'jpeg':
+                return 'image/jpeg';
+            case 'gif':
+                return 'image/gif';
+            case 'bmp':
+                return 'image/bmp';
+            case 'webp':
+                return 'image/webp';
+            case 'tif':
+            case 'tiff':
+                return 'image/tiff';
+            default:
+                return '';
+        }
+    }
+
+    async #loadWorksheetDrawings(
+        zip: unzipper.CentralDirectory,
+        worksheetPath: string,
+        worksheetXml: string,
+        worksheet: Worksheet,
+    ): Promise<void> {
+        const drawingTagMatches = [...worksheetXml.matchAll(/<drawing\b([^>]*)\/>/g)];
+        if (drawingTagMatches.length === 0) {
+            return;
+        }
+
+        const worksheetRelsPath = worksheetPath
+            .replace('xl/worksheets/', 'xl/worksheets/_rels/')
+            .replace('.xml', '.xml.rels');
+        const relsXml = await this.#readZipTextFile(zip, worksheetRelsPath);
+        if (!relsXml) {
+            return;
+        }
+
+        const rels = XlsxReader.#parseRelationshipsXml(relsXml);
+
+        for (const drawingTagMatch of drawingTagMatches) {
+            const attrs = drawingTagMatch[1] ?? '';
+            const rId =
+                XlsxReader.#extractXmlAttribute(attrs, 'r:id') ??
+                XlsxReader.#extractXmlAttribute(attrs, 'id');
+            if (!rId) {
+                continue;
+            }
+
+            const drawingRel = rels.find((r) => r.id === rId && r.type === XlsxReader.#DRAWING_REL_TYPE);
+            const drawingTarget = drawingRel?.target;
+            if (!drawingTarget) {
+                continue;
+            }
+
+            const drawingPath = XlsxReader.#resolveRelationshipTarget(worksheetPath, drawingTarget);
+            const drawingXml = await this.#readZipTextFile(zip, drawingPath);
+            if (!drawingXml) {
+                continue;
+            }
+
+            const drawingRelsPath = path.posix.join(
+                path.posix.dirname(drawingPath),
+                '_rels',
+                `${path.posix.basename(drawingPath)}.rels`,
+            );
+            const drawingRelsXml = await this.#readZipTextFile(zip, drawingRelsPath);
+            const drawingRels = drawingRelsXml ? XlsxReader.#parseRelationshipsXml(drawingRelsXml) : [];
+
+            const anchorMatches = drawingXml.matchAll(
+                /<xdr:(oneCellAnchor|twoCellAnchor)\b[^>]*>([\s\S]*?)<\/xdr:\1>/g,
+            );
+
+            for (const anchorMatch of anchorMatches) {
+                const anchorType = anchorMatch[1] ?? '';
+                const anchorInner = anchorMatch[2] ?? '';
+                void anchorType;
+
+                const fromMatch = anchorInner.match(/<xdr:from\b[^>]*>([\s\S]*?)<\/xdr:from>/);
+                const fromInner = fromMatch?.[1] ?? '';
+
+                const col = Number.parseInt(
+                    (fromInner.match(/<xdr:col>(\d+)<\/xdr:col>/)?.[1] ?? '0').trim(),
+                    10,
+                );
+                const row = Number.parseInt(
+                    (fromInner.match(/<xdr:row>(\d+)<\/xdr:row>/)?.[1] ?? '0').trim(),
+                    10,
+                );
+                const colOffEmu = Number.parseInt(
+                    (fromInner.match(/<xdr:colOff>(\d+)<\/xdr:colOff>/)?.[1] ?? '0').trim(),
+                    10,
+                );
+                const rowOffEmu = Number.parseInt(
+                    (fromInner.match(/<xdr:rowOff>(\d+)<\/xdr:rowOff>/)?.[1] ?? '0').trim(),
+                    10,
+                );
+
+                const coordinates = Coordinate.stringFromCoordinate(col + 1, row + 1);
+
+                let cxEmu = 0;
+                let cyEmu = 0;
+                const extMatch = anchorInner.match(
+                    /<xdr:ext\b[^>]*cx="(\d+)"[^>]*cy="(\d+)"[^>]*\/>/,
+                );
+                if (extMatch) {
+                    cxEmu = Number.parseInt(extMatch[1] ?? '0', 10);
+                    cyEmu = Number.parseInt(extMatch[2] ?? '0', 10);
+                } else {
+                    const aExtMatch = anchorInner.match(
+                        /<a:ext\b[^>]*cx="(\d+)"[^>]*cy="(\d+)"[^>]*\/>/,
+                    );
+                    if (aExtMatch) {
+                        cxEmu = Number.parseInt(aExtMatch[1] ?? '0', 10);
+                        cyEmu = Number.parseInt(aExtMatch[2] ?? '0', 10);
+                    }
+                }
+
+                const embedId = anchorInner.match(/r:embed="([^"]+)"/)?.[1] ?? null;
+
+                let imageBytes: Uint8Array | null = null;
+                let extension = '';
+                let mimeType = '';
+                if (embedId) {
+                    const imgRel = drawingRels.find((r) => r.id === embedId);
+                    if (imgRel?.target) {
+                        const mediaPath = XlsxReader.#resolveRelationshipTarget(drawingPath, imgRel.target);
+                        imageBytes = await this.#readZipBinaryFile(zip, mediaPath);
+
+                        const ext = path.posix.extname(mediaPath);
+                        extension = ext.startsWith('.') ? ext.slice(1).toLowerCase() : ext.toLowerCase();
+                        mimeType = XlsxReader.#mimeTypeFromExtension(extension);
+                    }
+                }
+
+                // Only create a Drawing if it references an image.
+                if (!imageBytes) {
+                    continue;
+                }
+
+                const drawing = new Drawing();
+                drawing.setCoordinates(coordinates);
+                drawing.setOffsetX(XlsxReader.#emuToPx(colOffEmu));
+                drawing.setOffsetY(XlsxReader.#emuToPx(rowOffEmu));
+                drawing.setWidth(XlsxReader.#emuToPx(cxEmu));
+                drawing.setHeight(XlsxReader.#emuToPx(cyEmu));
+                drawing.setImageData(imageBytes, mimeType, extension);
+
+                // Attach to worksheet.
+                worksheet.addDrawing(drawing);
+            }
+        }
     }
 
     /**
@@ -650,6 +831,9 @@ export class XlsxReader implements IReader {
 
                 // Parse merge cells
                 if (!this.#readDataOnly) {
+                    // Parse worksheet drawings (images) before other relationship-based parts.
+                    await this.#loadWorksheetDrawings(zip, worksheetPath, wsXml, worksheet);
+
                     const mergeCellsMatch = wsXml.match(
                         /<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/,
                     );
