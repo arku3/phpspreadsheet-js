@@ -25,6 +25,9 @@ export class ContentTypes extends WriterPart {
         // XML
         this.writeDefaultContentType(root, 'xml', 'application/xml');
 
+        // VML drawings (classic comments "notes")
+        this.writeDefaultContentType(root, 'vml', 'application/vnd.openxmlformats-officedocument.vmlDrawing');
+
         // Workbook
         this.writeOverrideContentType(root, '/xl/workbook.xml', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml');
 
@@ -47,6 +50,17 @@ export class ContentTypes extends WriterPart {
             const tableCount = spreadsheet.getSheet(i).getTables().length;
             for (let t = 1; t <= tableCount; t++) {
                 this.writeOverrideContentType(root, `/xl/tables/table${tableIndex++}.xml`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml');
+            }
+        }
+
+        // Comments (classic comments "notes")
+        for (let i = 0; i < sheetCount; i++) {
+            if (spreadsheet.getSheet(i).getComments().size > 0) {
+                this.writeOverrideContentType(
+                    root,
+                    `/xl/comments${i + 1}.xml`,
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml'
+                );
             }
         }
 

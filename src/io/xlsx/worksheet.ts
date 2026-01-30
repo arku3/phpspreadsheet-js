@@ -70,6 +70,9 @@ export class Worksheet extends WriterPart {
         // hyperlinks
         this.writeHyperlinks(root, worksheet);
 
+        // legacyDrawing (classic comments)
+        this.writeLegacyDrawing(root, worksheet);
+
         // pageMargins
         const margins = worksheet.getPageMargins();
         root.ele('pageMargins', {
@@ -85,6 +88,19 @@ export class Worksheet extends WriterPart {
         this.writePageSetup(root, worksheet);
 
         return root.end({ prettyPrint: true });
+    }
+
+    /**
+     * Write LegacyDrawing for classic comments (notes).
+     */
+    private writeLegacyDrawing(root: any, worksheet: CoreWorksheet): void {
+        if (worksheet.getComments().size === 0) {
+            return;
+        }
+
+        root.ele('legacyDrawing', {
+            'r:id': 'rId_comments_vml1',
+        });
     }
 
     /**

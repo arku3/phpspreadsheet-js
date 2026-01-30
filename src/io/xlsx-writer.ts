@@ -10,6 +10,7 @@ import { Worksheet } from './xlsx/worksheet.ts';
 import { Styles } from './xlsx/styles.ts';
 import { DocProps } from './xlsx/doc-props.ts';
 import { Theme } from './xlsx/theme.ts';
+import { Comments } from './xlsx/comments.ts';
 import { HashTable } from '../common/hash-table.ts';
 import { Font } from '../style/font.ts';
 import { Fill } from '../style/fill.ts';
@@ -42,6 +43,7 @@ export class XlsxWriter implements IWriter {
     #writerPartStyles: Styles;
     #writerPartDocProps: DocProps;
     #writerPartTheme: Theme;
+    #writerPartComments: Comments;
 
     constructor(spreadsheet: Spreadsheet) {
         this.#spreadsheet = spreadsheet;
@@ -54,6 +56,7 @@ export class XlsxWriter implements IWriter {
         this.#writerPartStyles = new Styles(this);
         this.#writerPartDocProps = new DocProps(this);
         this.#writerPartTheme = new Theme(this);
+        this.#writerPartComments = new Comments(this);
     }
 
     public getFontHashTable(): HashTable<Font> {
@@ -178,6 +181,12 @@ export class XlsxWriter implements IWriter {
                 const sheetRels = this.#writerPartRels.writeWorksheetRelationships(sheet, i + 1);
                 if (sheetRels) {
                     archive.append(sheetRels, { name: `xl/worksheets/_rels/sheet${i + 1}.xml.rels` });
+                }
+
+                // Classic comments (notes)
+                if (sheet.getComments().size > 0) {
+                    archive.append(this.#writerPartComments.writeComments(sheet), { name: `xl/comments${i + 1}.xml` });
+                    archive.append(this.#writerPartComments.writeVmlDrawing(sheet), { name: `xl/drawings/vmlDrawing${i + 1}.vml` });
                 }
             }
 

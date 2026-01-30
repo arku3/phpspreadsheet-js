@@ -180,6 +180,23 @@ export class Rels extends WriterPart {
             });
         }
 
+        // Classic comments (note): worksheet -> vml + comments
+        // Use PhpSpreadsheet-compatible relationship ids so the worksheet XML can refer
+        // to a stable legacyDrawing id without consuming numeric rIds.
+        const comments = worksheet.getComments();
+        if (comments.size > 0) {
+            relationships.push({
+                id: 'rId_comments_vml1',
+                type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing',
+                target: `../drawings/vmlDrawing${worksheetId}.vml`,
+            });
+            relationships.push({
+                id: 'rId_comments1',
+                type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments',
+                target: `../comments${worksheetId}.xml`,
+            });
+        }
+
         if (relationships.length === 0) {
             return null;
         }
