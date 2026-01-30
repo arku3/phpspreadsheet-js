@@ -127,7 +127,10 @@ export class Column {
 
     public createRule(): Rule {
         this.setEvaluatedFalse();
-        if (this.#filterType === Column.AUTOFILTER_FILTERTYPE_CUSTOMFILTER && this.#ruleset.length >= 2) {
+        if (
+            this.#filterType === Column.AUTOFILTER_FILTERTYPE_CUSTOMFILTER &&
+            this.#ruleset.length >= 2
+        ) {
             throw new Error('No more than 2 rules are allowed in a Custom Filter');
         }
         const rule = new Rule(this);

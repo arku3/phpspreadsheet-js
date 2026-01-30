@@ -1,7 +1,7 @@
 import { create } from 'xmlbuilder2';
 import { Spreadsheet } from '../../core/spreadsheet.ts';
-import { WriterPart } from './writer-part.ts';
 import { Properties } from '../../document/properties.ts';
+import { WriterPart } from './writer-part.ts';
 
 /**
  * Generates docProps/*.xml.
@@ -12,11 +12,13 @@ export class DocProps extends WriterPart {
      */
     public writeDocPropsApp(spreadsheet: Spreadsheet): string {
         const properties = spreadsheet.getProperties();
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
-            .ele('Properties', {
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
+            'Properties',
+            {
                 xmlns: 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties',
-                'xmlns:vt': 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes'
-            });
+                'xmlns:vt': 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes',
+            },
+        );
 
         root.ele('Application').txt('phpspreadsheet-js');
         root.ele('DocSecurity').txt('0');
@@ -28,7 +30,10 @@ export class DocProps extends WriterPart {
         vector1.ele('vt:variant').ele('vt:i4').txt(String(spreadsheet.getSheetCount()));
 
         const titlesOfParts = root.ele('TitlesOfParts');
-        const vector2 = titlesOfParts.ele('vt:vector', { size: String(spreadsheet.getSheetCount()), baseType: 'lpstr' });
+        const vector2 = titlesOfParts.ele('vt:vector', {
+            size: String(spreadsheet.getSheetCount()),
+            baseType: 'lpstr',
+        });
         for (let i = 0; i < spreadsheet.getSheetCount(); i++) {
             vector2.ele('vt:lpstr').txt(spreadsheet.getSheet(i).getTitle());
         }
@@ -49,22 +54,27 @@ export class DocProps extends WriterPart {
      */
     public writeDocPropsCore(spreadsheet: Spreadsheet): string {
         const properties = spreadsheet.getProperties();
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
-            .ele('cp:coreProperties', {
-                'xmlns:cp': 'http://schemas.openxmlformats.org/package/2006/metadata/core-properties',
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
+            'cp:coreProperties',
+            {
+                'xmlns:cp':
+                    'http://schemas.openxmlformats.org/package/2006/metadata/core-properties',
                 'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
                 'xmlns:dcterms': 'http://purl.org/dc/terms/',
                 'xmlns:dcmitype': 'http://purl.org/dc/dcmitype/',
-                'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance'
-            });
+                'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+            },
+        );
 
         root.ele('dc:creator').txt(properties.getCreator());
         root.ele('cp:lastModifiedBy').txt(properties.getLastModifiedBy());
 
-        const createdDate = new Date(properties.getCreated() * 1000).toISOString().split('.')[0] + 'Z';
+        const createdDate =
+            new Date(properties.getCreated() * 1000).toISOString().split('.')[0] + 'Z';
         root.ele('dcterms:created', { 'xsi:type': 'dcterms:W3CDTF' }).txt(createdDate);
 
-        const modifiedDate = new Date(properties.getModified() * 1000).toISOString().split('.')[0] + 'Z';
+        const modifiedDate =
+            new Date(properties.getModified() * 1000).toISOString().split('.')[0] + 'Z';
         root.ele('dcterms:modified', { 'xsi:type': 'dcterms:W3CDTF' }).txt(modifiedDate);
 
         root.ele('dc:title').txt(properties.getTitle());
@@ -86,11 +96,13 @@ export class DocProps extends WriterPart {
             return null;
         }
 
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
-            .ele('Properties', {
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
+            'Properties',
+            {
                 xmlns: 'http://schemas.openxmlformats.org/officeDocument/2006/custom-properties',
-                'xmlns:vt': 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes'
-            });
+                'xmlns:vt': 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes',
+            },
+        );
 
         customPropertyList.forEach((propName, index) => {
             const value = properties.getCustomPropertyValue(propName);
@@ -99,7 +111,7 @@ export class DocProps extends WriterPart {
             const prop = root.ele('property', {
                 fmtid: '{D5CDD505-2E9C-101B-9397-08002B2CF9AE}',
                 pid: String(index + 2),
-                name: propName
+                name: propName,
             });
 
             switch (type) {
@@ -113,7 +125,8 @@ export class DocProps extends WriterPart {
                     prop.ele('vt:bool').txt(value ? 'true' : 'false');
                     break;
                 case Properties.PROPERTY_TYPE_DATE:
-                    const dateVal = new Date((value as number) * 1000).toISOString().split('.')[0] + 'Z';
+                    const dateVal =
+                        new Date((value as number) * 1000).toISOString().split('.')[0] + 'Z';
                     prop.ele('vt:filetime').txt(dateVal);
                     break;
                 default:

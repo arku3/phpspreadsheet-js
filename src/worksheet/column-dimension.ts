@@ -81,7 +81,9 @@ export class ColumnDimension extends Dimension {
      * Get width for output.
      */
     public getWidthForOutput(restrictMax: boolean = false): number {
-        return (restrictMax && this.#width > ColumnDimension.EXCEL_MAX_WIDTH) ? ColumnDimension.EXCEL_MAX_WIDTH : this.#width;
+        return restrictMax && this.#width > ColumnDimension.EXCEL_MAX_WIDTH
+            ? ColumnDimension.EXCEL_MAX_WIDTH
+            : this.#width;
     }
 
     /**

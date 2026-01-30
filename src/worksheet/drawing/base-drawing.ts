@@ -1,5 +1,5 @@
-import type { Worksheet } from '../../core/worksheet.ts';
 import { Hyperlink } from '../../core/hyperlink.ts';
+import type { Worksheet } from '../../core/worksheet.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
 
 /**
@@ -153,7 +153,8 @@ export class BaseDrawing {
      * Empty string means unset.
      */
     public setCoordinates2(coordinates2: string): this {
-        this.#coordinates2 = coordinates2 === '' ? '' : BaseDrawing.#normalizeCoordinate(coordinates2);
+        this.#coordinates2 =
+            coordinates2 === '' ? '' : BaseDrawing.#normalizeCoordinate(coordinates2);
         return this;
     }
 

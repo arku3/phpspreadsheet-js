@@ -1,3 +1,4 @@
+import { Cell, DataType } from './cell.ts';
 import { DefaultValueBinder } from './default-value-binder.ts';
 
 /**
@@ -42,5 +43,3 @@ export class AdvancedValueBinder extends DefaultValueBinder {
         return super.bindValue(cell, value);
     }
 }
-
-import { Cell, DataType } from './cell.ts';

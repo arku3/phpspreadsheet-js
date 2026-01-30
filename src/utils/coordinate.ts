@@ -10,11 +10,11 @@ export class Coordinate {
     public static columnIndexFromString(column: string): number {
         let result = 0;
         const upperColumn = column.toUpperCase();
-        
+
         for (let i = 0; i < upperColumn.length; i++) {
             result = result * 26 + (upperColumn.charCodeAt(i) - 64);
         }
-        
+
         return result;
     }
 
@@ -25,13 +25,13 @@ export class Coordinate {
     public static stringFromColumnIndex(columnIndex: number): string {
         let result = '';
         let index = columnIndex;
-        
+
         while (index > 0) {
             index--;
             result = String.fromCharCode(65 + (index % 26)) + result;
             index = Math.floor(index / 26);
         }
-        
+
         return result;
     }
 
@@ -42,11 +42,8 @@ export class Coordinate {
     public static indexesFromString(coordinate: string): [number, number] {
         const match = coordinate.match(/^(\$?[A-Z]+)\$?(\d+)$/i);
         if (!match) return [1, 1];
-        
-        return [
-            this.columnIndexFromString(match[1]!.replace(/^\$/g, '')),
-            parseInt(match[2]!, 10)
-        ];
+
+        return [this.columnIndexFromString(match[1]!.replace(/^\$/g, '')), parseInt(match[2]!, 10)];
     }
 
     /**
@@ -64,7 +61,7 @@ export class Coordinate {
     public static coordinateFromString(coordinate: string): [string, number] {
         const match = coordinate.match(/^(\$?[A-Z]+)\$?(\d+)$/i);
         if (!match) return ['A', 1];
-        
+
         return [match[1]!.toUpperCase().replace(/^\$/, ''), parseInt(match[2]!, 10)];
     }
 
@@ -107,7 +104,10 @@ export class Coordinate {
      *
      * Port of PhpSpreadsheet's Coordinate::resolveUnionAndIntersection.
      */
-    public static resolveUnionAndIntersection(cellBlock: string, implodeCharacter: string = ','): string {
+    public static resolveUnionAndIntersection(
+        cellBlock: string,
+        implodeCharacter: string = ',',
+    ): string {
         let normalized = cellBlock.trim();
         normalized = normalized.replace(/\s{2,}/g, ' ');
         normalized = normalized.replace(/\s+,/g, ',');
@@ -118,7 +118,7 @@ export class Coordinate {
         for (const block of blocks) {
             const parts = block
                 .split(' ')
-                .map(s => s.trim())
+                .map((s) => s.trim())
                 .filter(Boolean);
 
             if (parts.length === 1) {
@@ -189,11 +189,14 @@ export class Coordinate {
         const cells = range.split(':');
         const start = cells[0]!;
         const end = cells[1] || start;
-        
+
         const [startCol, startRow] = this.indexesFromString(start);
         const [endCol, endRow] = this.indexesFromString(end);
-        
-        return [[startCol, startRow], [endCol, endRow]];
+
+        return [
+            [startCol, startRow],
+            [endCol, endRow],
+        ];
     }
 
     /**
@@ -203,7 +206,7 @@ export class Coordinate {
     public static splitRange(range: string): string[][] {
         const result: string[][] = [];
         const ranges = range.split(',');
-        
+
         for (const r of ranges) {
             const cells = r.split(':');
             if (cells.length === 2) {
@@ -212,7 +215,7 @@ export class Coordinate {
                 result.push([cells[0]!.trim()]);
             }
         }
-        
+
         return result;
     }
 
@@ -224,10 +227,10 @@ export class Coordinate {
     public static R1C1ToA1(reference: string): string {
         const match = reference.match(/^R(\d+)C(\d+)$/i);
         if (!match) return reference;
-        
+
         const row = parseInt(match[1]!, 10);
         const col = parseInt(match[2]!, 10);
-        
+
         return this.stringFromColumnIndex(col) + row;
     }
 
@@ -238,11 +241,11 @@ export class Coordinate {
     public static A1ToR1C1(reference: string): string {
         const match = reference.match(/^(\$?[A-Z]+)\$?(\d+)$/i);
         if (!match) return reference;
-        
+
         const col = match[1]!.replace(/^\$/, '');
         const row = parseInt(match[2]!, 10);
         const colIndex = this.columnIndexFromString(col);
-        
+
         return `R${row}C${colIndex}`;
     }
 
@@ -258,7 +261,7 @@ export class Coordinate {
      * "A1,B2" represents both A1 and B2
      */
     public static resolveUnion(cellCoordinate: string): string[] {
-        return cellCoordinate.split(',').map(s => s.trim());
+        return cellCoordinate.split(',').map((s) => s.trim());
     }
 
     /**
@@ -267,7 +270,10 @@ export class Coordinate {
      * Full intersection would require range overlap calculation
      */
     public static resolveIntersection(cellCoordinate: string): string | null {
-        const parts = cellCoordinate.split(/\s+/).map(s => s.trim()).filter(s => s);
+        const parts = cellCoordinate
+            .split(/\s+/)
+            .map((s) => s.trim())
+            .filter((s) => s);
         if (parts.length === 0) return null;
         return parts[0]!;
     }

@@ -1,6 +1,5 @@
 import path from 'node:path';
 import process from 'node:process';
-
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 import { RichText } from '../src/rich-text/rich-text.ts';

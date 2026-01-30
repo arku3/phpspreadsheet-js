@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test';
 import path from 'node:path';
+import { describe, expect, test } from 'bun:test';
 import unzipper from 'unzipper';
 
 describe('XLSX drawings fixture sanity', () => {
@@ -16,7 +16,7 @@ describe('XLSX drawings fixture sanity', () => {
         const zip = await unzipper.Open.file(fixturePath);
 
         const getText = async (zipPath: string): Promise<string> => {
-            const file = zip.files.find(f => f.path === zipPath);
+            const file = zip.files.find((f) => f.path === zipPath);
             expect(file, `Expected zip entry to exist: ${zipPath}`).toBeDefined();
             return (await file!.buffer()).toString('utf-8');
         };

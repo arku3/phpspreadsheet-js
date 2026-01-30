@@ -11,7 +11,7 @@ export class CellStyleAssessor {
 
     constructor(cell: Cell, conditionalRange: string) {
         this.cell = cell;
-        // In our TS implementation, CellMatcher might need the cell and range 
+        // In our TS implementation, CellMatcher might need the cell and range
         // to evaluate relative formulas and cross-cell logic.
         this.cellMatcher = new CellMatcher(cell, conditionalRange);
         this.styleMerger = new StyleMerger(cell.getStyle());
@@ -25,7 +25,7 @@ export class CellStyleAssessor {
             if (this.cellMatcher.evaluateConditional(conditional)) {
                 // Merge the conditional style into the base style
                 this.styleMerger.mergeStyle(conditional.getStyle());
-                
+
                 if (conditional.getStopIfTrue()) {
                     break;
                 }

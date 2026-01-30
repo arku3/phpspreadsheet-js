@@ -432,7 +432,11 @@ export class PageSetup {
     /**
      * Set print area.
      */
-    public setPrintArea(value: string, index: number = 0, method: string = PageSetup.SETPRINTRANGE_OVERWRITE): this {
+    public setPrintArea(
+        value: string,
+        index: number = 0,
+        method: string = PageSetup.SETPRINTRANGE_OVERWRITE,
+    ): this {
         if (value.includes('!')) {
             throw new Error('Cell coordinate must not specify a worksheet.');
         } else if (!value.includes(':')) {

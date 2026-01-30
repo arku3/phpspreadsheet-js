@@ -1,6 +1,6 @@
-import type { ITextElement } from './i-text-element.ts';
-import { Font } from '../style/font.ts';
 import { createHash } from 'node:crypto';
+import { Font } from '../style/font.ts';
+import type { ITextElement } from './i-text-element.ts';
 
 /**
  * Text element class.

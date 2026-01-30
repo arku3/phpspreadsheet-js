@@ -12,13 +12,16 @@ export class NumberFormatter {
      * @param format The format code (e.g., '0.00', '#,##0', 'yyyy-mm-dd')
      * @returns The formatted string
      */
-    public static toFormattedString(value: number | string | null | undefined, format: string): string {
+    public static toFormattedString(
+        value: number | string | null | undefined,
+        format: string,
+    ): string {
         if (value === null || value === undefined) {
             return '';
         }
 
         const numValue = typeof value === 'string' ? parseFloat(value) : value;
-        
+
         if (isNaN(numValue)) {
             return String(value);
         }
@@ -36,10 +39,12 @@ export class NumberFormatter {
     /**
      * Get built-in format info by format code.
      */
-    private static getBuiltInFormat(format: string): { type: string; decimals: number; thousands: boolean } | null {
+    private static getBuiltInFormat(
+        format: string,
+    ): { type: string; decimals: number; thousands: boolean } | null {
         // Common built-in format codes
         const formatMap: Record<string, { type: string; decimals: number; thousands: boolean }> = {
-            'General': { type: 'general', decimals: 0, thousands: false },
+            General: { type: 'general', decimals: 0, thousands: false },
             '0': { type: 'number', decimals: 0, thousands: false },
             '0.00': { type: 'number', decimals: 2, thousands: false },
             '#,##0': { type: 'number', decimals: 0, thousands: true },
@@ -60,7 +65,10 @@ export class NumberFormatter {
     /**
      * Format using built-in format type.
      */
-    private static formatWithBuiltin(value: number, format: { type: string; decimals: number; thousands: boolean }): string {
+    private static formatWithBuiltin(
+        value: number,
+        format: { type: string; decimals: number; thousands: boolean },
+    ): string {
         switch (format.type) {
             case 'general':
                 return this.formatGeneral(value);
@@ -87,12 +95,12 @@ export class NumberFormatter {
         if (Number.isInteger(value)) {
             return String(value);
         }
-        
+
         // For small numbers, show up to 10 significant digits
         if (Math.abs(value) < 1e10 && Math.abs(value) > 1e-10) {
             return value.toPrecision(10).replace(/\.?0+$/, '');
         }
-        
+
         // For very large or small numbers, use scientific notation
         return value.toExponential(6);
     }
@@ -102,13 +110,13 @@ export class NumberFormatter {
      */
     private static formatNumber(value: number, decimals: number, thousands: boolean): string {
         let formatted = value.toFixed(decimals);
-        
+
         if (thousands) {
             const parts = formatted.split('.');
             parts[0] = parts[0]!.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
             formatted = parts.join('.');
         }
-        
+
         return formatted;
     }
 
@@ -137,11 +145,11 @@ export class NumberFormatter {
         const excelEpoch = new Date(1899, 11, 30); // Dec 30, 1899
         const milliseconds = value * 24 * 60 * 60 * 1000;
         const date = new Date(excelEpoch.getTime() + milliseconds);
-        
+
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        
+
         return `${year}-${month}-${day}`;
     }
 
@@ -154,11 +162,11 @@ export class NumberFormatter {
         const hours = Math.floor(totalSeconds / 3600) % 24;
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
-        
+
         const h = String(hours).padStart(2, '0');
         const m = String(minutes).padStart(2, '0');
         const s = String(seconds).padStart(2, '0');
-        
+
         return `${h}:${m}:${s}`;
     }
 
@@ -167,42 +175,52 @@ export class NumberFormatter {
      */
     private static formatCustom(value: number, format: string): string {
         // Basic custom format parsing
-        
+
         // Handle date formats
-        if (format.includes('yyyy') || format.includes('mm') || format.includes('dd') || 
-            format.includes('m/d') || format.includes('d-mmm')) {
+        if (
+            format.includes('yyyy') ||
+            format.includes('mm') ||
+            format.includes('dd') ||
+            format.includes('m/d') ||
+            format.includes('d-mmm')
+        ) {
             return this.formatDate(value);
         }
-        
+
         // Handle time formats
-        if (format.includes('h:') || format.includes('hh:') || format.includes(':mm') || format.includes(':ss')) {
+        if (
+            format.includes('h:') ||
+            format.includes('hh:') ||
+            format.includes(':mm') ||
+            format.includes(':ss')
+        ) {
             return this.formatTime(value);
         }
-        
+
         // Handle percentage
         if (format.includes('%')) {
             const decimals = this.countDecimalPlaces(format);
             return this.formatPercentage(value, decimals);
         }
-        
+
         // Handle currency with $ symbol
         if (format.includes('$')) {
             const decimals = this.countDecimalPlaces(format);
             return this.formatCurrency(value, decimals);
         }
-        
+
         // Handle thousands separator
         if (format.includes('#,##0') || format.includes('#,##0.00')) {
             const decimals = this.countDecimalPlaces(format);
             return this.formatNumber(value, decimals, true);
         }
-        
+
         // Handle decimal places
         if (format.includes('0.')) {
             const decimals = this.countDecimalPlaces(format);
             return this.formatNumber(value, decimals, format.includes(','));
         }
-        
+
         // Default to general format
         return this.formatGeneral(value);
     }

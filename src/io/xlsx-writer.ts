@@ -1,22 +1,22 @@
 import fs from 'node:fs';
 import archiver from 'archiver';
-import { Spreadsheet } from '../core/spreadsheet.ts';
-import type { IWriter } from './i-writer.ts';
-import { ContentTypes } from './xlsx/content-types.ts';
-import { Rels } from './xlsx/rels.ts';
-import { StringTable } from './xlsx/string-table.ts';
-import { Workbook } from './xlsx/workbook.ts';
-import { Worksheet } from './xlsx/worksheet.ts';
-import { Styles } from './xlsx/styles.ts';
-import { DocProps } from './xlsx/doc-props.ts';
-import { Theme } from './xlsx/theme.ts';
-import { Comments } from './xlsx/comments.ts';
 import { HashTable } from '../common/hash-table.ts';
-import { Font } from '../style/font.ts';
-import { Fill } from '../style/fill.ts';
+import { Spreadsheet } from '../core/spreadsheet.ts';
 import { Borders } from '../style/borders.ts';
+import { Fill } from '../style/fill.ts';
+import { Font } from '../style/font.ts';
 import { NumberFormat } from '../style/number-format.ts';
 import { Style } from '../style/style.ts';
+import type { IWriter } from './i-writer.ts';
+import { Comments } from './xlsx/comments.ts';
+import { ContentTypes } from './xlsx/content-types.ts';
+import { DocProps } from './xlsx/doc-props.ts';
+import { Rels } from './xlsx/rels.ts';
+import { StringTable } from './xlsx/string-table.ts';
+import { Styles } from './xlsx/styles.ts';
+import { Theme } from './xlsx/theme.ts';
+import { Workbook } from './xlsx/workbook.ts';
+import { Worksheet } from './xlsx/worksheet.ts';
 
 /**
  * XLSX Writer.
@@ -25,7 +25,7 @@ export class XlsxWriter implements IWriter {
     #spreadsheet: Spreadsheet;
     #preCalculateFormulas = false;
     #stringTable: (string | any)[] = [];
-    
+
     // Hash tables
     #fontHashTable: HashTable<Font> = new HashTable();
     #fillHashTable: HashTable<Fill> = new HashTable();
@@ -47,7 +47,7 @@ export class XlsxWriter implements IWriter {
 
     constructor(spreadsheet: Spreadsheet) {
         this.#spreadsheet = spreadsheet;
-        
+
         this.#writerPartContentTypes = new ContentTypes(this);
         this.#writerPartRels = new Rels(this);
         this.#writerPartStringTable = new StringTable(this);
@@ -88,7 +88,9 @@ export class XlsxWriter implements IWriter {
         this.#styleHashTable.addFromSource(this.#writerPartStyles.allStyles(this.#spreadsheet));
 
         this.#stylesConditionalHashTable = new HashTable();
-        this.#stylesConditionalHashTable.addFromSource(this.#writerPartStyles.allConditionalStyles(this.#spreadsheet));
+        this.#stylesConditionalHashTable.addFromSource(
+            this.#writerPartStyles.allConditionalStyles(this.#spreadsheet),
+        );
 
         this.#fillHashTable = new HashTable();
         this.#fillHashTable.addFromSource(this.#writerPartStyles.allFills(this.#spreadsheet));
@@ -100,7 +102,9 @@ export class XlsxWriter implements IWriter {
         this.#bordersHashTable.addFromSource(this.#writerPartStyles.allBorders(this.#spreadsheet));
 
         this.#numFmtHashTable = new HashTable();
-        this.#numFmtHashTable.addFromSource(this.#writerPartStyles.allNumberFormats(this.#spreadsheet));
+        this.#numFmtHashTable.addFromSource(
+            this.#writerPartStyles.allNumberFormats(this.#spreadsheet),
+        );
     }
 
     public getSpreadsheet(): Spreadsheet {
@@ -124,7 +128,7 @@ export class XlsxWriter implements IWriter {
         return new Promise((resolve, reject) => {
             const output = fs.createWriteStream(filename);
             const archive = archiver('zip', {
-                zlib: { level: 9 }
+                zlib: { level: 9 },
             });
 
             output.on('close', () => resolve());
@@ -137,7 +141,7 @@ export class XlsxWriter implements IWriter {
             for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
                 this.#stringTable = this.#writerPartStringTable.createStringTable(
                     this.#spreadsheet.getSheet(i),
-                    this.#stringTable
+                    this.#stringTable,
                 );
             }
 
@@ -145,48 +149,79 @@ export class XlsxWriter implements IWriter {
             this.createStyleDictionaries();
 
             // 2. Add [Content_Types].xml
-            archive.append(this.#writerPartContentTypes.writeContentTypes(this.#spreadsheet), { name: '[Content_Types].xml' });
+            archive.append(this.#writerPartContentTypes.writeContentTypes(this.#spreadsheet), {
+                name: '[Content_Types].xml',
+            });
 
             // 3. Add relationships
-            archive.append(this.#writerPartRels.writeRelationships(this.#spreadsheet), { name: '_rels/.rels' });
-            const { xml: workbookRels, rIdMap } = this.#writerPartRels.writeWorkbookRelationships(this.#spreadsheet);
+            archive.append(this.#writerPartRels.writeRelationships(this.#spreadsheet), {
+                name: '_rels/.rels',
+            });
+            const { xml: workbookRels, rIdMap } = this.#writerPartRels.writeWorkbookRelationships(
+                this.#spreadsheet,
+            );
             archive.append(workbookRels, { name: 'xl/_rels/workbook.xml.rels' });
 
             // 4. Add string table
-            archive.append(this.#writerPartStringTable.writeStringTable(this.#stringTable), { name: 'xl/sharedStrings.xml' });
+            archive.append(this.#writerPartStringTable.writeStringTable(this.#stringTable), {
+                name: 'xl/sharedStrings.xml',
+            });
 
             // 5. Add styles
-            archive.append(this.#writerPartStyles.writeStyles(this.#spreadsheet), { name: 'xl/styles.xml' });
+            archive.append(this.#writerPartStyles.writeStyles(this.#spreadsheet), {
+                name: 'xl/styles.xml',
+            });
 
             // 5a. Add theme
-            archive.append(this.#writerPartTheme.writeTheme(this.#spreadsheet), { name: 'xl/theme/theme1.xml' });
+            archive.append(this.#writerPartTheme.writeTheme(this.#spreadsheet), {
+                name: 'xl/theme/theme1.xml',
+            });
 
             // 5b. Add metadata
-            archive.append(this.#writerPartDocProps.writeDocPropsApp(this.#spreadsheet), { name: 'docProps/app.xml' });
-            archive.append(this.#writerPartDocProps.writeDocPropsCore(this.#spreadsheet), { name: 'docProps/core.xml' });
+            archive.append(this.#writerPartDocProps.writeDocPropsApp(this.#spreadsheet), {
+                name: 'docProps/app.xml',
+            });
+            archive.append(this.#writerPartDocProps.writeDocPropsCore(this.#spreadsheet), {
+                name: 'docProps/core.xml',
+            });
             const customProps = this.#writerPartDocProps.writeDocPropsCustom(this.#spreadsheet);
             if (customProps) {
                 archive.append(customProps, { name: 'docProps/custom.xml' });
             }
 
             // 6. Add workbook
-            archive.append(this.#writerPartWorkbook.writeWorkbook(this.#spreadsheet, this.#preCalculateFormulas, rIdMap), { name: 'xl/workbook.xml' });
+            archive.append(
+                this.#writerPartWorkbook.writeWorkbook(
+                    this.#spreadsheet,
+                    this.#preCalculateFormulas,
+                    rIdMap,
+                ),
+                { name: 'xl/workbook.xml' },
+            );
 
             // 7. Add worksheets
             for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
                 const sheet = this.#spreadsheet.getSheet(i);
-                archive.append(this.#writerPartWorksheet.writeWorksheet(sheet, this.#stringTable), { name: `xl/worksheets/sheet${i + 1}.xml` });
-                
+                archive.append(this.#writerPartWorksheet.writeWorksheet(sheet, this.#stringTable), {
+                    name: `xl/worksheets/sheet${i + 1}.xml`,
+                });
+
                 // Worksheet rels (e.g. for drawings/comments, currently minimal)
                 const sheetRels = this.#writerPartRels.writeWorksheetRelationships(sheet, i + 1);
                 if (sheetRels) {
-                    archive.append(sheetRels, { name: `xl/worksheets/_rels/sheet${i + 1}.xml.rels` });
+                    archive.append(sheetRels, {
+                        name: `xl/worksheets/_rels/sheet${i + 1}.xml.rels`,
+                    });
                 }
 
                 // Classic comments (notes)
                 if (sheet.getComments().size > 0) {
-                    archive.append(this.#writerPartComments.writeComments(sheet), { name: `xl/comments${i + 1}.xml` });
-                    archive.append(this.#writerPartComments.writeVmlDrawing(sheet), { name: `xl/drawings/vmlDrawing${i + 1}.vml` });
+                    archive.append(this.#writerPartComments.writeComments(sheet), {
+                        name: `xl/comments${i + 1}.xml`,
+                    });
+                    archive.append(this.#writerPartComments.writeVmlDrawing(sheet), {
+                        name: `xl/drawings/vmlDrawing${i + 1}.vml`,
+                    });
                 }
             }
 

@@ -14,7 +14,7 @@ export const TokenType = {
     UNKNOWN: 'Unknown',
 } as const;
 
-export type TTokenType = typeof TokenType[keyof typeof TokenType];
+export type TTokenType = (typeof TokenType)[keyof typeof TokenType];
 
 /**
  * Token subtypes for formula parsing.
@@ -35,7 +35,7 @@ export const TokenSubType = {
     UNION: 'Union',
 } as const;
 
-export type TTokenSubType = typeof TokenSubType[keyof typeof TokenSubType];
+export type TTokenSubType = (typeof TokenSubType)[keyof typeof TokenSubType];
 
 /**
  * Represents a token in a spreadsheet formula.
@@ -48,7 +48,7 @@ export class FormulaToken {
     constructor(
         value: string,
         type: TTokenType = TokenType.UNKNOWN,
-        subType: TTokenSubType = TokenSubType.NOTHING
+        subType: TTokenSubType = TokenSubType.NOTHING,
     ) {
         this.#value = value;
         this.#tokenType = type;

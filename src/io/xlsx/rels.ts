@@ -1,8 +1,8 @@
 import { create } from 'xmlbuilder2';
 import { Spreadsheet } from '../../core/spreadsheet.ts';
 import { Worksheet } from '../../core/worksheet.ts';
-import { WriterPart } from './writer-part.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
+import { WriterPart } from './writer-part.ts';
 
 /**
  * Represents a relationship entry.
@@ -45,21 +45,21 @@ export class Rels extends WriterPart {
         relationships.push({
             id: this.getNextRId(),
             type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument',
-            target: 'xl/workbook.xml'
+            target: 'xl/workbook.xml',
         });
 
         // Relationship docProps/core.xml
         relationships.push({
             id: this.getNextRId(),
             type: 'http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties',
-            target: 'docProps/core.xml'
+            target: 'docProps/core.xml',
         });
 
         // Relationship docProps/app.xml
         relationships.push({
             id: this.getNextRId(),
             type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties',
-            target: 'docProps/app.xml'
+            target: 'docProps/app.xml',
         });
 
         // Relationship docProps/custom.xml (if custom properties exist)
@@ -67,7 +67,7 @@ export class Rels extends WriterPart {
             relationships.push({
                 id: this.getNextRId(),
                 type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties',
-                target: 'docProps/custom.xml'
+                target: 'docProps/custom.xml',
             });
         }
 
@@ -78,7 +78,10 @@ export class Rels extends WriterPart {
      * Write workbook relationships to XML format (xl/_rels/workbook.xml.rels).
      * Returns both the XML and a map of target -> rId for reference by workbook.xml.
      */
-    public writeWorkbookRelationships(spreadsheet: Spreadsheet): { xml: string; rIdMap: Map<string, string> } {
+    public writeWorkbookRelationships(spreadsheet: Spreadsheet): {
+        xml: string;
+        rIdMap: Map<string, string>;
+    } {
         this.resetRId();
         const relationships: Relationship[] = [];
         const rIdMap = new Map<string, string>();
@@ -88,7 +91,7 @@ export class Rels extends WriterPart {
         relationships.push({
             id: stylesRId,
             type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles',
-            target: 'styles.xml'
+            target: 'styles.xml',
         });
         rIdMap.set('styles.xml', stylesRId);
 
@@ -97,7 +100,7 @@ export class Rels extends WriterPart {
         relationships.push({
             id: themeRId,
             type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme',
-            target: 'theme/theme1.xml'
+            target: 'theme/theme1.xml',
         });
         rIdMap.set('theme/theme1.xml', themeRId);
 
@@ -106,7 +109,7 @@ export class Rels extends WriterPart {
         relationships.push({
             id: sharedStringsRId,
             type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings',
-            target: 'sharedStrings.xml'
+            target: 'sharedStrings.xml',
         });
         rIdMap.set('sharedStrings.xml', sharedStringsRId);
 
@@ -118,7 +121,7 @@ export class Rels extends WriterPart {
             relationships.push({
                 id: sheetRId,
                 type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet',
-                target: sheetTarget
+                target: sheetTarget,
             });
             rIdMap.set(sheetTarget, sheetRId);
         }
@@ -176,7 +179,7 @@ export class Rels extends WriterPart {
             relationships.push({
                 id: this.getNextRId(),
                 type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/table',
-                target: `../tables/table${i + 1}.xml`
+                target: `../tables/table${i + 1}.xml`,
             });
         }
 
@@ -208,14 +211,16 @@ export class Rels extends WriterPart {
      * Generate the XML from a list of relationships.
      */
     private writeRelationshipsXml(relationships: Relationship[]): string {
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
-            .ele('Relationships', { xmlns: 'http://schemas.openxmlformats.org/package/2006/relationships' });
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
+            'Relationships',
+            { xmlns: 'http://schemas.openxmlformats.org/package/2006/relationships' },
+        );
 
         for (const rel of relationships) {
             const attrs: any = {
                 Id: rel.id,
                 Type: rel.type,
-                Target: rel.target
+                Target: rel.target,
             };
             if (rel.targetMode) {
                 attrs.TargetMode = rel.targetMode;

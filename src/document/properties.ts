@@ -28,7 +28,8 @@ export class Properties {
     #category: string = '';
     #manager: string = '';
     #company: string = '';
-    #customProperties: Map<string, { value: boolean | number | string | null; type: string }> = new Map();
+    #customProperties: Map<string, { value: boolean | number | string | null; type: string }> =
+        new Map();
     #hyperlinkBase: string = '';
     #viewport: string = '';
 
@@ -153,7 +154,11 @@ export class Properties {
         return this.#customProperties.get(propertyName)?.type ?? null;
     }
 
-    public setCustomProperty(propertyName: string, propertyValue: boolean | number | string | null = '', propertyType: string | null = null): this {
+    public setCustomProperty(
+        propertyName: string,
+        propertyValue: boolean | number | string | null = '',
+        propertyType: string | null = null,
+    ): this {
         if (propertyType === null || !Properties.VALID_PROPERTY_TYPE_LIST.includes(propertyType)) {
             propertyType = this.#identifyPropertyType(propertyValue);
         }
@@ -197,7 +202,9 @@ export class Properties {
 
     #identifyPropertyType(propertyValue: boolean | number | string | null): string {
         if (typeof propertyValue === 'number') {
-            return Number.isInteger(propertyValue) ? Properties.PROPERTY_TYPE_INTEGER : Properties.PROPERTY_TYPE_FLOAT;
+            return Number.isInteger(propertyValue)
+                ? Properties.PROPERTY_TYPE_INTEGER
+                : Properties.PROPERTY_TYPE_FLOAT;
         }
         if (typeof propertyValue === 'boolean') {
             return Properties.PROPERTY_TYPE_BOOLEAN;
@@ -205,14 +212,19 @@ export class Properties {
         return Properties.PROPERTY_TYPE_STRING;
     }
 
-    #convertProperty(propertyValue: boolean | number | string | null, propertyType: string): boolean | number | string | null {
+    #convertProperty(
+        propertyValue: boolean | number | string | null,
+        propertyType: string,
+    ): boolean | number | string | null {
         switch (propertyType) {
             case Properties.PROPERTY_TYPE_INTEGER:
                 return Math.floor(Number(propertyValue));
             case Properties.PROPERTY_TYPE_FLOAT:
                 return Number(propertyValue);
             case Properties.PROPERTY_TYPE_BOOLEAN:
-                return typeof propertyValue === 'boolean' ? propertyValue : propertyValue === 'true';
+                return typeof propertyValue === 'boolean'
+                    ? propertyValue
+                    : propertyValue === 'true';
             case Properties.PROPERTY_TYPE_DATE:
                 return this.#parseTimestamp(propertyValue as string | number | null);
             default:
@@ -233,8 +245,10 @@ export class Properties {
         hash.update(this.#category);
         hash.update(this.#manager);
         hash.update(this.#company);
-        
-        const sortedCustom = Array.from(this.#customProperties.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+        const sortedCustom = Array.from(this.#customProperties.entries()).sort((a, b) =>
+            a[0].localeCompare(b[0]),
+        );
         for (const [key, value] of sortedCustom) {
             hash.update(key);
             hash.update(String(value.value));
@@ -243,7 +257,7 @@ export class Properties {
 
         hash.update(this.#hyperlinkBase);
         hash.update(this.#viewport);
-        
+
         return hash.digest('hex');
     }
 }

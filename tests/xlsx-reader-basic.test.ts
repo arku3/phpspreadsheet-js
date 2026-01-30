@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
-import { XlsxReader } from '../src/io/xlsx-reader.ts';
-import { XlsxWriter } from '../src/io/xlsx-writer.ts';
-import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import fs from 'node:fs';
 import path from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { Spreadsheet } from '../src/core/spreadsheet.ts';
+import { XlsxReader } from '../src/io/xlsx-reader.ts';
+import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 
 describe('XlsxReader Basic Infrastructure', () => {
     const testDir = './test-output';
@@ -29,7 +29,7 @@ describe('XlsxReader Basic Infrastructure', () => {
 
     it('should have correct default settings', () => {
         const reader = new XlsxReader();
-        
+
         expect(reader.getReadEmptyCells()).toBe(false);
         expect(reader.getReadDefaultStyles()).toBe(true);
         expect(reader.getReadDataOnly()).toBe(false);
@@ -38,16 +38,16 @@ describe('XlsxReader Basic Infrastructure', () => {
 
     it('should allow setting read options', () => {
         const reader = new XlsxReader();
-        
+
         reader.setReadEmptyCells(true);
         expect(reader.getReadEmptyCells()).toBe(true);
-        
+
         reader.setReadDefaultStyles(false);
         expect(reader.getReadDefaultStyles()).toBe(false);
-        
+
         reader.setReadDataOnly(true);
         expect(reader.getReadDataOnly()).toBe(true);
-        
+
         const filter = (name: string) => name === 'Sheet1';
         reader.setReadFilter(filter);
         expect(reader.getReadFilter()).toBe(filter);
@@ -55,18 +55,18 @@ describe('XlsxReader Basic Infrastructure', () => {
 
     it('should check if file exists with canRead', async () => {
         const reader = new XlsxReader();
-        
+
         // Test with non-existent file
         const nonExistentResult = await reader.canRead('./non-existent-file.xlsx');
         expect(nonExistentResult).toBe(false);
-        
+
         // Create a test file first
         const spreadsheet = new Spreadsheet();
         spreadsheet.getActiveSheet().getCell('A1').setValue('Test');
-        
+
         const writer = new XlsxWriter(spreadsheet);
         await writer.save(testFile);
-        
+
         // Test with existing file
         const existingResult = await reader.canRead(testFile);
         expect(existingResult).toBe(true);

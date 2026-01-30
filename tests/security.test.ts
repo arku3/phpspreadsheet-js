@@ -28,9 +28,9 @@ describe('Security', () => {
         security.setWorkbookAlgorithmName('SHA-256');
         security.setWorkbookSaltValue('salt', true);
         security.setWorkbookSpinCount(1000);
-        
+
         security.setWorkbookPassword('password');
-        
+
         expect(security.getWorkbookPassword()).toBe('');
         expect(security.getWorkbookHashValue()).toBeDefined();
         expect(security.getWorkbookHashValue().length).toBeGreaterThan(10);

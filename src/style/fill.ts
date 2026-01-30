@@ -1,5 +1,5 @@
-import { Color } from './color.ts';
 import { createHash } from 'node:crypto';
+import { Color } from './color.ts';
 import { Supervisor } from './supervisor.ts';
 
 /**
@@ -140,7 +140,7 @@ export class Fill extends Supervisor {
                 startColor: {
                     argb: color.getARGB(),
                     theme: color.getTheme(),
-                }
+                },
             });
             (this.parent as any).applyFromArray(styleArray);
         } else {
@@ -165,7 +165,7 @@ export class Fill extends Supervisor {
                 endColor: {
                     argb: color.getARGB(),
                     theme: color.getTheme(),
-                }
+                },
             });
             (this.parent as any).applyFromArray(styleArray);
         } else {
@@ -193,14 +193,22 @@ export class Fill extends Supervisor {
             this.setRotation(Number(styleArray.rotation));
         }
         if (styleArray.startColor !== undefined && typeof styleArray.startColor === 'object') {
-            this.getStartColor().applyFromArray(styleArray.startColor as { rgb?: string; argb?: string; theme?: number });
+            this.getStartColor().applyFromArray(
+                styleArray.startColor as { rgb?: string; argb?: string; theme?: number },
+            );
         }
         if (styleArray.endColor !== undefined && typeof styleArray.endColor === 'object') {
-            this.getEndColor().applyFromArray(styleArray.endColor as { rgb?: string; argb?: string; theme?: number });
+            this.getEndColor().applyFromArray(
+                styleArray.endColor as { rgb?: string; argb?: string; theme?: number },
+            );
         }
         if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
-            this.getStartColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
-            this.getEndColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
+            this.getStartColor().applyFromArray(
+                styleArray.color as { rgb?: string; argb?: string; theme?: number },
+            );
+            this.getEndColor().applyFromArray(
+                styleArray.color as { rgb?: string; argb?: string; theme?: number },
+            );
         }
         return this;
     }
@@ -215,10 +223,10 @@ export class Fill extends Supervisor {
         return createHash('md5')
             .update(
                 this.#fillType +
-                this.#rotation +
-                (this.#fillType !== Fill.FILL_NONE ? this.#startColor.getHashCode() : '') +
-                (this.#fillType !== Fill.FILL_NONE ? this.#endColor.getHashCode() : '') +
-                'Fill'
+                    this.#rotation +
+                    (this.#fillType !== Fill.FILL_NONE ? this.#startColor.getHashCode() : '') +
+                    (this.#fillType !== Fill.FILL_NONE ? this.#endColor.getHashCode() : '') +
+                    'Fill',
             )
             .digest('hex');
     }

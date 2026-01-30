@@ -1,7 +1,7 @@
 import { create } from 'xmlbuilder2';
 import { Worksheet } from '../../core/worksheet.ts';
-import { WriterPart } from './writer-part.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
+import { WriterPart } from './writer-part.ts';
 
 /**
  * Generates VML drawings for classic worksheet comments.
@@ -21,12 +21,11 @@ export class VmlDrawing extends WriterPart {
             return aCol - bCol;
         });
 
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
-            .ele('xml', {
-                'xmlns:v': 'urn:schemas-microsoft-com:vml',
-                'xmlns:o': 'urn:schemas-microsoft-com:office:office',
-                'xmlns:x': 'urn:schemas-microsoft-com:office:excel',
-            });
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('xml', {
+            'xmlns:v': 'urn:schemas-microsoft-com:vml',
+            'xmlns:o': 'urn:schemas-microsoft-com:office:office',
+            'xmlns:x': 'urn:schemas-microsoft-com:office:excel',
+        });
 
         // o:shapelayout
         const shapelayout = root.ele('o:shapelayout', { 'v:ext': 'edit' });

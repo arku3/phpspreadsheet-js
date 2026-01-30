@@ -81,11 +81,11 @@ for (let i = 0; i < CONTROL_CHARACTERS_KEYS.length; i++) {
 
 /**
  * Convert control characters from PHP/Excel to OOXML format.
- * 
+ *
  * Excel stores control characters differently than standard XML. This method
  * converts standard control characters to the Excel-specific escape format
  * (e.g., \x00 becomes '_x0000_').
- * 
+ *
  * It also escapes any existing '_xHHHH_' patterns that might be confused
  * with control character escapes by converting them to '_x005F_xHHHH_'.
  *
@@ -96,7 +96,7 @@ export function controlCharacterPHP2OOXML(textValue: string): string {
     // First, escape any existing '_xHHHH_' patterns that look like control character escapes
     // but aren't. We add _x005F_ (the escape for underscore) before them.
     let result = textValue.replace(/_(x[0-9A-F]{4}_)/g, '_x005F_$1');
-    
+
     // Then replace actual control characters with their escape sequences
     // We use a more efficient approach than individual replacements
     const chars: string[] = [];
@@ -108,7 +108,7 @@ export function controlCharacterPHP2OOXML(textValue: string): string {
             chars.push(char);
         }
     }
-    
+
     return chars.join('');
 }
 
@@ -138,13 +138,13 @@ export function formatNumber(numericValue: number | string | null): string {
     if (numericValue === null || numericValue === undefined) {
         return '0';
     }
-    
+
     const num = typeof numericValue === 'string' ? parseFloat(numericValue) : numericValue;
-    
+
     if (isNaN(num)) {
         return '0';
     }
-    
+
     // Convert to string and ensure decimal point is used
     return String(num);
 }

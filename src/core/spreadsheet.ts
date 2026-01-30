@@ -1,13 +1,13 @@
-import { Worksheet } from './worksheet.ts';
-import { Style } from '../style/style.ts';
 import { Calculation } from '../calculation/calculation.ts';
-import { DefinedName } from './defined-name.ts';
-import { NamedRange } from './named-range.ts';
-import type { IValueBinder } from './i-value-binder.ts';
-import { DefaultValueBinder } from './default-value-binder.ts';
 import { Properties } from '../document/properties.ts';
 import { Security } from '../document/security.ts';
+import { Style } from '../style/style.ts';
 import { Theme } from '../style/theme.ts';
+import { DefaultValueBinder } from './default-value-binder.ts';
+import { DefinedName } from './defined-name.ts';
+import type { IValueBinder } from './i-value-binder.ts';
+import { NamedRange } from './named-range.ts';
+import { Worksheet } from './worksheet.ts';
 
 /**
  * Spreadsheet workbook.
@@ -46,7 +46,7 @@ export class Spreadsheet {
         this.#properties = new Properties();
         this.#security = new Security();
         this.#theme = new Theme();
-        
+
         // Initialise worksheet collection and add one worksheet
         const initialSheet = new Worksheet(this, 'Worksheet 1');
         this.#workSheetCollection.push(initialSheet);
@@ -88,8 +88,11 @@ export class Spreadsheet {
     /**
      * Get a defined name by name.
      */
-    public getDefinedName(name: string, worksheet: Worksheet | null = null): DefinedName | undefined {
-        return this.#definedNames.find(dn => {
+    public getDefinedName(
+        name: string,
+        worksheet: Worksheet | null = null,
+    ): DefinedName | undefined {
+        return this.#definedNames.find((dn) => {
             if (dn.getName() !== name) return false;
             if (dn.getLocalOnly()) {
                 return dn.getScope() === worksheet;
@@ -102,7 +105,7 @@ export class Spreadsheet {
      * Get named ranges.
      */
     public getNamedRanges(): NamedRange[] {
-        return this.#definedNames.filter(dn => dn instanceof NamedRange) as NamedRange[];
+        return this.#definedNames.filter((dn) => dn instanceof NamedRange) as NamedRange[];
     }
 
     /**
@@ -165,7 +168,7 @@ export class Spreadsheet {
      * Get sheet by name.
      */
     public getSheetByName(name: string): Worksheet | undefined {
-        return this.#workSheetCollection.find(sheet => sheet.getTitle() === name);
+        return this.#workSheetCollection.find((sheet) => sheet.getTitle() === name);
     }
 
     /**
@@ -320,7 +323,10 @@ export class Spreadsheet {
             for (const rowDimension of sheet.getRowDimensions().values()) {
                 const xfIndex = rowDimension.getXfIndex();
                 if (xfIndex !== null) {
-                    countReferencesCellXf.set(xfIndex, (countReferencesCellXf.get(xfIndex) || 0) + 1);
+                    countReferencesCellXf.set(
+                        xfIndex,
+                        (countReferencesCellXf.get(xfIndex) || 0) + 1,
+                    );
                 }
             }
 
@@ -328,7 +334,10 @@ export class Spreadsheet {
             for (const columnDimension of sheet.getColumnDimensions().values()) {
                 const xfIndex = columnDimension.getXfIndex();
                 if (xfIndex !== null) {
-                    countReferencesCellXf.set(xfIndex, (countReferencesCellXf.get(xfIndex) || 0) + 1);
+                    countReferencesCellXf.set(
+                        xfIndex,
+                        (countReferencesCellXf.get(xfIndex) || 0) + 1,
+                    );
                 }
             }
         }
@@ -586,7 +595,7 @@ export class Spreadsheet {
      * @returns True if the sheet name exists
      */
     public sheetNameExists(sheetName: string): boolean {
-        return this.#workSheetCollection.some(sheet => sheet.getTitle() === sheetName);
+        return this.#workSheetCollection.some((sheet) => sheet.getTitle() === sheetName);
     }
 
     /**
@@ -595,7 +604,7 @@ export class Spreadsheet {
      * @returns Array of sheet names
      */
     public getSheetNames(): string[] {
-        return this.#workSheetCollection.map(sheet => sheet.getTitle());
+        return this.#workSheetCollection.map((sheet) => sheet.getTitle());
     }
 
     /**
@@ -660,7 +669,7 @@ export class Spreadsheet {
 
         // Create new sheet with copied data
         const newSheet = new Worksheet(this, newTitle);
-        
+
         // Copy cell values (basic implementation)
         for (const cell of sourceSheet.getCellCollection().getCells()) {
             const coord = cell.getCoordinate();
@@ -680,12 +689,12 @@ export class Spreadsheet {
 
     /**
      * Disconnect all worksheets from this spreadsheet.
-     * 
+     *
      * This method breaks the circular references between cells, worksheets, and the
      * spreadsheet to prevent memory leaks when the spreadsheet is no longer needed.
-     * 
+     *
      * After calling this method, the spreadsheet and its worksheets become unusable.
-     * 
+     *
      * @returns void
      */
     public disconnectWorksheets(): void {
@@ -693,7 +702,7 @@ export class Spreadsheet {
         for (const worksheet of this.#workSheetCollection) {
             worksheet.disconnectCells();
         }
-        
+
         // Clear the worksheet collection
         this.#workSheetCollection = [];
         this.#activeSheetIndex = 0;
@@ -724,10 +733,9 @@ export class Spreadsheet {
         if (!sheet) {
             throw new Error(`Sheet "${sheetName}" does not exist.`);
         }
-        
+
         const index = this.#workSheetCollection.indexOf(sheet);
         this.#activeSheetIndex = index;
         return this;
     }
-
 }

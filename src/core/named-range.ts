@@ -10,7 +10,7 @@ export class NamedRange extends DefinedName {
         worksheet: Worksheet | null = null,
         range: string = 'A1',
         localOnly: boolean = false,
-        scope: Worksheet | null = null
+        scope: Worksheet | null = null,
     ) {
         if (worksheet === null && scope === null) {
             throw new Error('You must specify a worksheet or a scope for a Named Range');

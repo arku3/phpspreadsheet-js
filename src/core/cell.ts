@@ -1,9 +1,9 @@
-import { Worksheet } from './worksheet.ts';
-import { Coordinate } from '../utils/coordinate.ts';
-import { Style } from '../style/style.ts';
 import { Protection } from '../style/protection.ts';
-import { Hyperlink } from './hyperlink.ts';
+import { Style } from '../style/style.ts';
+import { Coordinate } from '../utils/coordinate.ts';
 import type { Comment } from './comment.ts';
+import { Hyperlink } from './hyperlink.ts';
+import { Worksheet } from './worksheet.ts';
 
 /**
  * Cell data types.
@@ -18,7 +18,7 @@ export const DataType = {
     TYPE_ERROR: 'e',
 } as const;
 
-export type TDataType = typeof DataType[keyof typeof DataType];
+export type TDataType = (typeof DataType)[keyof typeof DataType];
 
 /**
  * Cell in a Worksheet.
@@ -36,7 +36,13 @@ export class Cell {
 
     #hyperlink: Hyperlink | null = null;
 
-    constructor(value: any, dataType: TDataType, worksheet: Worksheet, column: string | number, row: number) {
+    constructor(
+        value: any,
+        dataType: TDataType,
+        worksheet: Worksheet,
+        column: string | number,
+        row: number,
+    ) {
         this.#value = value;
         this.#dataType = dataType;
         this.#worksheet = worksheet;
@@ -67,7 +73,11 @@ export class Cell {
                     this.#throwDetached('getCalculatedValue');
                 }
                 const calculation = worksheet.getParent().getCalculationEngine();
-                this.#calculatedValue = calculation.calculateFormula(this.#value, worksheet, this.getCoordinate());
+                this.#calculatedValue = calculation.calculateFormula(
+                    this.#value,
+                    worksheet,
+                    this.getCoordinate(),
+                );
             }
             return this.#calculatedValue;
         }
@@ -266,7 +276,7 @@ export class Cell {
     public isInRange(range: string): boolean {
         const match = this.getCoordinate().match(/^([A-Z]+)(\d+)$/);
         if (!match) return false;
-        
+
         const cellCol = match[1]!;
         const cellRow = match[2]!;
         const cellColIndex = Coordinate.columnIndexFromString(cellCol);
@@ -274,20 +284,22 @@ export class Cell {
 
         const [[minCol, minRow], [maxCol, maxRow]] = Coordinate.rangeBoundaries(range);
 
-        return cellColIndex >= minCol && 
-               cellColIndex <= maxCol && 
-               cellRowNum >= minRow && 
-               cellRowNum <= maxRow;
+        return (
+            cellColIndex >= minCol &&
+            cellColIndex <= maxCol &&
+            cellRowNum >= minRow &&
+            cellRowNum <= maxRow
+        );
     }
 
     /**
      * Get the formatted value of this cell.
-     * 
+     *
      * @returns The formatted value as string
      */
     public getFormattedValue(): string {
         const value = this.getValue();
-        
+
         if (value === null || value === undefined) {
             return '';
         }
@@ -308,7 +320,7 @@ export class Cell {
 
     /**
      * Check if this cell is locked (for sheet protection).
-     * 
+     *
      * Returns true if the sheet is protected and this cell is NOT locked,
      * meaning it can be edited. Returns false if the sheet is not protected
      * or if the cell is explicitly locked.
@@ -318,12 +330,12 @@ export class Cell {
     public isLocked(): boolean {
         // Get protection from cell style
         const protection = this.getStyle().getProtection();
-        
+
         // If protection is not set (unprotected), return false
         if (protection.getLocked() === Protection.PROTECTION_UNPROTECTED) {
             return false;
         }
-        
+
         // Default behavior: cell is locked
         return true;
     }
@@ -337,19 +349,19 @@ export class Cell {
     public isHiddenOnFormulaBar(): boolean {
         // Get protection from cell style
         const protection = this.getStyle().getProtection();
-        
+
         // If protection is not set (unprotected), return false
         if (protection.getHidden() === Protection.PROTECTION_UNPROTECTED) {
             return false;
         }
-        
+
         // Default behavior: formula is not hidden
         return true;
     }
 
     /**
      * Get the hyperlink for this cell.
-     * 
+     *
      * @returns The hyperlink object or null if no hyperlink
      */
     public getHyperlink(): any {
@@ -369,7 +381,7 @@ export class Cell {
 
     /**
      * Get the data validation for this cell.
-     * 
+     *
      * @returns The data validation object or null if no validation
      */
     public getDataValidation(): any {
@@ -385,7 +397,7 @@ export class Cell {
 
     /**
      * Set the data validation for this cell.
-     * 
+     *
      * @param dataValidation Data validation object
      * @returns this
      */

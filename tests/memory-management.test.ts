@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'bun:test';
-import { Spreadsheet } from '../src/core/spreadsheet.ts';
+import { describe, expect, it } from 'bun:test';
 import { CellCollection } from '../src/core/cell-collection.ts';
+import { Spreadsheet } from '../src/core/spreadsheet.ts';
 
 describe('Memory Management', () => {
     describe('CellCollection', () => {
@@ -102,7 +102,7 @@ describe('Memory Management', () => {
                 spreadsheet.removeSheetByIndex(0);
                 spreadsheet.removeSheetByIndex(0);
             }
-            
+
             expect(spreadsheet.getActiveSheetIndex()).toBe(0);
 
             // Disconnect all worksheets
@@ -138,7 +138,7 @@ describe('Memory Management', () => {
 
             // All worksheets should be gone
             expect(spreadsheet.getSheetCount()).toBe(0);
-            
+
             // Note: After disconnecting, the cell collection is cleared
             // and the worksheet becomes unusable (cells are disconnected)
         });

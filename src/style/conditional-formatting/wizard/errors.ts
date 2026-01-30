@@ -36,7 +36,9 @@ export class Errors extends WizardAbstract implements WizardInterface {
 
         const conditional = new Conditional();
         conditional.setConditionType(
-            this.inverse ? Conditional.CONDITION_CONTAINSERRORS : Conditional.CONDITION_NOTCONTAINSERRORS
+            this.inverse
+                ? Conditional.CONDITION_CONTAINSERRORS
+                : Conditional.CONDITION_NOTCONTAINSERRORS,
         );
         conditional.setConditions([expression]);
         conditional.setStyle(this.getStyle());

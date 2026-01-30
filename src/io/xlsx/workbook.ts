@@ -9,25 +9,31 @@ export class Workbook extends WriterPart {
     /**
      * Write workbook to XML format.
      */
-    public writeWorkbook(spreadsheet: Spreadsheet, preCalculateFormulas: boolean = false, rIdMap: Map<string, string>): string {
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
-            .ele('workbook', {
+    public writeWorkbook(
+        spreadsheet: Spreadsheet,
+        preCalculateFormulas: boolean = false,
+        rIdMap: Map<string, string>,
+    ): string {
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
+            'workbook',
+            {
                 xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
-                'xmlns:r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
-            });
+                'xmlns:r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+            },
+        );
 
         // fileVersion
         root.ele('fileVersion', {
             appName: 'xl',
             lastEdited: '4',
             lowestEdited: '4',
-            rupBuild: '4505'
+            rupBuild: '4505',
         });
 
         // workbookPr
         root.ele('workbookPr', {
             codeName: 'ThisWorkbook',
-            defaultThemeVersion: '124226'
+            defaultThemeVersion: '124226',
         });
 
         // workbookProtection
@@ -46,7 +52,7 @@ export class Workbook extends WriterPart {
             sheets.ele('sheet', {
                 name: sheet.getTitle(),
                 sheetId: i + 1,
-                'r:id': rId
+                'r:id': rId,
             });
         }
 
@@ -54,7 +60,7 @@ export class Workbook extends WriterPart {
         root.ele('calcPr', {
             calcId: '999999',
             calcMode: 'auto',
-            fullCalcOnLoad: preCalculateFormulas ? '0' : '1'
+            fullCalcOnLoad: preCalculateFormulas ? '0' : '1',
         });
 
         return root.end({ prettyPrint: true });
@@ -107,7 +113,7 @@ export class Workbook extends WriterPart {
     #writeBookViews(root: any, spreadsheet: Spreadsheet): void {
         const bookViews = root.ele('bookViews');
         const attributes: any = {
-            activeTab: spreadsheet.getActiveSheetIndex().toString()
+            activeTab: spreadsheet.getActiveSheetIndex().toString(),
         };
 
         if (spreadsheet.getAutoFilterDateGrouping() === false) {

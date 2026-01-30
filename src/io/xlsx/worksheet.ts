@@ -1,17 +1,17 @@
 import { create } from 'xmlbuilder2';
-import { Worksheet as CoreWorksheet } from '../../core/worksheet.ts';
 import { DataType } from '../../core/cell.ts';
-import { Coordinate } from '../../utils/coordinate.ts';
+import { Worksheet as CoreWorksheet } from '../../core/worksheet.ts';
 import { RichText } from '../../rich-text/rich-text.ts';
 import { Run } from '../../rich-text/run.ts';
-import { WriterPart } from './writer-part.ts';
-import { AutoFilter } from '../../worksheet/auto-filter.ts';
-import { Column as AutoFilterColumn } from '../../worksheet/auto-filter/column.ts';
-import { Rule as AutoFilterRule } from '../../worksheet/auto-filter/column/rule.ts';
-import { Conditional } from '../../style/conditional.ts';
 import { ConditionalColorScale } from '../../style/conditional-formatting/conditional-color-scale.ts';
 import { ConditionalDataBar } from '../../style/conditional-formatting/conditional-data-bar.ts';
 import { ConditionalIconSet } from '../../style/conditional-formatting/conditional-icon-set.ts';
+import { Conditional } from '../../style/conditional.ts';
+import { Coordinate } from '../../utils/coordinate.ts';
+import { AutoFilter } from '../../worksheet/auto-filter.ts';
+import { Column as AutoFilterColumn } from '../../worksheet/auto-filter/column.ts';
+import { Rule as AutoFilterRule } from '../../worksheet/auto-filter/column/rule.ts';
+import { WriterPart } from './writer-part.ts';
 
 /**
  * Generates worksheet XMLs.
@@ -34,15 +34,17 @@ export class Worksheet extends WriterPart {
      * Write worksheet to XML format.
      */
     public writeWorksheet(worksheet: CoreWorksheet, stringTable: (RichText | string)[]): string {
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
-            .ele('worksheet', {
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
+            'worksheet',
+            {
                 xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
                 'xmlns:r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
                 'xmlns:mc': 'http://schemas.openxmlformats.org/compatibility/2006',
                 'mc:Ignorable': 'x14ac',
-                'xmlns:x14ac': 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac'
-            });
-        
+                'xmlns:x14ac': 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac',
+            },
+        );
+
         // sheetViews
         this.writeSheetViews(root, worksheet);
 
@@ -81,7 +83,7 @@ export class Worksheet extends WriterPart {
             top: margins.getTop(),
             bottom: margins.getBottom(),
             header: margins.getHeader(),
-            footer: margins.getFooter()
+            footer: margins.getFooter(),
         });
 
         // pageSetup
@@ -109,8 +111,12 @@ export class Worksheet extends WriterPart {
     private writeSheetViews(root: any, worksheet: CoreWorksheet): void {
         const sheetViews = root.ele('sheetViews');
         const sheetView = sheetViews.ele('sheetView', {
-            tabSelected: worksheet.getParent().getActiveSheetIndex() === worksheet.getParent().getIndex(worksheet) ? '1' : '0',
-            workbookViewId: '0'
+            tabSelected:
+                worksheet.getParent().getActiveSheetIndex() ===
+                worksheet.getParent().getIndex(worksheet)
+                    ? '1'
+                    : '0',
+            workbookViewId: '0',
         });
 
         const sv = worksheet.getSheetView();
@@ -152,7 +158,12 @@ export class Worksheet extends WriterPart {
         }
 
         const topLeftCell = worksheet.getTopLeftCell();
-        if (topLeftCell !== '' && topLeftCell !== 'A1' && worksheet.getPaneState() !== CoreWorksheet.PANE_FROZEN && worksheet.getPaneState() !== CoreWorksheet.PANE_FROZENSPLIT) {
+        if (
+            topLeftCell !== '' &&
+            topLeftCell !== 'A1' &&
+            worksheet.getPaneState() !== CoreWorksheet.PANE_FROZEN &&
+            worksheet.getPaneState() !== CoreWorksheet.PANE_FROZENSPLIT
+        ) {
             sheetView.att('topLeftCell', topLeftCell);
         }
 
@@ -170,7 +181,7 @@ export class Worksheet extends WriterPart {
             let normalFreeze = '';
             if (paneState === CoreWorksheet.PANE_FROZEN) {
                 if (ySplit > 0) {
-                    normalFreeze = (xSplit <= 0) ? 'bottomLeft' : 'bottomRight';
+                    normalFreeze = xSplit <= 0 ? 'bottomLeft' : 'bottomRight';
                 } else {
                     normalFreeze = 'topRight';
                 }
@@ -241,7 +252,10 @@ export class Worksheet extends WriterPart {
         // Default row height
         if (worksheet.getDefaultRowDimension().getRowHeight() >= 0) {
             sheetFormatPr.att('customHeight', '1');
-            sheetFormatPr.att('defaultRowHeight', String(worksheet.getDefaultRowDimension().getRowHeight()));
+            sheetFormatPr.att(
+                'defaultRowHeight',
+                String(worksheet.getDefaultRowDimension().getRowHeight()),
+            );
         } else {
             sheetFormatPr.att('defaultRowHeight', '14.4');
         }
@@ -253,7 +267,10 @@ export class Worksheet extends WriterPart {
 
         // Default column width
         if (worksheet.getDefaultColumnDimension().getWidth() >= 0) {
-            sheetFormatPr.att('defaultColWidth', String(worksheet.getDefaultColumnDimension().getWidthForOutput()));
+            sheetFormatPr.att(
+                'defaultColWidth',
+                String(worksheet.getDefaultColumnDimension().getWidthForOutput()),
+            );
         }
 
         // Outline level - row
@@ -287,7 +304,7 @@ export class Worksheet extends WriterPart {
                     min: colDimension.getColumnNumeric(),
                     max: colDimension.getColumnNumeric(),
                     width: colDimension.getWidth() < 0 ? '9.10' : colDimension.getWidthForOutput(),
-                    customWidth: colDimension.getWidth() >= 0 ? '1' : '0'
+                    customWidth: colDimension.getWidth() >= 0 ? '1' : '0',
                 });
                 if (!colDimension.getVisible()) {
                     col.att('hidden', '1');
@@ -308,9 +325,13 @@ export class Worksheet extends WriterPart {
     /**
      * Write sheetData.
      */
-    private writeSheetData(root: any, worksheet: CoreWorksheet, stringTable: (RichText | string)[]): void {
+    private writeSheetData(
+        root: any,
+        worksheet: CoreWorksheet,
+        stringTable: (RichText | string)[],
+    ): void {
         const sheetData = root.ele('sheetData');
-        
+
         const cells = worksheet.getCellCollection().getCells();
         // Group cells by row
         const cellsByRow = new Map<number, any[]>();
@@ -333,7 +354,7 @@ export class Worksheet extends WriterPart {
 
         for (const row of sortedRows) {
             const rowEle = sheetData.ele('row', { r: row + 1 });
-            
+
             // Row dimensions
             if (worksheet.rowDimensionExists(row)) {
                 const rowDimension = worksheet.getRowDimension(row);
@@ -364,7 +385,7 @@ export class Worksheet extends WriterPart {
 
             for (const cell of rowCells) {
                 const cellEle = rowEle.ele('c', { r: cell.getCoordinate() });
-                
+
                 // Style index
                 if (cell.getXfIndex() > 0) {
                     cellEle.att('s', String(cell.getXfIndex()));
@@ -418,7 +439,7 @@ export class Worksheet extends WriterPart {
     private writeRichText(root: any, richText: RichText): void {
         for (const element of richText.getRichTextElements()) {
             const r = root.ele('r');
-            
+
             if (element instanceof Run) {
                 const font = element.getFont();
                 if (font) {
@@ -427,7 +448,8 @@ export class Worksheet extends WriterPart {
                     if (font.getBold()) rPr.ele('b');
                     if (font.getItalic()) rPr.ele('i');
                     if (font.getStrikethrough()) rPr.ele('strike');
-                    if (font.getColor().getARGB()) rPr.ele('color').att('rgb', font.getColor().getARGB()!);
+                    if (font.getColor().getARGB())
+                        rPr.ele('color').att('rgb', font.getColor().getARGB()!);
                     if (font.getSize()) rPr.ele('sz').att('val', String(font.getSize()));
                     if (font.getUnderline()) rPr.ele('u').att('val', font.getUnderline()!);
                 }
@@ -460,34 +482,36 @@ export class Worksheet extends WriterPart {
      */
     private writeDataValidations(root: any, worksheet: CoreWorksheet): void {
         const dataValidationCollection = worksheet.getDataValidationCollection();
-        
+
         if (dataValidationCollection.size > 0) {
-            const dataValidationsEle = root.ele('dataValidations', { count: dataValidationCollection.size });
-            
+            const dataValidationsEle = root.ele('dataValidations', {
+                count: dataValidationCollection.size,
+            });
+
             for (const [coordinate, dv] of dataValidationCollection) {
                 const dvEle = dataValidationsEle.ele('dataValidation');
-                
+
                 // Type
                 if (dv.getType() !== '') {
                     dvEle.att('type', dv.getType());
                 }
-                
+
                 // Error style
                 if (dv.getErrorStyle() !== '') {
                     dvEle.att('errorStyle', dv.getErrorStyle());
                 }
-                
+
                 // Operator
                 if (dv.getOperator() !== '') {
                     dvEle.att('operator', dv.getOperator());
                 }
-                
+
                 // Boolean attributes (note: showDropDown is inverted)
                 dvEle.att('allowBlank', dv.getAllowBlank() ? '1' : '0');
                 dvEle.att('showDropDown', dv.getShowDropDown() ? '0' : '1');
                 dvEle.att('showInputMessage', dv.getShowInputMessage() ? '1' : '0');
                 dvEle.att('showErrorMessage', dv.getShowErrorMessage() ? '1' : '0');
-                
+
                 // Error messages
                 if (dv.getErrorTitle() !== '') {
                     dvEle.att('errorTitle', dv.getErrorTitle());
@@ -495,7 +519,7 @@ export class Worksheet extends WriterPart {
                 if (dv.getError() !== '') {
                     dvEle.att('error', dv.getError());
                 }
-                
+
                 // Prompt messages
                 if (dv.getPromptTitle() !== '') {
                     dvEle.att('promptTitle', dv.getPromptTitle());
@@ -503,10 +527,10 @@ export class Worksheet extends WriterPart {
                 if (dv.getPrompt() !== '') {
                     dvEle.att('prompt', dv.getPrompt());
                 }
-                
+
                 // Cell reference/range
                 dvEle.att('sqref', dv.getSqref() ?? coordinate);
-                
+
                 // Formulas
                 if (dv.getFormula1() !== '') {
                     dvEle.ele('formula1').txt(dv.getFormula1());
@@ -608,10 +632,15 @@ export class Worksheet extends WriterPart {
 
         for (const [cellCoordinate, styles] of stylesCollection) {
             const cf = root.ele('conditionalFormatting', {
-                sqref: Coordinate.resolveUnionAndIntersection(cellCoordinate.replace(/\$/g, ''), ' ')
+                sqref: Coordinate.resolveUnionAndIntersection(
+                    cellCoordinate.replace(/\$/g, ''),
+                    ' ',
+                ),
             });
 
-            const cellRange = Coordinate.splitRange(cellCoordinate.replace(/\$/g, '').toUpperCase());
+            const cellRange = Coordinate.splitRange(
+                cellCoordinate.replace(/\$/g, '').toUpperCase(),
+            );
             const firstRange = cellRange[0];
             const firstPair = firstRange ? firstRange[0] : undefined;
             const topLeftCell = Worksheet.normalizeConditionalTopLeftCell(firstPair?.[0] ?? 'A1');
@@ -620,7 +649,7 @@ export class Worksheet extends WriterPart {
                 const type = conditional.getConditionType();
                 const rule = cf.ele('cfRule', {
                     type: type,
-                    priority: conditional.getPriority() || ++id
+                    priority: conditional.getPriority() || ++id,
                 });
 
                 if (
@@ -630,7 +659,9 @@ export class Worksheet extends WriterPart {
                     !conditional.getNoFormatSet()
                 ) {
                     try {
-                        const dxfId = this.getParentWriter().getStylesConditionalHashTable().getIndexForHashCode(conditional.getHashCode());
+                        const dxfId = this.getParentWriter()
+                            .getStylesConditionalHashTable()
+                            .getIndexForHashCode(conditional.getHashCode());
                         rule.att('dxfId', String(dxfId));
                     } catch {
                         // DXF not found, skip dxfId
@@ -638,7 +669,11 @@ export class Worksheet extends WriterPart {
                 }
 
                 if (
-                    (type === Conditional.CONDITION_CELLIS || type === Conditional.CONDITION_CONTAINSTEXT || type === Conditional.CONDITION_NOTCONTAINSTEXT || type === Conditional.CONDITION_BEGINSWITH || type === Conditional.CONDITION_ENDSWITH) &&
+                    (type === Conditional.CONDITION_CELLIS ||
+                        type === Conditional.CONDITION_CONTAINSTEXT ||
+                        type === Conditional.CONDITION_NOTCONTAINSTEXT ||
+                        type === Conditional.CONDITION_BEGINSWITH ||
+                        type === Conditional.CONDITION_ENDSWITH) &&
                     conditional.getOperatorType() !== ''
                 ) {
                     rule.att('operator', conditional.getOperatorType());
@@ -648,7 +683,12 @@ export class Worksheet extends WriterPart {
                     rule.att('stopIfTrue', '1');
                 }
 
-                if (type === Conditional.CONDITION_CONTAINSTEXT || type === Conditional.CONDITION_NOTCONTAINSTEXT || type === Conditional.CONDITION_BEGINSWITH || type === Conditional.CONDITION_ENDSWITH) {
+                if (
+                    type === Conditional.CONDITION_CONTAINSTEXT ||
+                    type === Conditional.CONDITION_NOTCONTAINSTEXT ||
+                    type === Conditional.CONDITION_BEGINSWITH ||
+                    type === Conditional.CONDITION_ENDSWITH
+                ) {
                     this.writeTextCondElements(rule, conditional, topLeftCell);
                 } else if (type === Conditional.CONDITION_COLORSCALE) {
                     this.writeColorScaleElements(rule, conditional.getColorScale());
@@ -712,7 +752,11 @@ export class Worksheet extends WriterPart {
                     }
                 } else {
                     type = typex;
-                    const defaults: Record<string, string> = { number: '0', percent: '0', percentile: '10' };
+                    const defaults: Record<string, string> = {
+                        number: '0',
+                        percent: '0',
+                        percentile: '10',
+                    };
                     value = minCfvo.getValue() ?? defaults[type] ?? null;
                 }
             }
@@ -736,7 +780,11 @@ export class Worksheet extends WriterPart {
                         value = '50';
                     }
                 } else {
-                    const defaults: Record<string, string> = { number: '0', percent: '50', percentile: '50' };
+                    const defaults: Record<string, string> = {
+                        number: '0',
+                        percent: '50',
+                        percentile: '50',
+                    };
                     value = midCfvo.getValue() ?? defaults[type] ?? null;
                 }
             }
@@ -759,7 +807,11 @@ export class Worksheet extends WriterPart {
                     }
                 } else {
                     type = typex;
-                    const defaults: Record<string, string> = { number: '0', percent: '100', percentile: '90' };
+                    const defaults: Record<string, string> = {
+                        number: '0',
+                        percent: '100',
+                        percentile: '90',
+                    };
                     value = maxCfvo.getValue() ?? defaults[type] ?? null;
                 }
             }
@@ -783,12 +835,16 @@ export class Worksheet extends WriterPart {
     private writeDataBarElements(rule: any, dataBar: ConditionalDataBar | null): void {
         if (!dataBar) return;
         const db = rule.ele('dataBar');
-        if (dataBar.getShowValue() !== null) db.att('showValue', dataBar.getShowValue() ? '1' : '0');
+        if (dataBar.getShowValue() !== null)
+            db.att('showValue', dataBar.getShowValue() ? '1' : '0');
 
         const minCfvo = dataBar.getMinimumConditionalFormatValueObject();
         {
             const type = minCfvo?.getType() ?? 'min';
-            const val = type === 'formula' ? (minCfvo?.getCellFormula() ?? null) : (minCfvo?.getValue() ?? null);
+            const val =
+                type === 'formula'
+                    ? (minCfvo?.getCellFormula() ?? null)
+                    : (minCfvo?.getValue() ?? null);
             const cfvo = db.ele('cfvo', { type });
             if (val !== null) cfvo.att('val', String(val));
         }
@@ -796,7 +852,10 @@ export class Worksheet extends WriterPart {
         const maxCfvo = dataBar.getMaximumConditionalFormatValueObject();
         {
             const type = maxCfvo?.getType() ?? 'max';
-            const val = type === 'formula' ? (maxCfvo?.getCellFormula() ?? null) : (maxCfvo?.getValue() ?? null);
+            const val =
+                type === 'formula'
+                    ? (maxCfvo?.getCellFormula() ?? null)
+                    : (maxCfvo?.getValue() ?? null);
             const cfvo = db.ele('cfvo', { type });
             if (val !== null) cfvo.att('val', String(val));
         }
@@ -811,12 +870,14 @@ export class Worksheet extends WriterPart {
         const is = rule.ele('iconSet');
         if (iconSet.getIconSetType()) is.att('iconSet', iconSet.getIconSetType());
         if (iconSet.getReverse() !== null) is.att('reverse', iconSet.getReverse() ? '1' : '0');
-        if (iconSet.getShowValue() !== null) is.att('showValue', iconSet.getShowValue() ? '1' : '0');
+        if (iconSet.getShowValue() !== null)
+            is.att('showValue', iconSet.getShowValue() ? '1' : '0');
 
         for (const cfvoObj of iconSet.getCfvos()) {
             const cfvo = is.ele('cfvo', { type: cfvoObj.getType() });
             if (cfvoObj.getValue() !== null) cfvo.att('val', String(cfvoObj.getValue()));
-            if (cfvoObj.getGreaterThanOrEqual() !== null) cfvo.att('gte', cfvoObj.getGreaterThanOrEqual() ? '1' : '0');
+            if (cfvoObj.getGreaterThanOrEqual() !== null)
+                cfvo.att('gte', cfvoObj.getGreaterThanOrEqual() ? '1' : '0');
         }
     }
 
@@ -845,7 +906,7 @@ export class Worksheet extends WriterPart {
      */
     private writePageSetup(root: any, worksheet: CoreWorksheet): void {
         const pageSetup = worksheet.getPageSetup();
-        
+
         root.ele('pageSetup', {
             orientation: pageSetup.getOrientation(),
             paperSize: pageSetup.getPaperSize(),
@@ -854,7 +915,7 @@ export class Worksheet extends WriterPart {
             fitToWidth: pageSetup.getFitToWidth() || '1',
             firstPageNumber: pageSetup.getFirstPageNumber() || '1',
             useFirstPageNumber: pageSetup.getFirstPageNumber() !== null ? '1' : '0',
-            pageOrder: pageSetup.getPageOrder()
+            pageOrder: pageSetup.getPageOrder(),
         });
     }
 
@@ -877,7 +938,7 @@ export class Worksheet extends WriterPart {
             }
 
             const filterColumnEle = autoFilterEle.ele('filterColumn', {
-                colId: autoFilter.getColumnOffset(columnID)
+                colId: autoFilter.getColumnOffset(columnID),
             });
 
             const filterType = column.getFilterType();
@@ -895,8 +956,18 @@ export class Worksheet extends WriterPart {
             } else if (filterType === AutoFilterColumn.AUTOFILTER_FILTERTYPE_TOPTENFILTER) {
                 const top10Ele = filterColumnEle.ele('top10');
                 for (const rule of rules) {
-                    top10Ele.att('top', rule.getGrouping() === AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_TOP ? '1' : '0');
-                    top10Ele.att('percent', rule.getOperator() === AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_PERCENT ? '1' : '0');
+                    top10Ele.att(
+                        'top',
+                        rule.getGrouping() === AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_TOP
+                            ? '1'
+                            : '0',
+                    );
+                    top10Ele.att(
+                        'percent',
+                        rule.getOperator() === AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_PERCENT
+                            ? '1'
+                            : '0',
+                    );
                     top10Ele.att('val', String(rule.getValue()));
                     const filterVal = column.getAttribute('maxVal');
                     if (filterVal !== null) top10Ele.att('filterVal', String(filterVal));
@@ -922,7 +993,9 @@ export class Worksheet extends WriterPart {
                 for (const rule of rules) {
                     if (rule.getRuleType() === AutoFilterRule.AUTOFILTER_RULETYPE_FILTER) {
                         filtersEle.ele('filter', { val: String(rule.getValue()) });
-                    } else if (rule.getRuleType() === AutoFilterRule.AUTOFILTER_RULETYPE_DATEGROUP) {
+                    } else if (
+                        rule.getRuleType() === AutoFilterRule.AUTOFILTER_RULETYPE_DATEGROUP
+                    ) {
                         const dateGroupItemEle = filtersEle.ele('dateGroupItem');
                         const value = rule.getValue() as Record<string, any>;
                         for (const [key, val] of Object.entries(value)) {
@@ -938,9 +1011,11 @@ export class Worksheet extends WriterPart {
     private getStringTableIndex(value: any, stringTable: (RichText | string)[]): number {
         if (value instanceof RichText) {
             const hash = value.getHashCode();
-            return stringTable.findIndex(item => item instanceof RichText && item.getHashCode() === hash);
+            return stringTable.findIndex(
+                (item) => item instanceof RichText && item.getHashCode() === hash,
+            );
         }
         const sValue = String(value);
-        return stringTable.findIndex(item => typeof item === 'string' && item === sValue);
+        return stringTable.findIndex((item) => typeof item === 'string' && item === sValue);
     }
 }

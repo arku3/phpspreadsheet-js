@@ -10,7 +10,7 @@ export class RgbTint {
     private static readonly ONE_SIXTH = 1.0 / 6.0;
     private static readonly TWO_THIRD = 2.0 / 3.0;
     private static readonly RGBMAX = 255.0;
-    
+
     /**
      * MS Excel's tint function expects that HLS is base 240.
      *
@@ -66,7 +66,11 @@ export class RgbTint {
      *
      * @return [red, green, blue]
      */
-    private static hlsToRgb(hue: number, luminance: number, saturation: number): [number, number, number] {
+    private static hlsToRgb(
+        hue: number,
+        luminance: number,
+        saturation: number,
+    ): [number, number, number] {
         if (saturation === 0.0) {
             return [luminance, luminance, luminance];
         }
@@ -74,7 +78,7 @@ export class RgbTint {
         if (luminance <= 0.5) {
             m2 = luminance * (1.0 + saturation);
         } else {
-            m2 = luminance + saturation - (luminance * saturation);
+            m2 = luminance + saturation - luminance * saturation;
         }
         const m1 = 2.0 * luminance - m2;
 
@@ -103,7 +107,7 @@ export class RgbTint {
     private static positiveDecimalPart(num: number): number {
         const res = num % 1.0;
 
-        return (res >= 0.0) ? res : (1.0 + res);
+        return res >= 0.0 ? res : 1.0 + res;
     }
 
     /**
@@ -129,8 +133,16 @@ export class RgbTint {
      *
      * @return [red, green, blue]
      */
-    private static msHlsToRgb(hue: number, lightness: number, saturation: number): [number, number, number] {
-        return RgbTint.hlsToRgb(hue / RgbTint.HLSMAX, lightness / RgbTint.HLSMAX, saturation / RgbTint.HLSMAX);
+    private static msHlsToRgb(
+        hue: number,
+        lightness: number,
+        saturation: number,
+    ): [number, number, number] {
+        return RgbTint.hlsToRgb(
+            hue / RgbTint.HLSMAX,
+            lightness / RgbTint.HLSMAX,
+            saturation / RgbTint.HLSMAX,
+        );
     }
 
     /**
@@ -143,7 +155,9 @@ export class RgbTint {
             return Math.round(luminance * (1.0 + tint));
         }
 
-        return Math.round(luminance * (1.0 - tint) + (RgbTint.HLSMAX - RgbTint.HLSMAX * (1.0 - tint)));
+        return Math.round(
+            luminance * (1.0 - tint) + (RgbTint.HLSMAX - RgbTint.HLSMAX * (1.0 - tint)),
+        );
     }
 
     /**
@@ -151,10 +165,16 @@ export class RgbTint {
      */
     public static rgbAndTintToRgb(red: number, green: number, blue: number, tint: number): string {
         const [hue, luminance, saturation] = RgbTint.rgbToMsHls(red, green, blue);
-        const [r, g, b] = RgbTint.msHlsToRgb(hue, RgbTint.tintLuminance(tint, luminance), saturation);
+        const [r, g, b] = RgbTint.msHlsToRgb(
+            hue,
+            RgbTint.tintLuminance(tint, luminance),
+            saturation,
+        );
 
         const toHex = (c: number) => {
-            const hex = Math.round(c * RgbTint.RGBMAX).toString(16).toUpperCase();
+            const hex = Math.round(c * RgbTint.RGBMAX)
+                .toString(16)
+                .toUpperCase();
             return hex.length === 1 ? '0' + hex : hex;
         };
 

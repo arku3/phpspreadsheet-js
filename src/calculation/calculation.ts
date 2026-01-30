@@ -1,19 +1,17 @@
 import { Worksheet } from '../core/worksheet.ts';
-import { FormulaParser } from './formula-parser.ts';
-import { Stack } from './token/stack.ts';
-import { BranchPruner } from './engine/branch-pruner.ts';
-import { TokenType, TokenSubType, FormulaToken } from './formula-token.ts';
 import { Coordinate } from '../utils/coordinate.ts';
-import { FunctionRegistry } from './function-registry.ts';
 import { CalculationErrors } from './calculation-errors.ts';
-
+import { BranchPruner } from './engine/branch-pruner.ts';
 import { StructuredReference } from './engine/structured-reference.ts';
+import { FormulaParser } from './formula-parser.ts';
+import { FormulaToken, TokenSubType, TokenType } from './formula-token.ts';
+import { FunctionRegistry } from './function-registry.ts';
+import { Stack } from './token/stack.ts';
 
 /**
  * Calculation Engine.
  */
 export class Calculation {
-
     #branchPruner: BranchPruner;
     #stack: Stack;
     #functionRegistry: FunctionRegistry;
@@ -167,7 +165,12 @@ export class Calculation {
                     const p1 = Calculation.PRECEDENCE[token.getValue()] ?? 0;
                     while (operatorStack.length > 0) {
                         const top = operatorStack[operatorStack.length - 1];
-                        if (!top || top.getType() === TokenType.SUBEXPRESSION || top.getType() === TokenType.FUNCTION) break;
+                        if (
+                            !top ||
+                            top.getType() === TokenType.SUBEXPRESSION ||
+                            top.getType() === TokenType.FUNCTION
+                        )
+                            break;
                         const p2 = Calculation.PRECEDENCE[top.getValue()] ?? 0;
                         if (p2 >= p1) {
                             const op = operatorStack.pop();
@@ -221,11 +224,13 @@ export class Calculation {
                         if (top && top.getType() === TokenType.FUNCTION) {
                             if (top.getValue().toUpperCase() === 'IF') {
                                 const argCount = this.#countArgumentsSinceStart(stack);
-                                if (argCount === 1) { // Finished condition
+                                if (argCount === 1) {
+                                    // Finished condition
                                     const conditionResult = stack.last()?.value;
                                     branchPruner.setConditionResult(Boolean(conditionResult));
                                     branchPruner.enterThen();
-                                } else if (argCount === 2) { // Finished then-branch
+                                } else if (argCount === 2) {
+                                    // Finished then-branch
                                     branchPruner.enterElse();
                                 }
                             }
@@ -316,7 +321,10 @@ export class Calculation {
 
         const metadata = this.#functionRegistry.get(functionName);
         if (metadata) {
-            const validation = this.#functionRegistry.validateArgumentCount(functionName, args.length);
+            const validation = this.#functionRegistry.validateArgumentCount(
+                functionName,
+                args.length,
+            );
             if (validation !== true) {
                 return validation;
             }
@@ -325,7 +333,12 @@ export class Calculation {
         return `${CalculationErrors.NAME} (${functionName})`;
     }
 
-    #processOperand(token: FormulaToken, stack: Stack, worksheet?: Worksheet, cellID?: string): void {
+    #processOperand(
+        token: FormulaToken,
+        stack: Stack,
+        worksheet?: Worksheet,
+        cellID?: string,
+    ): void {
         let value: any = token.getValue();
 
         if (token.getSubType() === TokenSubType.NUMBER) {
@@ -349,7 +362,10 @@ export class Calculation {
                 if (namedRange) {
                     if (namedRange.isFormula()) {
                         const formula = namedRange.getValue();
-                        value = this.calculateFormula(formula, namedRange.getWorksheet() || worksheet);
+                        value = this.calculateFormula(
+                            formula,
+                            namedRange.getWorksheet() || worksheet,
+                        );
                     } else {
                         value = this.#resolveReference(namedRange.getValue(), worksheet);
                     }
@@ -424,7 +440,11 @@ export class Calculation {
     /**
      * Resolve reference.
      */
-    #resolveReference(reference: string, worksheet: Worksheet, rowMajor: boolean = Calculation.RANGE_ROW_MAJOR): any {
+    #resolveReference(
+        reference: string,
+        worksheet: Worksheet,
+        rowMajor: boolean = Calculation.RANGE_ROW_MAJOR,
+    ): any {
         let targetWorksheet = worksheet;
 
         if (reference.includes('!')) {

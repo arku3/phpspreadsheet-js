@@ -19,7 +19,9 @@ export class ConditionalColorScale {
         return this.#minimumConditionalFormatValueObject;
     }
 
-    public setMinimumConditionalFormatValueObject(minimumConditionalFormatValueObject: ConditionalFormatValueObject): this {
+    public setMinimumConditionalFormatValueObject(
+        minimumConditionalFormatValueObject: ConditionalFormatValueObject,
+    ): this {
         this.#minimumConditionalFormatValueObject = minimumConditionalFormatValueObject;
         return this;
     }
@@ -28,7 +30,9 @@ export class ConditionalColorScale {
         return this.#midpointConditionalFormatValueObject;
     }
 
-    public setMidpointConditionalFormatValueObject(midpointConditionalFormatValueObject: ConditionalFormatValueObject): this {
+    public setMidpointConditionalFormatValueObject(
+        midpointConditionalFormatValueObject: ConditionalFormatValueObject,
+    ): this {
         this.#midpointConditionalFormatValueObject = midpointConditionalFormatValueObject;
         return this;
     }
@@ -37,7 +41,9 @@ export class ConditionalColorScale {
         return this.#maximumConditionalFormatValueObject;
     }
 
-    public setMaximumConditionalFormatValueObject(maximumConditionalFormatValueObject: ConditionalFormatValueObject): this {
+    public setMaximumConditionalFormatValueObject(
+        maximumConditionalFormatValueObject: ConditionalFormatValueObject,
+    ): this {
         this.#maximumConditionalFormatValueObject = maximumConditionalFormatValueObject;
         return this;
     }

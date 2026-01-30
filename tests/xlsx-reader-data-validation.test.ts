@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
-import { XlsxReader } from '../src/io/xlsx-reader.ts';
-import { XlsxWriter } from '../src/io/xlsx-writer.ts';
-import { Spreadsheet } from '../src/core/spreadsheet.ts';
-import { DataValidation } from '../src/core/data-validation.ts';
 import fs from 'node:fs';
 import path from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { DataValidation } from '../src/core/data-validation.ts';
+import { Spreadsheet } from '../src/core/spreadsheet.ts';
+import { XlsxReader } from '../src/io/xlsx-reader.ts';
+import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 
 describe('XlsxReader Data Validation Integration', () => {
     const testDir = './test-output';
@@ -18,7 +18,7 @@ describe('XlsxReader Data Validation Integration', () => {
         // Create XLSX file with data validations
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
-        
+
         // Whole number validation (between 1 and 100)
         const cellA1 = sheet.getCell('A1');
         cellA1.setValue(50);
@@ -35,7 +35,7 @@ describe('XlsxReader Data Validation Integration', () => {
         dv1.setErrorTitle('Invalid Input');
         dv1.setError('Please enter a number between 1 and 100');
         cellA1.setDataValidation(dv1);
-        
+
         // List validation
         const cellA2 = sheet.getCell('A2');
         cellA2.setValue('Option1');
@@ -45,7 +45,7 @@ describe('XlsxReader Data Validation Integration', () => {
         dv2.setAllowBlank(true);
         dv2.setShowDropDown(true);
         cellA2.setDataValidation(dv2);
-        
+
         // Decimal validation (greater than 0)
         const cellA3 = sheet.getCell('A3');
         cellA3.setValue(10.5);
@@ -54,7 +54,7 @@ describe('XlsxReader Data Validation Integration', () => {
         dv3.setOperator(DataValidation.OPERATOR_GREATERTHAN);
         dv3.setFormula1('0');
         cellA3.setDataValidation(dv3);
-        
+
         // Save the file
         const writer = new XlsxWriter(spreadsheet);
         await writer.save(testFile);
@@ -70,9 +70,9 @@ describe('XlsxReader Data Validation Integration', () => {
         const reader = new XlsxReader();
         const loaded = await reader.load(testFile);
         const sheet = loaded.getActiveSheet();
-        
+
         expect(sheet.dataValidationExists('A1')).toBe(true);
-        
+
         const dv = sheet.getDataValidation('A1');
         expect(dv).toBeDefined();
         expect(dv!.getType()).toBe(DataValidation.TYPE_WHOLE);
@@ -92,9 +92,9 @@ describe('XlsxReader Data Validation Integration', () => {
         const reader = new XlsxReader();
         const loaded = await reader.load(testFile);
         const sheet = loaded.getActiveSheet();
-        
+
         expect(sheet.dataValidationExists('A2')).toBe(true);
-        
+
         const dv = sheet.getDataValidation('A2');
         expect(dv).toBeDefined();
         expect(dv!.getType()).toBe(DataValidation.TYPE_LIST);
@@ -107,9 +107,9 @@ describe('XlsxReader Data Validation Integration', () => {
         const reader = new XlsxReader();
         const loaded = await reader.load(testFile);
         const sheet = loaded.getActiveSheet();
-        
+
         expect(sheet.dataValidationExists('A3')).toBe(true);
-        
+
         const dv = sheet.getDataValidation('A3');
         expect(dv).toBeDefined();
         expect(dv!.getType()).toBe(DataValidation.TYPE_DECIMAL);
@@ -121,7 +121,7 @@ describe('XlsxReader Data Validation Integration', () => {
         const reader = new XlsxReader();
         const loaded = await reader.load(testFile);
         const sheet = loaded.getActiveSheet();
-        
+
         expect(sheet.dataValidationExists('B1')).toBe(false);
         expect(sheet.getDataValidation('B1')).toBeNull();
     });
@@ -130,7 +130,7 @@ describe('XlsxReader Data Validation Integration', () => {
         const reader = new XlsxReader();
         const loaded = await reader.load(testFile);
         const sheet = loaded.getActiveSheet();
-        
+
         const cell = sheet.getCell('A1');
         const dv = cell.getDataValidation();
         expect(dv).toBeDefined();
@@ -141,7 +141,7 @@ describe('XlsxReader Data Validation Integration', () => {
         const reader = new XlsxReader();
         const loaded = await reader.load(testFile);
         const sheet = loaded.getActiveSheet();
-        
+
         const collection = sheet.getDataValidationCollection();
         expect(collection.size).toBe(3);
         expect(collection.has('A1')).toBe(true);
@@ -152,10 +152,10 @@ describe('XlsxReader Data Validation Integration', () => {
     it('should respect readDataOnly option', async () => {
         const reader = new XlsxReader();
         reader.setReadDataOnly(true);
-        
+
         const loaded = await reader.load(testFile);
         const sheet = loaded.getActiveSheet();
-        
+
         // Data validations should not be loaded when readDataOnly is true
         expect(sheet.dataValidationExists('A1')).toBe(false);
         expect(sheet.getDataValidationCollection().size).toBe(0);

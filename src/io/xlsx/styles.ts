@@ -1,13 +1,13 @@
 import { create } from 'xmlbuilder2';
 import { Spreadsheet } from '../../core/spreadsheet.ts';
-import { Style as InternalStyle } from '../../style/style.ts';
-import { Font } from '../../style/font.ts';
-import { Fill } from '../../style/fill.ts';
-import { Borders } from '../../style/borders.ts';
-import { Border } from '../../style/border.ts';
-import { NumberFormat } from '../../style/number-format.ts';
 import { Alignment } from '../../style/alignment.ts';
+import { Border } from '../../style/border.ts';
+import { Borders } from '../../style/borders.ts';
+import { Fill } from '../../style/fill.ts';
+import { Font } from '../../style/font.ts';
+import { NumberFormat } from '../../style/number-format.ts';
 import { Protection } from '../../style/protection.ts';
+import { Style as InternalStyle } from '../../style/style.ts';
 import { WriterPart } from './writer-part.ts';
 
 /**
@@ -18,10 +18,12 @@ export class Styles extends WriterPart {
      * Write styles to XML format.
      */
     public writeStyles(spreadsheet: Spreadsheet): string {
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
-            .ele('styleSheet', {
-                xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
-            });
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
+            'styleSheet',
+            {
+                xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
+            },
+        );
 
         const writer = this.getParentWriter();
 
@@ -65,7 +67,7 @@ export class Styles extends WriterPart {
         // cellXfs
         const cellXfCollection = spreadsheet.getCellXfCollection();
         const cellXfs = root.ele('cellXfs', { count: cellXfCollection.length });
-        
+
         const defaultAlignment = new Alignment();
         let defaultAlignHash = defaultAlignment.getHashCode();
         if (defaultAlignHash !== spreadsheet.getDefaultStyle().getAlignment().getHashCode()) {
@@ -81,7 +83,7 @@ export class Styles extends WriterPart {
         cellStyles.ele('cellStyle', {
             name: 'Normal',
             xfId: 0,
-            builtinId: 0
+            builtinId: 0,
         });
 
         // dxfs
@@ -94,7 +96,7 @@ export class Styles extends WriterPart {
         // tableStyles
         root.ele('tableStyles', {
             defaultTableStyle: 'TableStyleMedium9',
-            defaultPivotStyle: 'PivotTableStyle1'
+            defaultPivotStyle: 'PivotTableStyle1',
         });
 
         return root.end({ prettyPrint: true });
@@ -105,7 +107,7 @@ export class Styles extends WriterPart {
         if (formatCode !== null) {
             parent.ele('numFmt', {
                 numFmtId: id + 164,
-                formatCode: formatCode
+                formatCode: formatCode,
             });
         }
     }
@@ -114,9 +116,10 @@ export class Styles extends WriterPart {
         const f = parent.ele('font');
         if (font.getBold() !== null) f.ele('b', { val: font.getBold() ? '1' : '0' });
         if (font.getItalic() !== null) f.ele('i', { val: font.getItalic() ? '1' : '0' });
-        if (font.getStrikethrough() !== null) f.ele('strike', { val: font.getStrikethrough() ? '1' : '0' });
+        if (font.getStrikethrough() !== null)
+            f.ele('strike', { val: font.getStrikethrough() ? '1' : '0' });
         if (font.getUnderline() !== null) f.ele('u', { val: font.getUnderline() });
-        
+
         if (font.getSuperscript()) {
             f.ele('vertAlign', { val: 'superscript' });
         } else if (font.getSubscript()) {
@@ -124,7 +127,7 @@ export class Styles extends WriterPart {
         }
 
         if (font.getSize() !== null) f.ele('sz', { val: font.getSize() });
-        
+
         this.writeColor(f, font.getColor());
 
         if (font.getName() !== null) {
@@ -135,11 +138,11 @@ export class Styles extends WriterPart {
     private writeFill(parent: any, fill: Fill): void {
         const f = parent.ele('fill');
         const fillType = fill.getFillType();
-        
+
         if (fillType === 'linear' || fillType === 'path') {
             const gf = f.ele('gradientFill', {
                 type: fillType,
-                degree: fill.getRotation()
+                degree: fill.getRotation(),
             });
             const stop0 = gf.ele('stop', { position: 0 });
             const startColor = fill.getStartColor().getARGB();
@@ -166,7 +169,7 @@ export class Styles extends WriterPart {
 
     private writeBorder(parent: any, borders: Borders): void {
         const b = parent.ele('border');
-        
+
         if (borders.getDiagonalDirection() === Borders.DIAGONAL_UP) {
             b.att('diagonalUp', 'true');
             b.att('diagonalDown', 'false');
@@ -215,17 +218,29 @@ export class Styles extends WriterPart {
         this.writeBorder(dxf, style.getBorders());
     }
 
-    private writeCellStyleXf(parent: any, style: InternalStyle, spreadsheet: Spreadsheet, defaultAlignHash: string): void {
+    private writeCellStyleXf(
+        parent: any,
+        style: InternalStyle,
+        spreadsheet: Spreadsheet,
+        defaultAlignHash: string,
+    ): void {
         const writer = this.getParentWriter();
         const xf = parent.ele('xf', {
             xfId: 0,
             fontId: writer.getFontHashTable().getIndexForHashCode(style.getFont().getHashCode()),
             fillId: writer.getFillHashTable().getIndexForHashCode(style.getFill().getHashCode()),
-            borderId: writer.getBordersHashTable().getIndexForHashCode(style.getBorders().getHashCode())
+            borderId: writer
+                .getBordersHashTable()
+                .getIndexForHashCode(style.getBorders().getHashCode()),
         });
 
         if (style.getNumberFormat().getBuiltInFormatCode() === false) {
-            xf.att('numFmtId', writer.getNumFmtHashTable().getIndexForHashCode(style.getNumberFormat().getHashCode()) + 164);
+            xf.att(
+                'numFmtId',
+                writer
+                    .getNumFmtHashTable()
+                    .getIndexForHashCode(style.getNumberFormat().getHashCode()) + 164,
+            );
         } else {
             xf.att('numFmtId', style.getNumberFormat().getBuiltInFormatCode());
         }
@@ -242,9 +257,10 @@ export class Styles extends WriterPart {
         if (align.getHorizontal()) al.att('horizontal', align.getHorizontal()!);
         if (align.getVertical()) al.att('vertical', align.getVertical()!);
         if (align.getTextRotation() !== 0) {
-            const textRotation = align.getTextRotation() >= 0
-                ? align.getTextRotation()
-                : 90 - align.getTextRotation();
+            const textRotation =
+                align.getTextRotation() >= 0
+                    ? align.getTextRotation()
+                    : 90 - align.getTextRotation();
             al.att('textRotation', textRotation);
         }
         if (align.getWrapText()) al.att('wrapText', 'true');
@@ -281,7 +297,10 @@ export class Styles extends WriterPart {
         const styles: any[] = [];
         const sheetCount = spreadsheet.getSheetCount();
         for (let i = 0; i < sheetCount; i++) {
-            for (const conditionalStyles of spreadsheet.getSheet(i).getConditionalStylesCollection().values()) {
+            for (const conditionalStyles of spreadsheet
+                .getSheet(i)
+                .getConditionalStylesCollection()
+                .values()) {
                 for (const conditionalStyle of conditionalStyles) {
                     styles.push(conditionalStyle);
                 }
@@ -295,7 +314,7 @@ export class Styles extends WriterPart {
      */
     public allFills(spreadsheet: Spreadsheet): Fill[] {
         const fills = new Map<string, Fill>();
-        
+
         // Two predefined fills
         const fill0 = new Fill();
         fill0.setFillType('none');
@@ -305,7 +324,10 @@ export class Styles extends WriterPart {
         fill1.setFillType('gray125');
         fills.set(fill1.getHashCode(), fill1);
 
-        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
+        for (const style of [
+            ...spreadsheet.getCellXfCollection(),
+            ...spreadsheet.getCellStyleXfCollection(),
+        ]) {
             const fill = style.getFill();
             fills.set(fill.getHashCode(), fill);
         }
@@ -318,7 +340,10 @@ export class Styles extends WriterPart {
      */
     public allFonts(spreadsheet: Spreadsheet): Font[] {
         const fonts = new Map<string, Font>();
-        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
+        for (const style of [
+            ...spreadsheet.getCellXfCollection(),
+            ...spreadsheet.getCellStyleXfCollection(),
+        ]) {
             const font = style.getFont();
             fonts.set(font.getHashCode(), font);
         }
@@ -330,7 +355,10 @@ export class Styles extends WriterPart {
      */
     public allBorders(spreadsheet: Spreadsheet): Borders[] {
         const borders = new Map<string, Borders>();
-        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
+        for (const style of [
+            ...spreadsheet.getCellXfCollection(),
+            ...spreadsheet.getCellStyleXfCollection(),
+        ]) {
             const border = style.getBorders();
             borders.set(border.getHashCode(), border);
         }
@@ -342,7 +370,10 @@ export class Styles extends WriterPart {
      */
     public allNumberFormats(spreadsheet: Spreadsheet): NumberFormat[] {
         const formats = new Map<string, NumberFormat>();
-        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
+        for (const style of [
+            ...spreadsheet.getCellXfCollection(),
+            ...spreadsheet.getCellStyleXfCollection(),
+        ]) {
             const format = style.getNumberFormat();
             if (format.getBuiltInFormatCode() === false) {
                 formats.set(format.getHashCode(), format);

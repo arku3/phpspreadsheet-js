@@ -16,16 +16,16 @@ export class PasswordHasher {
 
         // Mapping between algorithm name in Excel and algorithm name in Node.js
         const mapping: Record<string, string> = {
-            'MD2': 'md2',
-            'MD4': 'md4',
-            'MD5': 'md5',
+            MD2: 'md2',
+            MD4: 'md4',
+            MD5: 'md5',
             'SHA-1': 'sha1',
             'SHA-256': 'sha256',
             'SHA-384': 'sha384',
             'SHA-512': 'sha512',
             'RIPEMD-128': 'ripemd128',
             'RIPEMD-160': 'ripemd160',
-            'WHIRLPOOL': 'whirlpool',
+            WHIRLPOOL: 'whirlpool',
         };
 
         const nodeAlgorithm = mapping[algorithmName];
@@ -49,20 +49,20 @@ export class PasswordHasher {
         let verifier = 0;
         const pwlen = password.length;
         const passwordArray = Buffer.concat([Buffer.from([pwlen]), Buffer.from(password, 'ascii')]);
-        
+
         for (let i = pwlen; i >= 0; --i) {
-            const intermediate1 = ((verifier & 0x4000) === 0) ? 0 : 1;
+            const intermediate1 = (verifier & 0x4000) === 0 ? 0 : 1;
             let intermediate2 = 2 * verifier;
-            intermediate2 = intermediate2 & 0x7FFF;
+            intermediate2 = intermediate2 & 0x7fff;
             const intermediate3 = intermediate1 | intermediate2;
             const byte = passwordArray[i];
             if (byte !== undefined) {
                 verifier = intermediate3 ^ byte;
             }
         }
-        verifier ^= 0xCE4B;
+        verifier ^= 0xce4b;
 
-        return (verifier & 0xFFFF).toString(16).toUpperCase();
+        return (verifier & 0xffff).toString(16).toUpperCase();
     }
 
     /**
@@ -79,11 +79,18 @@ export class PasswordHasher {
      *
      * @return string Hashed password
      */
-    public static hashPassword(password: string, algorithm: string = '', salt: string = '', spinCount: number = 10000): string {
+    public static hashPassword(
+        password: string,
+        algorithm: string = '',
+        salt: string = '',
+        spinCount: number = 10000,
+    ): string {
         if (password.length > PasswordHasher.MAX_PASSWORD_LENGTH) {
-            throw new Error('Password exceeds ' + PasswordHasher.MAX_PASSWORD_LENGTH + ' characters');
+            throw new Error(
+                'Password exceeds ' + PasswordHasher.MAX_PASSWORD_LENGTH + ' characters',
+            );
         }
-        
+
         const nodeAlgorithm = PasswordHasher.getAlgorithm(algorithm);
         if (!nodeAlgorithm) {
             return PasswordHasher.defaultHashPassword(password);
@@ -100,10 +107,7 @@ export class PasswordHasher {
         for (let i = 0; i < spinCount; ++i) {
             const buffer = Buffer.alloc(4);
             buffer.writeUInt32LE(i, 0);
-            hashValue = createHash(nodeAlgorithm)
-                .update(hashValue)
-                .update(buffer)
-                .digest();
+            hashValue = createHash(nodeAlgorithm).update(hashValue).update(buffer).digest();
         }
 
         return hashValue.toString('base64');

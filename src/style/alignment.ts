@@ -162,7 +162,12 @@ export class Alignment extends Supervisor {
             normalized = Alignment.TEXTROTATION_STACK_PHPSPREADSHEET;
         }
 
-        if (!((normalized >= -90 && normalized <= 90) || normalized === Alignment.TEXTROTATION_STACK_PHPSPREADSHEET)) {
+        if (
+            !(
+                (normalized >= -90 && normalized <= 90) ||
+                normalized === Alignment.TEXTROTATION_STACK_PHPSPREADSHEET
+            )
+        ) {
             throw new Error('Text rotation should be a value between -90 and 90.');
         }
 
@@ -343,14 +348,14 @@ export class Alignment extends Supervisor {
         return createHash('md5')
             .update(
                 this.#horizontal +
-                this.#vertical +
-                this.#textRotation +
-                (this.#wrapText ? 't' : 'f') +
-                (this.#shrinkToFit ? 't' : 'f') +
-                this.#indent +
-                this.#readOrder +
-                (this.#justifyLastLine ? 't' : 'f') +
-                'Alignment'
+                    this.#vertical +
+                    this.#textRotation +
+                    (this.#wrapText ? 't' : 'f') +
+                    (this.#shrinkToFit ? 't' : 'f') +
+                    this.#indent +
+                    this.#readOrder +
+                    (this.#justifyLastLine ? 't' : 'f') +
+                    'Alignment',
             )
             .digest('hex');
     }

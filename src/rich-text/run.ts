@@ -1,6 +1,6 @@
-import { TextElement } from './text-element.ts';
-import { Font } from '../style/font.ts';
 import { createHash } from 'node:crypto';
+import { Font } from '../style/font.ts';
+import { TextElement } from './text-element.ts';
 
 /**
  * Rich text run class.
@@ -48,11 +48,7 @@ export class Run extends TextElement {
      */
     public override getHashCode(): string {
         return createHash('md5')
-            .update(
-                this.getText() +
-                (this.#font ? this.#font.getHashCode() : '') +
-                'Run'
-            )
+            .update(this.getText() + (this.#font ? this.#font.getHashCode() : '') + 'Run')
             .digest('hex');
     }
 }

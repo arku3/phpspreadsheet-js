@@ -1,5 +1,5 @@
-import { Border } from './border.ts';
 import { createHash } from 'node:crypto';
+import { Border } from './border.ts';
 import { Supervisor } from './supervisor.ts';
 
 /**
@@ -273,12 +273,12 @@ export class Borders extends Supervisor {
         return createHash('md5')
             .update(
                 this.#left.getHashCode() +
-                this.#right.getHashCode() +
-                this.#top.getHashCode() +
-                this.#bottom.getHashCode() +
-                this.#diagonal.getHashCode() +
-                this.#diagonalDirection +
-                'Borders'
+                    this.#right.getHashCode() +
+                    this.#top.getHashCode() +
+                    this.#bottom.getHashCode() +
+                    this.#diagonal.getHashCode() +
+                    this.#diagonalDirection +
+                    'Borders',
             )
             .digest('hex');
     }

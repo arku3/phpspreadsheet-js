@@ -1,5 +1,4 @@
 import path from 'node:path';
-
 import { BaseDrawing } from './base-drawing.ts';
 
 /**
@@ -50,7 +49,11 @@ export class Drawing extends BaseDrawing {
     /**
      * Set image bytes.
      */
-    public setImageData(data: Uint8Array | null, mimeType: string = '', extension: string = ''): this {
+    public setImageData(
+        data: Uint8Array | null,
+        mimeType: string = '',
+        extension: string = '',
+    ): this {
         this.#imageData = data;
         this.#mimeType = mimeType;
         if (extension !== '') {

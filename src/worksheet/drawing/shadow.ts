@@ -1,5 +1,5 @@
-import { Color } from '../../style/color.ts';
 import { createHash } from 'node:crypto';
+import { Color } from '../../style/color.ts';
 
 export class Shadow {
     // Shadow alignment

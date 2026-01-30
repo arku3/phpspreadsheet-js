@@ -24,7 +24,9 @@ export class ConditionalDataBar {
         return this.#minimumConditionalFormatValueObject;
     }
 
-    public setMinimumConditionalFormatValueObject(minimumConditionalFormatValueObject: ConditionalFormatValueObject): this {
+    public setMinimumConditionalFormatValueObject(
+        minimumConditionalFormatValueObject: ConditionalFormatValueObject,
+    ): this {
         this.#minimumConditionalFormatValueObject = minimumConditionalFormatValueObject;
         return this;
     }
@@ -33,7 +35,9 @@ export class ConditionalDataBar {
         return this.#maximumConditionalFormatValueObject;
     }
 
-    public setMaximumConditionalFormatValueObject(maximumConditionalFormatValueObject: ConditionalFormatValueObject): this {
+    public setMaximumConditionalFormatValueObject(
+        maximumConditionalFormatValueObject: ConditionalFormatValueObject,
+    ): this {
         this.#maximumConditionalFormatValueObject = maximumConditionalFormatValueObject;
         return this;
     }

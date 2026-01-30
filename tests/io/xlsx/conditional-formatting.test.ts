@@ -1,37 +1,37 @@
-import { expect, test, describe } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { Spreadsheet } from '../../../src/core/spreadsheet.ts';
-import { Worksheet } from '../../../src/io/xlsx/worksheet.ts';
 import { XlsxWriter } from '../../../src/io/xlsx-writer.ts';
-import { Conditional } from '../../../src/style/conditional.ts';
-import { ConditionalDataBar } from '../../../src/style/conditional-formatting/conditional-data-bar.ts';
+import { Worksheet } from '../../../src/io/xlsx/worksheet.ts';
+import { Color } from '../../../src/style/color.ts';
 import { ConditionalColorScale } from '../../../src/style/conditional-formatting/conditional-color-scale.ts';
+import { ConditionalDataBar } from '../../../src/style/conditional-formatting/conditional-data-bar.ts';
 import { ConditionalIconSet } from '../../../src/style/conditional-formatting/conditional-icon-set.ts';
 import { IconSetValues } from '../../../src/style/conditional-formatting/icon-set-values.ts';
-import { Color } from '../../../src/style/color.ts';
+import { Conditional } from '../../../src/style/conditional.ts';
 
 describe('XLSX Worksheet Writer - Conditional Formatting', () => {
     test('writeWorksheet with DataBar', () => {
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
-        
+
         const conditional = new Conditional();
         conditional.setConditionType(Conditional.CONDITION_DATABAR);
-        
+
         const dataBar = new ConditionalDataBar();
         dataBar.setShowValue(false);
         dataBar.setColor('FF0000FF');
         conditional.setDataBar(dataBar);
-        
+
         sheet.setConditionalStyles('A1:A10', [conditional]);
-        
+
         const writer = new XlsxWriter(spreadsheet);
         const worksheetWriter = new Worksheet(writer);
-        
+
         // We need to initialize style dictionaries so dxfId can be looked up (though DataBar doesn't use it)
         writer.createStyleDictionaries();
-        
+
         const xml = worksheetWriter.writeWorksheet(sheet, []);
-        
+
         expect(xml).toContain('<conditionalFormatting sqref="A1:A10">');
         expect(xml).toContain('<cfRule type="dataBar"');
         expect(xml).toContain('<dataBar showValue="0">');
@@ -43,23 +43,23 @@ describe('XLSX Worksheet Writer - Conditional Formatting', () => {
     test('writeWorksheet with ColorScale', () => {
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
-        
+
         const conditional = new Conditional();
         conditional.setConditionType(Conditional.CONDITION_COLORSCALE);
-        
+
         const colorScale = new ConditionalColorScale();
         colorScale.setMinimumColor(new Color('FFFF0000'));
         colorScale.setMaximumColor(new Color('FF00FF00'));
         conditional.setColorScale(colorScale);
-        
+
         sheet.setConditionalStyles('B1:B10', [conditional]);
-        
+
         const writer = new XlsxWriter(spreadsheet);
         const worksheetWriter = new Worksheet(writer);
         writer.createStyleDictionaries();
-        
+
         const xml = worksheetWriter.writeWorksheet(sheet, []);
-        
+
         expect(xml).toContain('<conditionalFormatting sqref="B1:B10">');
         expect(xml).toContain('<cfRule type="colorScale"');
         expect(xml).toContain('<colorScale>');
@@ -72,22 +72,22 @@ describe('XLSX Worksheet Writer - Conditional Formatting', () => {
     test('writeWorksheet with IconSet', () => {
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
-        
+
         const conditional = new Conditional();
         conditional.setConditionType(Conditional.CONDITION_ICONSET);
-        
+
         const iconSet = new ConditionalIconSet();
         iconSet.setIconSetType(IconSetValues.ThreeArrows);
         conditional.setIconSet(iconSet);
-        
+
         sheet.setConditionalStyles('C1:C10', [conditional]);
-        
+
         const writer = new XlsxWriter(spreadsheet);
         const worksheetWriter = new Worksheet(writer);
         writer.createStyleDictionaries();
-        
+
         const xml = worksheetWriter.writeWorksheet(sheet, []);
-        
+
         expect(xml).toContain('<conditionalFormatting sqref="C1:C10">');
         expect(xml).toContain('<cfRule type="iconSet"');
         // xmlbuilder2 self-closes empty elements; accept either form.
@@ -100,20 +100,20 @@ describe('XLSX Worksheet Writer - Conditional Formatting', () => {
     test('writeWorksheet with Text Condition', () => {
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
-        
+
         const conditional = new Conditional();
         conditional.setConditionType(Conditional.CONDITION_CONTAINSTEXT);
         conditional.setOperatorType(Conditional.OPERATOR_CONTAINSTEXT);
         conditional.setText('test');
-        
+
         sheet.setConditionalStyles('D1', [conditional]);
-        
+
         const writer = new XlsxWriter(spreadsheet);
         const worksheetWriter = new Worksheet(writer);
         writer.createStyleDictionaries();
-        
+
         const xml = worksheetWriter.writeWorksheet(sheet, []);
-        
+
         expect(xml).toContain('<conditionalFormatting sqref="D1">');
         expect(xml).toContain('<cfRule type="containsText"');
         expect(xml).toContain('operator="containsText"');

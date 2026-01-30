@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
-import { Style } from './style.ts';
-import { ConditionalDataBar } from './conditional-formatting/conditional-data-bar.ts';
 import { ConditionalColorScale } from './conditional-formatting/conditional-color-scale.ts';
+import { ConditionalDataBar } from './conditional-formatting/conditional-data-bar.ts';
 import { ConditionalIconSet } from './conditional-formatting/conditional-icon-set.ts';
+import { Style } from './style.ts';
 
 /**
  * Conditional style.
@@ -187,13 +187,13 @@ export class Conditional {
         return createHash('md5')
             .update(
                 this.#conditionType +
-                this.#operatorType +
-                this.#conditions.join(';') +
-                this.#style.getHashCode() +
-                (this.#dataBar ? 'dataBar' : '') +
-                (this.#colorScale ? 'colorScale' : '') +
-                (this.#iconSet ? 'iconSet' : '') +
-                'Conditional'
+                    this.#operatorType +
+                    this.#conditions.join(';') +
+                    this.#style.getHashCode() +
+                    (this.#dataBar ? 'dataBar' : '') +
+                    (this.#colorScale ? 'colorScale' : '') +
+                    (this.#iconSet ? 'iconSet' : '') +
+                    'Conditional',
             )
             .digest('hex');
     }

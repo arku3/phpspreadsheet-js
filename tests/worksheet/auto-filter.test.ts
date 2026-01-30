@@ -1,7 +1,7 @@
-import { expect, test, describe } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { Spreadsheet } from '../../src/core/spreadsheet.ts';
-import { Rule } from '../../src/worksheet/auto-filter/column/rule.ts';
 import { Column } from '../../src/worksheet/auto-filter/column.ts';
+import { Rule } from '../../src/worksheet/auto-filter/column/rule.ts';
 
 describe('AutoFilter', () => {
     test('showHideRows simple filter', () => {
@@ -24,7 +24,8 @@ describe('AutoFilter', () => {
         autoFilter.setRange('A1:A5');
 
         // Filter for "Apple"
-        autoFilter.getColumn('A')
+        autoFilter
+            .getColumn('A')
             .setFilterType(Column.AUTOFILTER_FILTERTYPE_FILTER)
             .createRule()
             .setRuleType(Rule.AUTOFILTER_RULETYPE_FILTER)
@@ -53,15 +54,20 @@ describe('AutoFilter', () => {
         autoFilter.setRange('A1:A5');
 
         // Filter for names starting with "C" or containing "o"
-        autoFilter.getColumn('A')
+        autoFilter
+            .getColumn('A')
             .setFilterType(Column.AUTOFILTER_FILTERTYPE_CUSTOMFILTER)
             .setJoin(Column.AUTOFILTER_COLUMN_JOIN_OR);
-        
-        autoFilter.getColumn('A').createRule()
+
+        autoFilter
+            .getColumn('A')
+            .createRule()
             .setOperator(Rule.AUTOFILTER_COLUMN_RULE_EQUAL)
             .setValue('C*');
-        
-        autoFilter.getColumn('A').createRule()
+
+        autoFilter
+            .getColumn('A')
+            .createRule()
             .setOperator(Rule.AUTOFILTER_COLUMN_RULE_EQUAL)
             .setValue('*o*');
 
@@ -92,7 +98,8 @@ describe('AutoFilter', () => {
         autoFilter.setRange('A1:A6');
 
         // Filter top 2
-        autoFilter.getColumn('A')
+        autoFilter
+            .getColumn('A')
             .setFilterType(Column.AUTOFILTER_FILTERTYPE_TOPTENFILTER)
             .createRule()
             .setRuleType(Rule.AUTOFILTER_RULETYPE_TOPTENFILTER)
@@ -105,8 +112,8 @@ describe('AutoFilter', () => {
         expect(sheet.getRowDimension(2).getVisible()).toBe(false); // 10
         expect(sheet.getRowDimension(3).getVisible()).toBe(false); // 20
         expect(sheet.getRowDimension(4).getVisible()).toBe(false); // 30
-        expect(sheet.getRowDimension(5).getVisible()).toBe(true);  // 40
-        expect(sheet.getRowDimension(6).getVisible()).toBe(true);  // 50
+        expect(sheet.getRowDimension(5).getVisible()).toBe(true); // 40
+        expect(sheet.getRowDimension(6).getVisible()).toBe(true); // 50
     });
 
     test('showHideRows auto-extend range', () => {
@@ -122,7 +129,8 @@ describe('AutoFilter', () => {
         const autoFilter = sheet.getAutoFilter();
         autoFilter.setRange('A1:A1'); // Single row header
 
-        autoFilter.getColumn('A')
+        autoFilter
+            .getColumn('A')
             .setFilterType(Column.AUTOFILTER_FILTERTYPE_FILTER)
             .createRule()
             .setValue('Apple');

@@ -1,5 +1,5 @@
-import { Color } from './color.ts';
 import { createHash } from 'node:crypto';
+import { Color } from './color.ts';
 import { Supervisor } from './supervisor.ts';
 
 /**
@@ -70,7 +70,7 @@ export class Border extends Supervisor {
         if (this.#parentPropertyName === 'top') return parentComponent.getTop();
         if (this.#parentPropertyName === 'bottom') return parentComponent.getBottom();
         if (this.#parentPropertyName === 'diagonal') return parentComponent.getDiagonal();
-        
+
         throw new Error('Invalid parent property name.');
     }
 
@@ -151,7 +151,9 @@ export class Border extends Supervisor {
             this.setBorderStyle(styleArray.borderStyle as string | boolean);
         }
         if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
-            this.getColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
+            this.getColor().applyFromArray(
+                styleArray.color as { rgb?: string; argb?: string; theme?: number },
+            );
         }
         return this;
     }
@@ -164,11 +166,7 @@ export class Border extends Supervisor {
             return this.getSharedComponent().getHashCode();
         }
         return createHash('md5')
-            .update(
-                this.#borderStyle +
-                this.#color.getHashCode() +
-                'Border'
-            )
+            .update(this.#borderStyle + this.#color.getHashCode() + 'Border')
             .digest('hex');
     }
 }

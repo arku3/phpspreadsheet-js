@@ -1,13 +1,13 @@
-import { MathTrig } from './functions/math-trig.ts';
-import { Logical } from './functions/logical.ts';
-import { Statistical } from './functions/statistical.ts';
-import { TextData } from './functions/text-data.ts';
-import { LookupRef } from './functions/lookup-ref.ts';
-import { DateTime } from './functions/datetime.ts';
-import { Financial } from './functions/financial.ts';
-import { Engineering } from './functions/engineering.ts';
 import { Conditional } from './functions/conditional.ts';
 import { Database } from './functions/database.ts';
+import { DateTime } from './functions/datetime.ts';
+import { Engineering } from './functions/engineering.ts';
+import { Financial } from './functions/financial.ts';
+import { Logical } from './functions/logical.ts';
+import { LookupRef } from './functions/lookup-ref.ts';
+import { MathTrig } from './functions/math-trig.ts';
+import { Statistical } from './functions/statistical.ts';
+import { TextData } from './functions/text-data.ts';
 
 export type FunctionImplementation = (args: any[]) => any;
 
@@ -27,7 +27,12 @@ export class FunctionRegistry {
         this.#registerDefaultFunctions();
     }
 
-    public register(name: string, implementation: FunctionImplementation, minArgs: number = 0, maxArgs: number | null = null): void {
+    public register(
+        name: string,
+        implementation: FunctionImplementation,
+        minArgs: number = 0,
+        maxArgs: number | null = null,
+    ): void {
         // Some registrations use -1 to mean "no maximum" (infinite varargs).
         // Normalize to null so validation logic is consistent.
         if (maxArgs !== null && maxArgs < 0) {

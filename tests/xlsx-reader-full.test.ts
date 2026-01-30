@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
-import { XlsxReader } from '../src/io/xlsx-reader.ts';
-import { XlsxWriter } from '../src/io/xlsx-writer.ts';
-import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import fs from 'node:fs';
 import path from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { Spreadsheet } from '../src/core/spreadsheet.ts';
+import { XlsxReader } from '../src/io/xlsx-reader.ts';
+import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 
 describe('XlsxReader Full Reading', () => {
     const testDir = './test-output';
@@ -42,12 +42,9 @@ describe('XlsxReader Full Reading', () => {
         const simpleSpreadsheet = new Spreadsheet();
         simpleSpreadsheet.getActiveSheet().setTitle('Sheet1');
         simpleSpreadsheet.getActiveSheet().getCell('A1').setValue('Hello');
-        
+
         const simpleWriter = new XlsxWriter(simpleSpreadsheet);
-        await Promise.all([
-            writer.save(multiSheetFile),
-            simpleWriter.save(simpleFile),
-        ]);
+        await Promise.all([writer.save(multiSheetFile), simpleWriter.save(simpleFile)]);
     }, 30_000);
 
     afterAll(() => {
@@ -62,7 +59,7 @@ describe('XlsxReader Full Reading', () => {
     it('should list worksheet names from multi-sheet file', async () => {
         const reader = new XlsxReader();
         const names = await reader.listWorksheetNames(multiSheetFile);
-        
+
         expect(names).toHaveLength(3);
         expect(names).toContain('Sales Data');
         expect(names).toContain('Expenses');
@@ -72,29 +69,25 @@ describe('XlsxReader Full Reading', () => {
     it('should list worksheet names from single-sheet file', async () => {
         const reader = new XlsxReader();
         const names = await reader.listWorksheetNames(simpleFile);
-        
+
         expect(names).toHaveLength(1);
         expect(names[0]).toBe('Sheet1');
     });
 
     it('should throw error for non-existent file', async () => {
         const reader = new XlsxReader();
-        
-        await expect(
-            reader.listWorksheetNames('./non-existent-file.xlsx')
-        ).rejects.toThrow();
+
+        await expect(reader.listWorksheetNames('./non-existent-file.xlsx')).rejects.toThrow();
     });
 
     it('should throw error for invalid XLSX file', async () => {
         const invalidFile = path.join(testDir, 'invalid.xlsx');
         fs.writeFileSync(invalidFile, 'not a valid zip file');
-        
+
         const reader = new XlsxReader();
-        
-        await expect(
-            reader.listWorksheetNames(invalidFile)
-        ).rejects.toThrow();
-        
+
+        await expect(reader.listWorksheetNames(invalidFile)).rejects.toThrow();
+
         fs.unlinkSync(invalidFile);
     });
 });

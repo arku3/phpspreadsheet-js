@@ -1,11 +1,11 @@
 import { create } from 'xmlbuilder2';
-import { Worksheet } from '../../core/worksheet.ts';
 import { DataType } from '../../core/cell.ts';
+import { Worksheet } from '../../core/worksheet.ts';
 import { RichText } from '../../rich-text/rich-text.ts';
 import { Run } from '../../rich-text/run.ts';
 import { Font } from '../../style/font.ts';
-import { WriterPart } from './writer-part.ts';
 import { controlCharacterPHP2OOXML } from '../../utils/string-helper.ts';
+import { WriterPart } from './writer-part.ts';
 
 /**
  * Generates sharedStrings.xml.
@@ -14,7 +14,10 @@ export class StringTable extends WriterPart {
     /**
      * Create worksheet stringtable.
      */
-    public createStringTable(worksheet: Worksheet, existingTable: (RichText | string)[] = []): (RichText | string)[] {
+    public createStringTable(
+        worksheet: Worksheet,
+        existingTable: (RichText | string)[] = [],
+    ): (RichText | string)[] {
         const aStringTable = [...existingTable];
         const aFlippedStringTable = this.flipStringTable(aStringTable);
 
@@ -50,11 +53,10 @@ export class StringTable extends WriterPart {
      * Write string table to XML format.
      */
     public writeStringTable(stringTable: (RichText | string)[]): string {
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true })
-            .ele('sst', {
-                xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
-                uniqueCount: stringTable.length
-            });
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('sst', {
+            xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
+            uniqueCount: stringTable.length,
+        });
 
         for (const textElement of stringTable) {
             const si = root.ele('si');
@@ -79,7 +81,7 @@ export class StringTable extends WriterPart {
     private writeRichText(si: any, richText: RichText): void {
         for (const element of richText.getRichTextElements()) {
             const r = si.ele('r');
-            
+
             if (element instanceof Run) {
                 const font = element.getFont();
                 if (font) {
@@ -88,7 +90,8 @@ export class StringTable extends WriterPart {
                     rPr.ele('b').att('val', font.getBold() ? 'true' : 'false');
                     rPr.ele('i').att('val', font.getItalic() ? 'true' : 'false');
                     if (font.getStrikethrough()) rPr.ele('strike').att('val', 'true');
-                    if (font.getColor().getARGB()) rPr.ele('color').att('rgb', font.getColor().getARGB()!);
+                    if (font.getColor().getARGB())
+                        rPr.ele('color').att('rgb', font.getColor().getARGB()!);
                     if (font.getSize()) rPr.ele('sz').att('val', String(font.getSize()));
                     if (font.getUnderline()) rPr.ele('u').att('val', font.getUnderline()!);
                     if (font.getSuperscript()) rPr.ele('vertAlign').att('val', 'superscript');

@@ -13,7 +13,7 @@ export const CalculationErrors = {
     CIRCULAR: '#CIRCULAR!',
 } as const;
 
-export type CalculationError = typeof CalculationErrors[keyof typeof CalculationErrors];
+export type CalculationError = (typeof CalculationErrors)[keyof typeof CalculationErrors];
 
 /**
  * Check if a value is an Excel error.

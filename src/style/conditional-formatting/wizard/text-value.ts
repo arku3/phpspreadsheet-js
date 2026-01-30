@@ -32,7 +32,10 @@ export class TextValue extends WizardAbstract implements WizardInterface {
         return this;
     }
 
-    public doesNotContain(value: string, operandValueType: string = Wizard.VALUE_TYPE_LITERAL): this {
+    public doesNotContain(
+        value: string,
+        operandValueType: string = Wizard.VALUE_TYPE_LITERAL,
+    ): this {
         this.setOperator('notContains');
         this.setOperand(value, operandValueType);
         return this;
@@ -57,7 +60,10 @@ export class TextValue extends WizardAbstract implements WizardInterface {
         this.operator = operator;
     }
 
-    protected setOperand(operand: string, operandValueType: string = Wizard.VALUE_TYPE_LITERAL): void {
+    protected setOperand(
+        operand: string,
+        operandValueType: string = Wizard.VALUE_TYPE_LITERAL,
+    ): void {
         this.operand = operand;
         this.operandValueType = operandValueType;
     }
@@ -67,17 +73,24 @@ export class TextValue extends WizardAbstract implements WizardInterface {
     }
 
     protected getExpression(): string {
-        const operand = this.operandValueType === Wizard.VALUE_TYPE_LITERAL
-            ? this.wrapValue(this.operand)
-            : this.cellConditionCheck(this.operand);
+        const operand =
+            this.operandValueType === Wizard.VALUE_TYPE_LITERAL
+                ? this.wrapValue(this.operand)
+                : this.cellConditionCheck(this.operand);
 
         const format = TextValue.EXPRESSIONS[this.operator]!;
-        if (this.operator === Conditional.OPERATOR_CONTAINSTEXT || this.operator === 'notContains') {
+        if (
+            this.operator === Conditional.OPERATOR_CONTAINSTEXT ||
+            this.operator === 'notContains'
+        ) {
             return format.replace('%s', operand).replace('%s', this.referenceCell);
         }
         // For beginsWith and endsWith, we have 3 placeholders in PHP but they are the same value for 2nd and 3rd
         // LEFT(%s,LEN(%s))=%s
-        return format.replace('%s', this.referenceCell).replace('%s', operand).replace('%s', operand);
+        return format
+            .replace('%s', this.referenceCell)
+            .replace('%s', operand)
+            .replace('%s', operand);
     }
 
     public getConditional(): Conditional {
@@ -89,7 +102,7 @@ export class TextValue extends WizardAbstract implements WizardInterface {
         conditional.setText(
             this.operandValueType !== Wizard.VALUE_TYPE_LITERAL
                 ? this.cellConditionCheck(this.operand)
-                : this.operand
+                : this.operand,
         );
         conditional.setConditions([expression]);
         conditional.setStyle(this.getStyle());

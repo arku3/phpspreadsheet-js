@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { Spreadsheet } from '../../src/core/spreadsheet.ts';
 import { Comment } from '../../src/core/comment.ts';
+import { Spreadsheet } from '../../src/core/spreadsheet.ts';
 import { RichText } from '../../src/rich-text/rich-text.ts';
 
 describe('Classic Comments', () => {
@@ -34,11 +34,21 @@ describe('Classic Comments', () => {
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
 
-        expect(() => sheet.getComment('A1:B2')).toThrow('Cell coordinate string can not be a range of cells.');
-        expect(() => sheet.getComment('$A$1')).toThrow('Cell coordinate string must not be absolute.');
-        expect(() => sheet.getComment('Sheet1!A1')).toThrow('Cell coordinate must not include a worksheet reference.');
-        expect(() => sheet.getComment('')).toThrow('Cell coordinate can not be zero-length string.');
-        expect(() => sheet.getComment('NOT_A_CELL')).toThrow('Cell coordinate string is not a valid A1 reference.');
+        expect(() => sheet.getComment('A1:B2')).toThrow(
+            'Cell coordinate string can not be a range of cells.',
+        );
+        expect(() => sheet.getComment('$A$1')).toThrow(
+            'Cell coordinate string must not be absolute.',
+        );
+        expect(() => sheet.getComment('Sheet1!A1')).toThrow(
+            'Cell coordinate must not include a worksheet reference.',
+        );
+        expect(() => sheet.getComment('')).toThrow(
+            'Cell coordinate can not be zero-length string.',
+        );
+        expect(() => sheet.getComment('NOT_A_CELL')).toThrow(
+            'Cell coordinate string is not a valid A1 reference.',
+        );
     });
 
     test('Worksheet.removeComment removes and is idempotent', () => {

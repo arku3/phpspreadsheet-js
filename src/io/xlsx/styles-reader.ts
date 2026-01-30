@@ -1,12 +1,12 @@
+import { Alignment } from '../../style/alignment.ts';
+import { Border } from '../../style/border.ts';
+import { Borders } from '../../style/borders.ts';
+import { Fill } from '../../style/fill.ts';
+import { Font } from '../../style/font.ts';
+import { NumberFormat } from '../../style/number-format.ts';
+import { Style } from '../../style/style.ts';
 import type { XlsxReader } from '../xlsx-reader.ts';
 import { ReaderPart } from './reader-part.ts';
-import { Style } from '../../style/style.ts';
-import { Font } from '../../style/font.ts';
-import { Fill } from '../../style/fill.ts';
-import { Borders } from '../../style/borders.ts';
-import { Border } from '../../style/border.ts';
-import { Alignment } from '../../style/alignment.ts';
-import { NumberFormat } from '../../style/number-format.ts';
 
 /**
  * Style data structure for parsed styles.
@@ -34,11 +34,13 @@ export class StylesReader extends ReaderPart {
             fills: [],
             borders: [],
             cellStyleXfs: [],
-            cellXfs: []
+            cellXfs: [],
         };
 
         // Parse number formats
-        const numFmtMatches = xmlContent.matchAll(/<numFmt[^>]*numFmtId="(\d+)"[^>]*formatCode="([^"]*)"/g);
+        const numFmtMatches = xmlContent.matchAll(
+            /<numFmt[^>]*numFmtId="(\d+)"[^>]*formatCode="([^"]*)"/g,
+        );
         for (const match of numFmtMatches) {
             const id = parseInt(match[1]!, 10);
             const formatCode = match[2]!;
@@ -70,7 +72,9 @@ export class StylesReader extends ReaderPart {
         }
 
         // Parse cellStyleXfs (named styles)
-        const cellStyleXfsSection = xmlContent.match(/<cellStyleXfs[^>]*>([\s\S]*?)<\/cellStyleXfs>/);
+        const cellStyleXfsSection = xmlContent.match(
+            /<cellStyleXfs[^>]*>([\s\S]*?)<\/cellStyleXfs>/,
+        );
         if (cellStyleXfsSection && cellStyleXfsSection[1]) {
             const xfMatches = cellStyleXfsSection[1].matchAll(/<xf[^>]*>([\s\S]*?)<\/xf>/g);
             for (const match of xfMatches) {
@@ -201,7 +205,7 @@ export class StylesReader extends ReaderPart {
             const leftBorder = this.parseBorder(leftMatch[0]!);
             borders.getLeft().applyFromArray({
                 borderStyle: leftBorder.getBorderStyle(),
-                color: { argb: leftBorder.getColor().getARGB() }
+                color: { argb: leftBorder.getColor().getARGB() },
             });
         }
 
@@ -211,7 +215,7 @@ export class StylesReader extends ReaderPart {
             const rightBorder = this.parseBorder(rightMatch[0]!);
             borders.getRight().applyFromArray({
                 borderStyle: rightBorder.getBorderStyle(),
-                color: { argb: rightBorder.getColor().getARGB() }
+                color: { argb: rightBorder.getColor().getARGB() },
             });
         }
 
@@ -221,7 +225,7 @@ export class StylesReader extends ReaderPart {
             const topBorder = this.parseBorder(topMatch[0]!);
             borders.getTop().applyFromArray({
                 borderStyle: topBorder.getBorderStyle(),
-                color: { argb: topBorder.getColor().getARGB() }
+                color: { argb: topBorder.getColor().getARGB() },
             });
         }
 
@@ -231,7 +235,7 @@ export class StylesReader extends ReaderPart {
             const bottomBorder = this.parseBorder(bottomMatch[0]!);
             borders.getBottom().applyFromArray({
                 borderStyle: bottomBorder.getBorderStyle(),
-                color: { argb: bottomBorder.getColor().getARGB() }
+                color: { argb: bottomBorder.getColor().getARGB() },
             });
         }
 
@@ -241,7 +245,7 @@ export class StylesReader extends ReaderPart {
             const diagonalBorder = this.parseBorder(diagonalMatch[0]!);
             borders.getDiagonal().applyFromArray({
                 borderStyle: diagonalBorder.getBorderStyle(),
-                color: { argb: diagonalBorder.getColor().getARGB() }
+                color: { argb: diagonalBorder.getColor().getARGB() },
             });
         }
 
@@ -327,24 +331,24 @@ export class StylesReader extends ReaderPart {
                 style.getBorders().applyFromArray({
                     left: {
                         borderStyle: borders.getLeft().getBorderStyle(),
-                        color: { argb: borders.getLeft().getColor().getARGB() }
+                        color: { argb: borders.getLeft().getColor().getARGB() },
                     },
                     right: {
                         borderStyle: borders.getRight().getBorderStyle(),
-                        color: { argb: borders.getRight().getColor().getARGB() }
+                        color: { argb: borders.getRight().getColor().getARGB() },
                     },
                     top: {
                         borderStyle: borders.getTop().getBorderStyle(),
-                        color: { argb: borders.getTop().getColor().getARGB() }
+                        color: { argb: borders.getTop().getColor().getARGB() },
                     },
                     bottom: {
                         borderStyle: borders.getBottom().getBorderStyle(),
-                        color: { argb: borders.getBottom().getColor().getARGB() }
+                        color: { argb: borders.getBottom().getColor().getARGB() },
                     },
                     diagonal: {
                         borderStyle: borders.getDiagonal().getBorderStyle(),
-                        color: { argb: borders.getDiagonal().getColor().getARGB() }
-                    }
+                        color: { argb: borders.getDiagonal().getColor().getARGB() },
+                    },
                 });
             }
         }

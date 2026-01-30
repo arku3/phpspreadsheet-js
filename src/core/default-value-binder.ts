@@ -1,6 +1,6 @@
-import type { IValueBinder } from './i-value-binder.ts';
-import { Cell, DataType, type TDataType } from './cell.ts';
 import { RichText } from '../rich-text/rich-text.ts';
+import { Cell, DataType, type TDataType } from './cell.ts';
+import type { IValueBinder } from './i-value-binder.ts';
 
 /**
  * Default Value Binder.

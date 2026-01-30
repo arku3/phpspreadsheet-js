@@ -1,7 +1,7 @@
 import { Cell } from '../../core/cell.ts';
-import { Conditional } from '../conditional.ts';
-import { Coordinate } from '../../utils/coordinate.ts';
 import { Worksheet } from '../../core/worksheet.ts';
+import { Coordinate } from '../../utils/coordinate.ts';
+import { Conditional } from '../conditional.ts';
 
 export class CellMatcher {
     public static readonly COMPARISON_OPERATORS: Record<string, string> = {
@@ -45,12 +45,16 @@ export class CellMatcher {
         const firstRange = splitRange[0];
         if (firstRange && firstRange[0]) {
             this.referenceCell = firstRange[0];
-            [this.referenceColumn, this.referenceRow] = Coordinate.indexesFromString(this.referenceCell);
+            [this.referenceColumn, this.referenceRow] = Coordinate.indexesFromString(
+                this.referenceCell,
+            );
         }
 
         const absoluteRanges: string[] = [];
         for (const rangeSet of splitRange) {
-            const absoluteRange = rangeSet.map(coord => Coordinate.absoluteCoordinate(coord)).join(':');
+            const absoluteRange = rangeSet
+                .map((coord) => Coordinate.absoluteCoordinate(coord))
+                .join(':');
             absoluteRanges.push(absoluteRange);
         }
         this.conditionalRange = absoluteRanges.join(',');
@@ -114,10 +118,10 @@ export class CellMatcher {
     protected processRangeOperator(conditional: Conditional): boolean {
         const conditions = this.adjustConditionsForCellReferences(conditional.getConditions());
         conditions.sort();
-        
+
         let expression = CellMatcher.COMPARISON_RANGE_OPERATORS[conditional.getOperatorType()]!;
         expression = expression.replace(/\bA1\b/gi, String(this.wrapCellValue()));
-        
+
         const safeConditions = [...conditions];
         expression = `=${expression.replace(/%s/g, () => String(safeConditions.shift()))}`;
 
@@ -126,10 +130,11 @@ export class CellMatcher {
 
     protected processDuplicatesComparison(conditional: Conditional): boolean {
         const worksheetName = this.worksheet.getTitle();
-        const expression = `=${CellMatcher.COMPARISON_DUPLICATES_OPERATORS[conditional.getConditionType()]}`
-            .replace('%s', worksheetName)
-            .replace('%s', this.conditionalRange)
-            .replace('%s', String(this.wrapValue(this.cell.getCalculatedValue())));
+        const expression =
+            `=${CellMatcher.COMPARISON_DUPLICATES_OPERATORS[conditional.getConditionType()]}`
+                .replace('%s', worksheetName)
+                .replace('%s', this.conditionalRange)
+                .replace('%s', String(this.wrapValue(this.cell.getCalculatedValue())));
 
         return this.evaluateExpression(expression);
     }
@@ -137,7 +142,7 @@ export class CellMatcher {
     protected processExpression(conditional: Conditional): boolean {
         const conditions = this.adjustConditionsForCellReferences(conditional.getConditions());
         let expression = conditions[conditions.length - 1] as string;
-        
+
         const cellValue = this.wrapCellValue();
         expression = `=${expression.replace(new RegExp('\\b' + this.referenceCell + '\\b', 'gi'), String(cellValue))}`;
 
@@ -148,14 +153,18 @@ export class CellMatcher {
         try {
             const calculation = this.worksheet.getParent().getCalculationEngine();
             calculation.flushInstance();
-            return Boolean(calculation.calculateFormula(expression, this.worksheet, this.cell.getCoordinate()));
+            return Boolean(
+                calculation.calculateFormula(expression, this.worksheet, this.cell.getCoordinate()),
+            );
         } catch (e) {
             return false;
         }
     }
 
-    protected adjustConditionsForCellReferences(conditions: (string | number)[]): (string | number)[] {
-        return conditions.map(condition => {
+    protected adjustConditionsForCellReferences(
+        conditions: (string | number)[],
+    ): (string | number)[] {
+        return conditions.map((condition) => {
             if (typeof condition === 'string') {
                 return this.cellConditionCheck(condition);
             }

@@ -1,8 +1,8 @@
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 import { Color } from '../src/style/color.ts';
-import { Fill } from '../src/style/fill.ts';
 import { CellValue } from '../src/style/conditional-formatting/wizard/cell-value.ts';
+import { Fill } from '../src/style/fill.ts';
 
 async function run() {
     const spreadsheet = new Spreadsheet();

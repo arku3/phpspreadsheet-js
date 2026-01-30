@@ -1,11 +1,14 @@
-import { describe, it, expect } from 'bun:test';
+import fs from 'node:fs';
+import { describe, expect, it } from 'bun:test';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
-import { controlCharacterPHP2OOXML, containsControlCharacters } from '../src/utils/string-helper.ts';
 import { Rels } from '../src/io/xlsx/rels.ts';
 import { RichText } from '../src/rich-text/rich-text.ts';
 import { Run } from '../src/rich-text/run.ts';
-import fs from 'node:fs';
+import {
+    containsControlCharacters,
+    controlCharacterPHP2OOXML,
+} from '../src/utils/string-helper.ts';
 
 describe('I/O Module Writer Fixes', () => {
     describe('controlCharacterPHP2OOXML sanitization', () => {
@@ -61,14 +64,14 @@ describe('I/O Module Writer Fixes', () => {
             const spreadsheet = new Spreadsheet();
             const writer = new XlsxWriter(spreadsheet);
             const rels = new Rels(writer);
-            
+
             const xml = rels.writeRelationships(spreadsheet);
-            
+
             // Should contain rId1, rId2, rId3 at minimum
             expect(xml).toContain('Id="rId1"');
             expect(xml).toContain('Id="rId2"');
             expect(xml).toContain('Id="rId3"');
-            
+
             // Should not have gaps in rId numbering
             expect(xml).not.toContain('Id="rId0"');
             expect(xml).not.toContain('Id="rId4"'); // Without custom properties
@@ -77,11 +80,11 @@ describe('I/O Module Writer Fixes', () => {
         it('should include rId for custom properties when present', () => {
             const spreadsheet = new Spreadsheet();
             spreadsheet.getProperties().setCustomProperty('TestProp', 'string', 'TestValue');
-            
+
             const writer = new XlsxWriter(spreadsheet);
             const rels = new Rels(writer);
             const xml = rels.writeRelationships(spreadsheet);
-            
+
             // Should now have rId4 for custom properties
             expect(xml).toContain('Id="rId4"');
             expect(xml).toContain('custom-properties');
@@ -91,18 +94,18 @@ describe('I/O Module Writer Fixes', () => {
             const spreadsheet = new Spreadsheet();
             spreadsheet.createSheet('Sheet1');
             spreadsheet.createSheet('Sheet2');
-            
+
             const writer = new XlsxWriter(spreadsheet);
             const rels = new Rels(writer);
             const { xml, rIdMap } = rels.writeWorkbookRelationships(spreadsheet);
-            
+
             // Check rIdMap contains expected targets
             expect(rIdMap.has('styles.xml')).toBe(true);
             expect(rIdMap.has('theme/theme1.xml')).toBe(true);
             expect(rIdMap.has('sharedStrings.xml')).toBe(true);
             expect(rIdMap.has('worksheets/sheet1.xml')).toBe(true);
             expect(rIdMap.has('worksheets/sheet2.xml')).toBe(true);
-            
+
             // Check rIds are sequential
             const rIds = Array.from(rIdMap.values());
             expect(rIds).toContain('rId1');
@@ -110,7 +113,7 @@ describe('I/O Module Writer Fixes', () => {
             expect(rIds).toContain('rId3');
             expect(rIds).toContain('rId4');
             expect(rIds).toContain('rId5');
-            
+
             // Check XML contains the relationships
             expect(xml).toContain('Target="styles.xml"');
             expect(xml).toContain('Target="theme/theme1.xml"');
@@ -121,9 +124,9 @@ describe('I/O Module Writer Fixes', () => {
             const spreadsheet = new Spreadsheet();
             const writer = new XlsxWriter(spreadsheet);
             const rels = new Rels(writer);
-            
+
             const xml = rels.writeRelationships(spreadsheet);
-            
+
             expect(xml).toContain('relationships/officeDocument');
             expect(xml).toContain('relationships/metadata/core-properties');
             expect(xml).toContain('relationships/extended-properties');
@@ -134,22 +137,22 @@ describe('I/O Module Writer Fixes', () => {
         it('should write superscript formatting for RichText runs', () => {
             const spreadsheet = new Spreadsheet();
             const worksheet = spreadsheet.getActiveSheet();
-            
+
             // Create RichText with superscript
             const richText = new RichText();
             const run1 = new Run();
             run1.setText('E=');
             run1.getFontOrThrow().setSuperscript(false);
-            
+
             const run2 = new Run();
             run2.setText('mc²');
             run2.getFontOrThrow().setSuperscript(true);
-            
+
             richText.addText(run1);
             richText.addText(run2);
-            
+
             worksheet.getCell('A1').setValue(richText);
-            
+
             // Verify font properties
             expect(run2.getFontOrThrow().getSuperscript()).toBe(true);
         });
@@ -157,39 +160,39 @@ describe('I/O Module Writer Fixes', () => {
         it('should write subscript formatting for RichText runs', () => {
             const spreadsheet = new Spreadsheet();
             const worksheet = spreadsheet.getActiveSheet();
-            
+
             // Create RichText with subscript
             const richText = new RichText();
             const run = new Run();
             run.setText('H₂O');
             run.getFontOrThrow().setSubscript(true);
-            
+
             richText.addText(run);
             worksheet.getCell('A1').setValue(richText);
-            
+
             expect(run.getFontOrThrow().getSubscript()).toBe(true);
         });
 
         it('should handle mixed formatting in RichText', () => {
             const richText = new RichText();
-            
+
             const normalRun = new Run();
             normalRun.setText('Normal');
             normalRun.getFontOrThrow().setSuperscript(false);
             normalRun.getFontOrThrow().setSubscript(false);
-            
+
             const superRun = new Run();
             superRun.setText('Superscript');
             superRun.getFontOrThrow().setSuperscript(true);
-            
+
             const subRun = new Run();
             subRun.setText('Subscript');
             subRun.getFontOrThrow().setSubscript(true);
-            
+
             richText.addText(normalRun);
             richText.addText(superRun);
             richText.addText(subRun);
-            
+
             expect(normalRun.getFontOrThrow().getSuperscript()).toBe(false);
             expect(normalRun.getFontOrThrow().getSubscript()).toBe(false);
             expect(superRun.getFontOrThrow().getSuperscript()).toBe(true);
@@ -201,15 +204,15 @@ describe('I/O Module Writer Fixes', () => {
         it('should write file with control characters sanitized', () => {
             const spreadsheet = new Spreadsheet();
             const worksheet = spreadsheet.getActiveSheet();
-            
+
             // Set cell with control characters
             worksheet.getCell('A1').setValue('Test\x00Value');
-            
+
             const writer = new XlsxWriter(spreadsheet);
             const tempFile = `/tmp/test_integration_${Date.now()}.xlsx`;
-            
+
             expect(() => writer.save(tempFile)).not.toThrow();
-            
+
             // Clean up
             try {
                 fs.unlinkSync(tempFile);
@@ -219,20 +222,20 @@ describe('I/O Module Writer Fixes', () => {
         it('should write file with RichText superscript', () => {
             const spreadsheet = new Spreadsheet();
             const worksheet = spreadsheet.getActiveSheet();
-            
+
             const richText = new RichText();
             const run = new Run();
             run.setText('Formula: x²');
             run.getFontOrThrow().setSuperscript(true);
             richText.addText(run);
-            
+
             worksheet.getCell('A1').setValue(richText);
-            
+
             const writer = new XlsxWriter(spreadsheet);
             const tempFile = `/tmp/test_richtext_${Date.now()}.xlsx`;
-            
+
             expect(() => writer.save(tempFile)).not.toThrow();
-            
+
             // Clean up
             try {
                 fs.unlinkSync(tempFile);
@@ -241,17 +244,17 @@ describe('I/O Module Writer Fixes', () => {
 
         it('should handle multiple sheets with dynamic rIds', () => {
             const spreadsheet = new Spreadsheet();
-            
+
             // Create multiple sheets
             for (let i = 0; i < 5; i++) {
                 spreadsheet.createSheet(`Sheet${i + 1}`);
             }
-            
+
             const writer = new XlsxWriter(spreadsheet);
             const tempFile = `/tmp/test_multi_sheet_${Date.now()}.xlsx`;
-            
+
             expect(() => writer.save(tempFile)).not.toThrow();
-            
+
             // Clean up
             try {
                 fs.unlinkSync(tempFile);

@@ -1,7 +1,7 @@
-import { Worksheet } from '../../core/worksheet.ts';
 import { Cell } from '../../core/cell.ts';
-import { Table } from '../../worksheet/table.ts';
+import { Worksheet } from '../../core/worksheet.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
+import { Table } from '../../worksheet/table.ts';
 
 /**
  * Structured Reference Resolver.
@@ -62,7 +62,12 @@ export class StructuredReference {
             for (const t of tables) {
                 const boundaries = t.getRangeBoundaries();
                 const [[minCol, minRow], [maxCol, maxRow]] = boundaries;
-                if (cellCol1 >= minCol && cellCol1 <= maxCol && cellRow1 >= minRow && cellRow1 <= maxRow) {
+                if (
+                    cellCol1 >= minCol &&
+                    cellCol1 <= maxCol &&
+                    cellRow1 >= minRow &&
+                    cellRow1 <= maxRow
+                ) {
                     table = t;
                     break;
                 }
@@ -87,7 +92,7 @@ export class StructuredReference {
 
         // Simple column/row resolution
         // Handles: [Column], [#All], [#Data], [#Headers], [#Totals], [@Column]
-        
+
         if (reference.includes('[@') || reference.includes('[#This Row]')) {
             // Current row reference
             const cellRef = this.resolveRowReference(reference, table, cellRow1);
@@ -101,7 +106,14 @@ export class StructuredReference {
             return cellRef;
         }
 
-        const rangeRef = this.resolveColumnReference(reference, table, headerRow, firstDataRow, lastDataRow, totalsRow);
+        const rangeRef = this.resolveColumnReference(
+            reference,
+            table,
+            headerRow,
+            firstDataRow,
+            lastDataRow,
+            totalsRow,
+        );
         if (rangeRef === '#REF!') return rangeRef;
 
         const tableSheet = table.getWorksheet();
@@ -165,8 +177,8 @@ export class StructuredReference {
             // Nested form: [[Column]] -> outer group content is "[Column]".
             if (trimmed.includes('[')) {
                 const inner = extractTopLevelGroups(trimmed)
-                    .map(s => s.trim())
-                    .find(s => s !== '' && !s.startsWith('#'));
+                    .map((s) => s.trim())
+                    .find((s) => s !== '' && !s.startsWith('#'));
                 if (inner) {
                     colName = inner;
                     break;
@@ -189,12 +201,12 @@ export class StructuredReference {
     }
 
     private resolveColumnReference(
-        reference: string, 
-        table: Table, 
-        headerRow: number | null, 
-        firstDataRow: number, 
-        lastDataRow: number, 
-        totalsRow: number | null
+        reference: string,
+        table: Table,
+        headerRow: number | null,
+        firstDataRow: number,
+        lastDataRow: number,
+        totalsRow: number | null,
     ): string {
         const [[minCol, _minRow], [maxCol, _maxRow]] = table.getRangeBoundaries();
 

@@ -103,7 +103,7 @@ export class Security {
                         password,
                         this.#revisionsAlgorithmName,
                         this.#revisionsSaltValue,
-                        this.#revisionsSpinCount
+                        this.#revisionsSpinCount,
                     );
                 }
                 this.#revisionsHashValue = password;
@@ -136,7 +136,7 @@ export class Security {
                         password,
                         this.#workbookAlgorithmName,
                         this.#workbookSaltValue,
-                        this.#workbookSpinCount
+                        this.#workbookSpinCount,
                     );
                 }
                 this.#workbookHashValue = password;
@@ -156,7 +156,11 @@ export class Security {
     }
 
     public advancedPassword(): boolean {
-        return this.#workbookAlgorithmName !== '' && this.#workbookSaltValue !== '' && this.#workbookSpinCount > 0;
+        return (
+            this.#workbookAlgorithmName !== '' &&
+            this.#workbookSaltValue !== '' &&
+            this.#workbookSpinCount > 0
+        );
     }
 
     public getWorkbookAlgorithmName(): string {
@@ -182,7 +186,9 @@ export class Security {
     }
 
     public setWorkbookSaltValue(workbookSaltValue: string, base64Required: boolean): this {
-        this.#workbookSaltValue = base64Required ? Buffer.from(workbookSaltValue).toString('base64') : workbookSaltValue;
+        this.#workbookSaltValue = base64Required
+            ? Buffer.from(workbookSaltValue).toString('base64')
+            : workbookSaltValue;
         return this;
     }
 
@@ -191,7 +197,11 @@ export class Security {
     }
 
     public advancedRevisionsPassword(): boolean {
-        return this.#revisionsAlgorithmName !== '' && this.#revisionsSaltValue !== '' && this.#revisionsSpinCount > 0;
+        return (
+            this.#revisionsAlgorithmName !== '' &&
+            this.#revisionsSaltValue !== '' &&
+            this.#revisionsSpinCount > 0
+        );
     }
 
     public getRevisionsAlgorithmName(): string {
@@ -217,7 +227,9 @@ export class Security {
     }
 
     public setRevisionsSaltValue(revisionsSaltValue: string, base64Required: boolean): this {
-        this.#revisionsSaltValue = base64Required ? Buffer.from(revisionsSaltValue).toString('base64') : revisionsSaltValue;
+        this.#revisionsSaltValue = base64Required
+            ? Buffer.from(revisionsSaltValue).toString('base64')
+            : revisionsSaltValue;
         return this;
     }
 }

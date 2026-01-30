@@ -260,19 +260,21 @@ export class DataValidation {
      * Get hash code.
      */
     getHashCode(): string {
-        return this.#formula1
-            + this.#formula2
-            + this.#type
-            + this.#errorStyle
-            + this.#operator
-            + (this.#allowBlank ? 't' : 'f')
-            + (this.#showDropDown ? 't' : 'f')
-            + (this.#showInputMessage ? 't' : 'f')
-            + (this.#showErrorMessage ? 't' : 'f')
-            + this.#errorTitle
-            + this.#error
-            + this.#promptTitle
-            + this.#prompt
-            + (this.#sqref ?? '');
+        return (
+            this.#formula1 +
+            this.#formula2 +
+            this.#type +
+            this.#errorStyle +
+            this.#operator +
+            (this.#allowBlank ? 't' : 'f') +
+            (this.#showDropDown ? 't' : 'f') +
+            (this.#showInputMessage ? 't' : 'f') +
+            (this.#showErrorMessage ? 't' : 'f') +
+            this.#errorTitle +
+            this.#error +
+            this.#promptTitle +
+            this.#prompt +
+            (this.#sqref ?? '')
+        );
     }
 }

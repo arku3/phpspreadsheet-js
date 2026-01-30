@@ -15,13 +15,13 @@ export abstract class DefinedName {
         worksheet: Worksheet | null = null,
         value: string = '',
         localOnly: boolean = false,
-        scope: Worksheet | null = null
+        scope: Worksheet | null = null,
     ) {
         this.#name = name;
         this.#worksheet = worksheet || scope;
         this.#value = value;
         this.#localOnly = localOnly;
-        this.#scope = localOnly ? (scope || worksheet) : null;
+        this.#scope = localOnly ? scope || worksheet : null;
     }
 
     public getName(): string {

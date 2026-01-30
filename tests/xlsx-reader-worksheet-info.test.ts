@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
-import { XlsxReader } from '../src/io/xlsx-reader.ts';
-import { XlsxWriter } from '../src/io/xlsx-writer.ts';
-import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import fs from 'node:fs';
 import path from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { Spreadsheet } from '../src/core/spreadsheet.ts';
+import { XlsxReader } from '../src/io/xlsx-reader.ts';
+import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 
 describe('XlsxReader listWorksheetInfo', () => {
     const testDir = './test-output';
@@ -52,10 +52,10 @@ describe('XlsxReader listWorksheetInfo', () => {
     it('should return correct dimensions for Sheet1', async () => {
         const reader = new XlsxReader();
         const info = await reader.listWorksheetInfo(testFile);
-        
-        const sheet1Info = info.find(i => i.worksheetName === 'Sheet1');
+
+        const sheet1Info = info.find((i) => i.worksheetName === 'Sheet1');
         expect(sheet1Info).toBeDefined();
-        
+
         // D5 = column D is index 3 (0-based), row 5
         expect(sheet1Info!.lastColumnLetter).toBe('D');
         expect(sheet1Info!.lastColumnIndex).toBe(3); // 0-based
@@ -67,10 +67,10 @@ describe('XlsxReader listWorksheetInfo', () => {
     it('should return correct dimensions for LargeSheet', async () => {
         const reader = new XlsxReader();
         const info = await reader.listWorksheetInfo(testFile);
-        
-        const largeInfo = info.find(i => i.worksheetName === 'LargeSheet');
+
+        const largeInfo = info.find((i) => i.worksheetName === 'LargeSheet');
         expect(largeInfo).toBeDefined();
-        
+
         // Z100 = column Z is index 25 (0-based), row 100
         expect(largeInfo!.lastColumnLetter).toBe('Z');
         expect(largeInfo!.lastColumnIndex).toBe(25); // 0-based
@@ -82,10 +82,10 @@ describe('XlsxReader listWorksheetInfo', () => {
     it('should handle empty sheets', async () => {
         const reader = new XlsxReader();
         const info = await reader.listWorksheetInfo(testFile);
-        
-        const emptyInfo = info.find(i => i.worksheetName === 'EmptySheet');
+
+        const emptyInfo = info.find((i) => i.worksheetName === 'EmptySheet');
         expect(emptyInfo).toBeDefined();
-        
+
         // Empty sheet has default dimensions in XLSX
         expect(emptyInfo!.totalRows).toBe(1);
         expect(emptyInfo!.totalColumns).toBe(1);
@@ -95,9 +95,7 @@ describe('XlsxReader listWorksheetInfo', () => {
 
     it('should throw error for non-existent file', async () => {
         const reader = new XlsxReader();
-        
-        await expect(
-            reader.listWorksheetInfo('./non-existent-file.xlsx')
-        ).rejects.toThrow();
+
+        await expect(reader.listWorksheetInfo('./non-existent-file.xlsx')).rejects.toThrow();
     });
 });

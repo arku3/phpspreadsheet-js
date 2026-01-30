@@ -60,7 +60,7 @@ export class Table {
     }
 
     public getColumn(name: string): TableColumn | undefined {
-        return this.#columns.find(col => col.getName() === name);
+        return this.#columns.find((col) => col.getName() === name);
     }
 
     public showTotals(show: boolean): void {
@@ -87,6 +87,9 @@ export class Table {
         const startCol = Coordinate.columnIndexFromString(startColRaw);
         const endCol = Coordinate.columnIndexFromString(endColRaw);
 
-        return [[startCol, startRow], [endCol, endRow]];
+        return [
+            [startCol, startRow],
+            [endCol, endRow],
+        ];
     }
 }

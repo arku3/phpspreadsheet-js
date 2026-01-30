@@ -16,7 +16,7 @@ export class SheetView {
     #zoomScalePageLayoutView: number = 100;
     #zoomScaleSheetLayoutView: number = 100;
     #showZeros: boolean = true;
-    #sheetviewType: typeof SheetView.SHEET_VIEW_TYPES[number] = SheetView.SHEETVIEW_NORMAL;
+    #sheetviewType: (typeof SheetView.SHEET_VIEW_TYPES)[number] = SheetView.SHEETVIEW_NORMAL;
 
     public getZoomScale(): number | null {
         return this.#zoomScale;

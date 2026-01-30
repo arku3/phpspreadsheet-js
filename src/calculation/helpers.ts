@@ -33,8 +33,8 @@ export class Helpers {
      */
     public static flattenNumeric(array: any): number[] {
         return Helpers.flattenArray(array)
-            .map(val => Number(val))
-            .filter(val => !isNaN(val));
+            .map((val) => Number(val))
+            .filter((val) => !isNaN(val));
     }
 
     /**

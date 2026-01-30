@@ -1,8 +1,8 @@
-import type { ITextElement } from './i-text-element.ts';
-import { TextElement } from './text-element.ts';
-import { Run } from './run.ts';
-import { Cell, DataType } from '../core/cell.ts';
 import { createHash } from 'node:crypto';
+import { Cell, DataType } from '../core/cell.ts';
+import type { ITextElement } from './i-text-element.ts';
+import { Run } from './run.ts';
+import { TextElement } from './text-element.ts';
 
 /**
  * Rich text class.
@@ -68,7 +68,7 @@ export class RichText {
      * Get plain text.
      */
     public getPlainText(): string {
-        return this.#richTextElements.map(element => element.getText()).join('');
+        return this.#richTextElements.map((element) => element.getText()).join('');
     }
 
     /**

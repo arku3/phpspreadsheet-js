@@ -1,0 +1,12 @@
+node_modules
+test-output
+php-src
+.agents
+.opencode
+.vscode
+coverage
+dist
+build
+*.xlsx
+*.lockb
+*.md

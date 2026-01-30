@@ -1,5 +1,5 @@
-import { Color } from './color.ts';
 import { createHash } from 'node:crypto';
+import { Color } from './color.ts';
 import { Supervisor } from './supervisor.ts';
 
 /**
@@ -27,7 +27,7 @@ export class Font extends Supervisor {
     #strikethrough: boolean = false;
     #color: Color;
     #scheme: string = '';
-    
+
     // Chart and theme-specific font properties
     #cap: string = Font.CAP_NONE;
     #latin: string = '';
@@ -373,7 +373,9 @@ export class Font extends Supervisor {
             this.setStrikethrough(Boolean(styleArray.strikethrough));
         }
         if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
-            this.getColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
+            this.getColor().applyFromArray(
+                styleArray.color as { rgb?: string; argb?: string; theme?: number },
+            );
         }
         if (styleArray.size !== undefined) {
             this.setSize(Number(styleArray.size));
@@ -412,22 +414,22 @@ export class Font extends Supervisor {
         return createHash('md5')
             .update(
                 this.#name +
-                this.#size +
-                (this.#bold ? 't' : 'f') +
-                (this.#italic ? 't' : 'f') +
-                (this.#superscript ? 't' : 'f') +
-                (this.#subscript ? 't' : 'f') +
-                this.#underline +
-                (this.#strikethrough ? 't' : 'f') +
-                this.#color.getHashCode() +
-                this.#scheme +
-                this.#cap +
-                this.#latin +
-                this.#eastAsian +
-                this.#complexScript +
-                this.#baseLine +
-                this.#strikeType +
-                'Font'
+                    this.#size +
+                    (this.#bold ? 't' : 'f') +
+                    (this.#italic ? 't' : 'f') +
+                    (this.#superscript ? 't' : 'f') +
+                    (this.#subscript ? 't' : 'f') +
+                    this.#underline +
+                    (this.#strikethrough ? 't' : 'f') +
+                    this.#color.getHashCode() +
+                    this.#scheme +
+                    this.#cap +
+                    this.#latin +
+                    this.#eastAsian +
+                    this.#complexScript +
+                    this.#baseLine +
+                    this.#strikeType +
+                    'Font',
             )
             .digest('hex');
     }

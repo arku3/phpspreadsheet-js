@@ -1,5 +1,10 @@
-import { FormulaToken, TokenType, TokenSubType } from './formula-token.ts';
-import type { TTokenType, TTokenSubType } from './formula-token.ts';
+import {
+    FormulaToken,
+    TokenSubType,
+    TokenType,
+    type TTokenSubType,
+    type TTokenType,
+} from './formula-token.ts';
 
 /**
  * Formula Parser.
@@ -63,7 +68,10 @@ export class FormulaParser {
 
             if (inString) {
                 if (char === FormulaParser.QUOTE_DOUBLE) {
-                    if (index + 1 < formulaLength && this.formula.charAt(index + 1) === FormulaParser.QUOTE_DOUBLE) {
+                    if (
+                        index + 1 < formulaLength &&
+                        this.formula.charAt(index + 1) === FormulaParser.QUOTE_DOUBLE
+                    ) {
                         value += FormulaParser.QUOTE_DOUBLE;
                         index++;
                     } else {
@@ -80,7 +88,10 @@ export class FormulaParser {
 
             if (inPath) {
                 if (char === FormulaParser.QUOTE_SINGLE) {
-                    if (index + 1 < formulaLength && this.formula.charAt(index + 1) === FormulaParser.QUOTE_SINGLE) {
+                    if (
+                        index + 1 < formulaLength &&
+                        this.formula.charAt(index + 1) === FormulaParser.QUOTE_SINGLE
+                    ) {
                         value += FormulaParser.QUOTE_SINGLE;
                         index++;
                     } else {
@@ -138,7 +149,7 @@ export class FormulaParser {
                 // Check if it's a structured reference start
                 const remainder = this.formula.substring(index);
                 const isTableRef = value !== '' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
-                
+
                 if (remainder.startsWith('[@') || remainder.startsWith('[#') || isTableRef) {
                     // It's a structured reference
                     let bracketCount = 0;
@@ -151,7 +162,13 @@ export class FormulaParser {
                         tempIndex++;
                         if (bracketCount === 0) break;
                     }
-                    tokens1.push(new FormulaToken(value, TokenType.OPERAND, TokenSubType.STRUCTURED_REFERENCE));
+                    tokens1.push(
+                        new FormulaToken(
+                            value,
+                            TokenType.OPERAND,
+                            TokenSubType.STRUCTURED_REFERENCE,
+                        ),
+                    );
                     value = '';
                     index = tempIndex;
                     continue;
@@ -181,11 +198,15 @@ export class FormulaParser {
                 }
                 const tmpArr = new FormulaToken('ARRAY', TokenType.FUNCTION, TokenSubType.START);
                 tokens1.push(tmpArr);
-                stack.push(new FormulaToken(tmpArr.getValue(), tmpArr.getType(), tmpArr.getSubType()));
+                stack.push(
+                    new FormulaToken(tmpArr.getValue(), tmpArr.getType(), tmpArr.getSubType()),
+                );
 
                 const tmpRow = new FormulaToken('ARRAYROW', TokenType.FUNCTION, TokenSubType.START);
                 tokens1.push(tmpRow);
-                stack.push(new FormulaToken(tmpRow.getValue(), tmpRow.getType(), tmpRow.getSubType()));
+                stack.push(
+                    new FormulaToken(tmpRow.getValue(), tmpRow.getType(), tmpRow.getSubType()),
+                );
                 index++;
                 continue;
             }
@@ -204,7 +225,9 @@ export class FormulaParser {
                 tokens1.push(new FormulaToken(',', TokenType.ARGUMENT));
                 const tmpRow = new FormulaToken('ARRAYROW', TokenType.FUNCTION, TokenSubType.START);
                 tokens1.push(tmpRow);
-                stack.push(new FormulaToken(tmpRow.getValue(), tmpRow.getType(), tmpRow.getSubType()));
+                stack.push(
+                    new FormulaToken(tmpRow.getValue(), tmpRow.getType(), tmpRow.getSubType()),
+                );
                 index++;
                 continue;
             }
@@ -218,13 +241,17 @@ export class FormulaParser {
                 if (tmp1) {
                     tmp1.setValue('');
                     tmp1.setSubType(TokenSubType.STOP);
-                    tokens1.push(new FormulaToken(tmp1.getValue(), tmp1.getType(), tmp1.getSubType()));
+                    tokens1.push(
+                        new FormulaToken(tmp1.getValue(), tmp1.getType(), tmp1.getSubType()),
+                    );
                 }
                 const tmp2 = stack.pop();
                 if (tmp2) {
                     tmp2.setValue('');
                     tmp2.setSubType(TokenSubType.STOP);
-                    tokens1.push(new FormulaToken(tmp2.getValue(), tmp2.getType(), tmp2.getSubType()));
+                    tokens1.push(
+                        new FormulaToken(tmp2.getValue(), tmp2.getType(), tmp2.getSubType()),
+                    );
                 }
                 index++;
                 continue;
@@ -237,7 +264,10 @@ export class FormulaParser {
                 }
                 tokens1.push(new FormulaToken('', TokenType.WHITESPACE));
                 index++;
-                while (index < formulaLength && this.formula.charAt(index) === FormulaParser.WHITESPACE) {
+                while (
+                    index < formulaLength &&
+                    this.formula.charAt(index) === FormulaParser.WHITESPACE
+                ) {
                     index++;
                 }
                 continue;
@@ -250,7 +280,9 @@ export class FormulaParser {
                         tokens1.push(new FormulaToken(value, TokenType.OPERAND));
                         value = '';
                     }
-                    tokens1.push(new FormulaToken(multi, TokenType.OPERATOR_INFIX, TokenSubType.LOGICAL));
+                    tokens1.push(
+                        new FormulaToken(multi, TokenType.OPERATOR_INFIX, TokenSubType.LOGICAL),
+                    );
                     index += 2;
                     continue;
                 }
@@ -342,8 +374,10 @@ export class FormulaParser {
 
             if (
                 !(
-                    (previousToken.getType() === TokenType.FUNCTION && previousToken.getSubType() === TokenSubType.STOP) ||
-                    (previousToken.getType() === TokenType.SUBEXPRESSION && previousToken.getSubType() === TokenSubType.STOP) ||
+                    (previousToken.getType() === TokenType.FUNCTION &&
+                        previousToken.getSubType() === TokenSubType.STOP) ||
+                    (previousToken.getType() === TokenType.SUBEXPRESSION &&
+                        previousToken.getSubType() === TokenSubType.STOP) ||
                     previousToken.getType() === TokenType.OPERAND
                 )
             ) {
@@ -352,15 +386,19 @@ export class FormulaParser {
 
             if (
                 !(
-                    (nextToken.getType() === TokenType.FUNCTION && nextToken.getSubType() === TokenSubType.START) ||
-                    (nextToken.getType() === TokenType.SUBEXPRESSION && nextToken.getSubType() === TokenSubType.START) ||
+                    (nextToken.getType() === TokenType.FUNCTION &&
+                        nextToken.getSubType() === TokenSubType.START) ||
+                    (nextToken.getType() === TokenType.SUBEXPRESSION &&
+                        nextToken.getSubType() === TokenSubType.START) ||
                     nextToken.getType() === TokenType.OPERAND
                 )
             ) {
                 continue;
             }
 
-            tokens2.push(new FormulaToken(value, TokenType.OPERATOR_INFIX, TokenSubType.INTERSECTION));
+            tokens2.push(
+                new FormulaToken(value, TokenType.OPERATOR_INFIX, TokenSubType.INTERSECTION),
+            );
         }
 
         this.tokens = [];
@@ -372,8 +410,10 @@ export class FormulaParser {
                 if (i === 0) {
                     token.setType(TokenType.OPERATOR_PREFIX);
                 } else if (
-                    (previousToken?.getType() === TokenType.FUNCTION && previousToken?.getSubType() === TokenSubType.STOP) ||
-                    (previousToken?.getType() === TokenType.SUBEXPRESSION && previousToken?.getSubType() === TokenSubType.STOP) ||
+                    (previousToken?.getType() === TokenType.FUNCTION &&
+                        previousToken?.getSubType() === TokenSubType.STOP) ||
+                    (previousToken?.getType() === TokenType.SUBEXPRESSION &&
+                        previousToken?.getSubType() === TokenSubType.STOP) ||
                     previousToken?.getType() === TokenType.OPERATOR_POSTFIX ||
                     previousToken?.getType() === TokenType.OPERAND
                 ) {
@@ -388,8 +428,10 @@ export class FormulaParser {
             if (token.getType() === TokenType.OPERATOR_INFIX && token.getValue() === '+') {
                 if (i === 0) continue;
                 if (
-                    (previousToken?.getType() === TokenType.FUNCTION && previousToken?.getSubType() === TokenSubType.STOP) ||
-                    (previousToken?.getType() === TokenType.SUBEXPRESSION && previousToken?.getSubType() === TokenSubType.STOP) ||
+                    (previousToken?.getType() === TokenType.FUNCTION &&
+                        previousToken?.getSubType() === TokenSubType.STOP) ||
+                    (previousToken?.getType() === TokenType.SUBEXPRESSION &&
+                        previousToken?.getSubType() === TokenSubType.STOP) ||
                     previousToken?.getType() === TokenType.OPERATOR_POSTFIX ||
                     previousToken?.getType() === TokenType.OPERAND
                 ) {
@@ -399,7 +441,10 @@ export class FormulaParser {
                 continue;
             }
 
-            if (token.getType() === TokenType.OPERATOR_INFIX && token.getSubType() === TokenSubType.NOTHING) {
+            if (
+                token.getType() === TokenType.OPERATOR_INFIX &&
+                token.getSubType() === TokenSubType.NOTHING
+            ) {
                 if ('<>= '.includes(token.getValue().charAt(0))) {
                     token.setSubType(TokenSubType.LOGICAL);
                 } else if (token.getValue() === '&') {
@@ -411,7 +456,10 @@ export class FormulaParser {
                 continue;
             }
 
-            if (token.getType() === TokenType.OPERAND && token.getSubType() === TokenSubType.NOTHING) {
+            if (
+                token.getType() === TokenType.OPERAND &&
+                token.getSubType() === TokenSubType.NOTHING
+            ) {
                 if (isNaN(Number(token.getValue()))) {
                     const upperValue = token.getValue().toUpperCase();
                     if (upperValue === 'TRUE' || upperValue === 'FALSE') {

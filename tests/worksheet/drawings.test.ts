@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-
+import { Hyperlink } from '../../src/core/hyperlink.ts';
 import { Spreadsheet } from '../../src/core/spreadsheet.ts';
 import { Drawing } from '../../src/worksheet/drawing/drawing.ts';
-import { Hyperlink } from '../../src/core/hyperlink.ts';
 
 describe('Worksheet drawings', () => {
     test('getDrawingCollection defaults empty and is stable reference', () => {

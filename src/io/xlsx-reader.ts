@@ -1,11 +1,11 @@
-import type { IReader, WorksheetInfo } from './i-reader.ts';
-import { Spreadsheet } from '../core/spreadsheet.ts';
-import { Coordinate } from '../utils/coordinate.ts';
 import { open } from 'node:fs/promises';
 import path from 'node:path';
 import unzipper from 'unzipper';
-import { StylesReader, type StyleData } from './xlsx/styles-reader.ts';
+import { Spreadsheet } from '../core/spreadsheet.ts';
 import { RichText } from '../rich-text/rich-text.ts';
+import { Coordinate } from '../utils/coordinate.ts';
+import type { IReader, WorksheetInfo } from './i-reader.ts';
+import { StylesReader, type StyleData } from './xlsx/styles-reader.ts';
 
 /**
  * XLSX file reader.
@@ -42,53 +42,54 @@ export class XlsxReader implements IReader {
      */
     private stylesPath: string | null = null;
 
-    static readonly #COMMENTS_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments';
-    static readonly #VMLDRAWING_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing';
+    static readonly #COMMENTS_REL_TYPE =
+        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments';
+    static readonly #VMLDRAWING_REL_TYPE =
+        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing';
 
     static decodeXmlEntities(value: string): string {
         // Minimal XML entity decoding.
         // Supports: named entities (&amp; &lt; &gt; &quot; &apos;) + numeric entities.
-        return value
-            .replace(/&(#x[0-9A-Fa-f]+|#\d+|amp|lt|gt|quot|apos);/g, (m, g1: string) => {
-                switch (g1) {
-                    case 'amp':
-                        return '&';
-                    case 'lt':
-                        return '<';
-                    case 'gt':
-                        return '>';
-                    case 'quot':
-                        return '"';
-                    case 'apos':
-                        return "'";
-                    default: {
-                        const toChar = (codePoint: number): string | null => {
-                            if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
-                                return null;
-                            }
-                            // Exclude UTF-16 surrogate range.
-                            if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
-                                return null;
-                            }
-                            try {
-                                return String.fromCodePoint(codePoint);
-                            } catch {
-                                return null;
-                            }
-                        };
+        return value.replace(/&(#x[0-9A-Fa-f]+|#\d+|amp|lt|gt|quot|apos);/g, (m, g1: string) => {
+            switch (g1) {
+                case 'amp':
+                    return '&';
+                case 'lt':
+                    return '<';
+                case 'gt':
+                    return '>';
+                case 'quot':
+                    return '"';
+                case 'apos':
+                    return "'";
+                default: {
+                    const toChar = (codePoint: number): string | null => {
+                        if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
+                            return null;
+                        }
+                        // Exclude UTF-16 surrogate range.
+                        if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
+                            return null;
+                        }
+                        try {
+                            return String.fromCodePoint(codePoint);
+                        } catch {
+                            return null;
+                        }
+                    };
 
-                        if (g1.startsWith('#x')) {
-                            const codePoint = Number.parseInt(g1.slice(2), 16);
-                            return toChar(codePoint) ?? m;
-                        }
-                        if (g1.startsWith('#')) {
-                            const codePoint = Number.parseInt(g1.slice(1), 10);
-                            return toChar(codePoint) ?? m;
-                        }
-                        return m;
+                    if (g1.startsWith('#x')) {
+                        const codePoint = Number.parseInt(g1.slice(2), 16);
+                        return toChar(codePoint) ?? m;
                     }
+                    if (g1.startsWith('#')) {
+                        const codePoint = Number.parseInt(g1.slice(1), 10);
+                        return toChar(codePoint) ?? m;
+                    }
+                    return m;
                 }
-            });
+            }
+        });
     }
 
     static #resolveRelationshipTarget(basePartPath: string, target: string): string {
@@ -144,8 +145,15 @@ export class XlsxReader implements IReader {
         return richText;
     }
 
-    static #parseRelationshipsXml(relsXml: string): Array<{ id: string; type: string; target: string; targetMode: string | null }> {
-        const relationships: Array<{ id: string; type: string; target: string; targetMode: string | null }> = [];
+    static #parseRelationshipsXml(
+        relsXml: string,
+    ): Array<{ id: string; type: string; target: string; targetMode: string | null }> {
+        const relationships: Array<{
+            id: string;
+            type: string;
+            target: string;
+            targetMode: string | null;
+        }> = [];
         const relMatches = relsXml.matchAll(/<Relationship\b([^>]*)\/>/g);
         for (const match of relMatches) {
             const attrs = match[1] ?? '';
@@ -160,8 +168,11 @@ export class XlsxReader implements IReader {
         return relationships;
     }
 
-    async #readZipTextFile(zip: unzipper.CentralDirectory, zipPath: string): Promise<string | null> {
-        const entry = zip.files.find(f => f.path === zipPath);
+    async #readZipTextFile(
+        zip: unzipper.CentralDirectory,
+        zipPath: string,
+    ): Promise<string | null> {
+        const entry = zip.files.find((f) => f.path === zipPath);
         if (!entry) {
             return null;
         }
@@ -189,32 +200,32 @@ export class XlsxReader implements IReader {
     async listWorksheetNames(filename: string): Promise<string[]> {
         try {
             const zip = await unzipper.Open.file(filename);
-            const relsFile = zip.files.find(f => f.path === '_rels/.rels');
+            const relsFile = zip.files.find((f) => f.path === '_rels/.rels');
             if (!relsFile) {
                 throw new Error('Invalid XLSX file: missing _rels/.rels');
             }
-            
+
             const relsContent = await relsFile.buffer();
             const relsXml = relsContent.toString('utf-8');
-            
+
             // Extract workbook path from rels
             const workbookMatch = relsXml.match(/Target="([^"]*workbook\.xml)"/);
             if (!workbookMatch) {
                 throw new Error('Invalid XLSX file: cannot find workbook.xml in _rels/.rels');
             }
-            
+
             const workbookPath = (workbookMatch[1] ?? '').replace(/^\//, '');
             if (!workbookPath) {
                 throw new Error('Invalid XLSX file: cannot determine workbook path');
             }
-            const workbookFile = zip.files.find(f => f.path === workbookPath);
+            const workbookFile = zip.files.find((f) => f.path === workbookPath);
             if (!workbookFile) {
                 throw new Error(`Invalid XLSX file: missing ${workbookPath}`);
             }
-            
+
             const workbookContent = await workbookFile.buffer();
             const workbookXml = workbookContent.toString('utf-8');
-            
+
             // Extract sheet names
             const sheetNames: string[] = [];
             const sheetMatches = workbookXml.match(/<sheet[^>]*name="([^"]+)"/g);
@@ -226,7 +237,7 @@ export class XlsxReader implements IReader {
                     }
                 }
             }
-            
+
             return sheetNames;
         } catch (error) {
             if (error instanceof Error) {
@@ -242,7 +253,7 @@ export class XlsxReader implements IReader {
     async listWorksheetInfo(filename: string): Promise<WorksheetInfo[]> {
         try {
             const zip = await unzipper.Open.file(filename);
-            const relsFile = zip.files.find(f => f.path === '_rels/.rels');
+            const relsFile = zip.files.find((f) => f.path === '_rels/.rels');
             if (!relsFile) {
                 throw new Error('Invalid XLSX file: missing _rels/.rels');
             }
@@ -259,9 +270,11 @@ export class XlsxReader implements IReader {
             if (!workbookPath) {
                 throw new Error('Invalid XLSX file: cannot determine workbook path');
             }
-            const workbookRelPath = workbookPath.replace('xl/', 'xl/_rels/').replace('.xml', '.xml.rels');
+            const workbookRelPath = workbookPath
+                .replace('xl/', 'xl/_rels/')
+                .replace('.xml', '.xml.rels');
 
-            const workbookFile = zip.files.find(f => f.path === workbookPath);
+            const workbookFile = zip.files.find((f) => f.path === workbookPath);
             if (!workbookFile) {
                 throw new Error(`Invalid XLSX file: missing ${workbookPath}`);
             }
@@ -270,26 +283,33 @@ export class XlsxReader implements IReader {
             const workbookXml = workbookContent.toString('utf-8');
 
             // Parse workbook relationships to find worksheet paths
-            const workbookRelsFile = zip.files.find(f => f.path === workbookRelPath);
+            const workbookRelsFile = zip.files.find((f) => f.path === workbookRelPath);
             const worksheetPaths: Map<string, string> = new Map();
 
             if (workbookRelsFile) {
                 const relsContent = await workbookRelsFile.buffer();
                 const relsXml = relsContent.toString('utf-8');
 
-                const worksheetMatches = relsXml.matchAll(/<Relationship[^>]*Id="([^"]+)"[^>]*Type="[^"]*worksheet"[^>]*Target="([^"]+)"/g);
+                const worksheetMatches = relsXml.matchAll(
+                    /<Relationship[^>]*Id="([^"]+)"[^>]*Type="[^"]*worksheet"[^>]*Target="([^"]+)"/g,
+                );
                 for (const match of worksheetMatches) {
                     const rId = match[1];
                     const target = match[2];
                     if (rId && target) {
                         const cleanTarget = target.replace(/^\//, '');
-                        worksheetPaths.set(rId, cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`);
+                        worksheetPaths.set(
+                            rId,
+                            cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`,
+                        );
                     }
                 }
             }
 
             // Parse sheets from workbook.xml
-            const sheetMatches = workbookXml.matchAll(/<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"(?:[^>]*state="([^"]*)")?[^>]*r:id="([^"]+)"/g);
+            const sheetMatches = workbookXml.matchAll(
+                /<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"(?:[^>]*state="([^"]*)")?[^>]*r:id="([^"]+)"/g,
+            );
             const sheets: { name: string; rId: string; state: string }[] = [];
             for (const match of sheetMatches) {
                 const name = match[1];
@@ -309,7 +329,7 @@ export class XlsxReader implements IReader {
                     continue;
                 }
 
-                const wsFile = zip.files.find(f => f.path === worksheetPath);
+                const wsFile = zip.files.find((f) => f.path === worksheetPath);
                 if (!wsFile) {
                     continue;
                 }
@@ -374,7 +394,7 @@ export class XlsxReader implements IReader {
                     lastColumnIndex: lastColumnIndex - 1, // Convert to 0-based
                     totalRows: totalRows,
                     totalColumns: totalColumns,
-                    sheetState: sheetInfo.state
+                    sheetState: sheetInfo.state,
                 });
             }
 
@@ -393,50 +413,59 @@ export class XlsxReader implements IReader {
     async load(filename: string): Promise<Spreadsheet> {
         try {
             const zip = await unzipper.Open.file(filename);
-            
+
             // Find workbook path
-            const relsFile = zip.files.find(f => f.path === '_rels/.rels');
+            const relsFile = zip.files.find((f) => f.path === '_rels/.rels');
             if (!relsFile) {
                 throw new Error('Invalid XLSX file: missing _rels/.rels');
             }
-            
+
             const relsContent = await relsFile.buffer();
             const relsXml = relsContent.toString('utf-8');
-            
+
             const workbookMatch = relsXml.match(/Target="([^"]*workbook\.xml)"/);
             if (!workbookMatch) {
                 throw new Error('Invalid XLSX file: cannot find workbook.xml');
             }
-            
+
             const workbookPath = (workbookMatch[1] ?? '').replace(/^\//, '');
             if (!workbookPath) {
                 throw new Error('Invalid XLSX file: cannot determine workbook path');
             }
-            
-            const workbookRelPath = workbookPath.replace('xl/', 'xl/_rels/').replace('.xml', '.xml.rels');
-            
+
+            const workbookRelPath = workbookPath
+                .replace('xl/', 'xl/_rels/')
+                .replace('.xml', '.xml.rels');
+
             // Parse workbook relationships to find worksheets and shared strings
-            const workbookRelsFile = zip.files.find(f => f.path === workbookRelPath);
+            const workbookRelsFile = zip.files.find((f) => f.path === workbookRelPath);
             const worksheetPaths: Map<string, string> = new Map();
             let sharedStringsPath: string | null = null;
-            
+
             if (workbookRelsFile) {
                 const relsContent = await workbookRelsFile.buffer();
                 const relsXml = relsContent.toString('utf-8');
-                
+
                 // Find worksheet relationships
-                const worksheetMatches = relsXml.matchAll(/<Relationship[^>]*Id="([^"]+)"[^>]*Type="[^"]*worksheet"[^>]*Target="([^"]+)"/g);
+                const worksheetMatches = relsXml.matchAll(
+                    /<Relationship[^>]*Id="([^"]+)"[^>]*Type="[^"]*worksheet"[^>]*Target="([^"]+)"/g,
+                );
                 for (const match of worksheetMatches) {
                     const rId = match[1];
                     const target = match[2];
                     if (rId && target) {
                         const cleanTarget = target.replace(/^\//, '');
-                        worksheetPaths.set(rId, cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`);
+                        worksheetPaths.set(
+                            rId,
+                            cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`,
+                        );
                     }
                 }
-                
+
                 // Find shared strings
-                const sharedStringsMatch = relsXml.match(/<Relationship[^>]*Type="[^"]*sharedStrings"[^>]*Target="([^"]+)"/);
+                const sharedStringsMatch = relsXml.match(
+                    /<Relationship[^>]*Type="[^"]*sharedStrings"[^>]*Target="([^"]+)"/,
+                );
                 if (sharedStringsMatch && sharedStringsMatch[1]) {
                     const ssPath = sharedStringsMatch[1].replace(/^\//, '');
                     if (!ssPath.startsWith('xl/')) {
@@ -445,9 +474,11 @@ export class XlsxReader implements IReader {
                         sharedStringsPath = ssPath;
                     }
                 }
-                
+
                 // Find styles
-                const stylesMatch = relsXml.match(/<Relationship[^>]*Type="[^"]*styles"[^>]*Target="([^"]+)"/);
+                const stylesMatch = relsXml.match(
+                    /<Relationship[^>]*Type="[^"]*styles"[^>]*Target="([^"]+)"/,
+                );
                 if (stylesMatch && stylesMatch[1]) {
                     const stylesPath = stylesMatch[1].replace(/^\//, '');
                     if (!stylesPath.startsWith('xl/')) {
@@ -457,11 +488,11 @@ export class XlsxReader implements IReader {
                     }
                 }
             }
-            
+
             // Read shared strings if present
             const sharedStrings: string[] = [];
             if (sharedStringsPath) {
-                const ssFile = zip.files.find(f => f.path === sharedStringsPath);
+                const ssFile = zip.files.find((f) => f.path === sharedStringsPath);
                 if (ssFile) {
                     const ssContent = await ssFile.buffer();
                     const ssXml = ssContent.toString('utf-8');
@@ -477,11 +508,11 @@ export class XlsxReader implements IReader {
                     }
                 }
             }
-            
+
             // Read styles if present and not in data-only mode
             let styleData: StyleData | null = null;
             if (!this.#readDataOnly && this.stylesPath) {
-                const stylesFile = zip.files.find(f => f.path === this.stylesPath);
+                const stylesFile = zip.files.find((f) => f.path === this.stylesPath);
                 if (stylesFile) {
                     const stylesContent = await stylesFile.buffer();
                     const stylesXml = stylesContent.toString('utf-8');
@@ -489,20 +520,20 @@ export class XlsxReader implements IReader {
                     styleData = await stylesReader.readStyles(stylesXml);
                 }
             }
-            
+
             // Read workbook.xml to get sheet information
-            const workbookFile = zip.files.find(f => f.path === workbookPath);
+            const workbookFile = zip.files.find((f) => f.path === workbookPath);
             if (!workbookFile) {
                 throw new Error(`Invalid XLSX file: missing ${workbookPath}`);
             }
-            
+
             const workbookContent = await workbookFile.buffer();
             const workbookXml = workbookContent.toString('utf-8');
-            
+
             // Create spreadsheet
             const spreadsheet = new Spreadsheet();
             let defaultSheetUsed = false;
-            
+
             // Add styles to spreadsheet if available
             if (styleData && styleData.cellXfs.length > 0) {
                 // Replace the default style collection to keep xf indices aligned
@@ -512,9 +543,11 @@ export class XlsxReader implements IReader {
                     spreadsheet.addCellXf(cellXf);
                 }
             }
-            
+
             // Parse sheets from workbook.xml
-            const sheetMatches = workbookXml.matchAll(/<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"[^>]*r:id="([^"]+)"/g);
+            const sheetMatches = workbookXml.matchAll(
+                /<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"[^>]*r:id="([^"]+)"/g,
+            );
             const sheets: { name: string; rId: string }[] = [];
             for (const match of sheetMatches) {
                 const name = match[1];
@@ -523,19 +556,19 @@ export class XlsxReader implements IReader {
                     sheets.push({ name, rId });
                 }
             }
-            
+
             // Load each worksheet
             for (const sheetInfo of sheets) {
                 // Apply read filter if set
                 if (this.#readFilter && !this.#readFilter(sheetInfo.name)) {
                     continue;
                 }
-                
+
                 const worksheetPath = worksheetPaths.get(sheetInfo.rId);
                 if (!worksheetPath) {
                     continue;
                 }
-                
+
                 // Get or create worksheet - reuse default sheet for first sheet
                 let worksheet = spreadsheet.getSheetByName(sheetInfo.name);
                 if (!worksheet) {
@@ -551,50 +584,50 @@ export class XlsxReader implements IReader {
                         worksheet.setTitle(sheetInfo.name);
                     }
                 }
-                
+
                 // Read worksheet XML
-                const wsFile = zip.files.find(f => f.path === worksheetPath);
+                const wsFile = zip.files.find((f) => f.path === worksheetPath);
                 if (!wsFile) {
                     continue;
                 }
-                
+
                 const wsContent = await wsFile.buffer();
                 const wsXml = wsContent.toString('utf-8');
-                
+
                 // Parse cells from worksheet - parse cell elements directly
                 const cellMatches = wsXml.matchAll(/<c[^>]*r="([A-Z]+\d+)"[^>]*>([\s\S]*?)<\/c>/g);
                 for (const cellMatch of cellMatches) {
                     const cellRef = cellMatch[1];
                     const cellContent = cellMatch[2];
                     if (!cellRef || !cellContent) continue;
-                    
+
                     // Get the full cell element to extract attributes
                     const fullCellMatch = wsXml.match(new RegExp(`<c[^>]*r="${cellRef}"([^>]*)>`));
                     const cellAttrs = fullCellMatch && fullCellMatch[1] ? fullCellMatch[1] : '';
-                    
+
                     // Extract style index
                     const styleMatch = cellAttrs.match(/s="(\d+)"/);
                     const styleIndex = styleMatch ? parseInt(styleMatch[1]!, 10) : null;
-                    
+
                     // Determine cell type and value
                     const typeMatch = cellContent.match(/<v>([^<]*)<\/v>/);
                     const formulaMatch = cellContent.match(/<f>([^<]*)<\/f>/);
-                    
+
                     const cell = worksheet.getCell(cellRef);
-                    
+
                     // Apply style if available and not in data-only mode
                     if (styleIndex !== null && !this.#readDataOnly && styleData) {
                         // Assign xf index directly; styles are stored in the workbook collection.
                         cell.setXfIndex(styleIndex);
                     }
-                    
+
                     if (formulaMatch && formulaMatch[1]) {
                         cell.setValue('=' + formulaMatch[1]);
                     } else if (typeMatch && typeMatch[1]) {
                         const value = typeMatch[1];
                         // Check if it's a shared string reference
                         const isSharedString = cellAttrs.includes('t="s"');
-                        
+
                         if (isSharedString) {
                             const ssIndex = parseInt(value, 10);
                             if (!isNaN(ssIndex) && ssIndex >= 0 && ssIndex < sharedStrings.length) {
@@ -614,13 +647,17 @@ export class XlsxReader implements IReader {
                         }
                     }
                 }
-                
+
                 // Parse merge cells
                 if (!this.#readDataOnly) {
-                    const mergeCellsMatch = wsXml.match(/<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/);
+                    const mergeCellsMatch = wsXml.match(
+                        /<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/,
+                    );
                     if (mergeCellsMatch && mergeCellsMatch[1]) {
                         const mergeCellsContent = mergeCellsMatch[1];
-                        const mergeCellMatches = mergeCellsContent.matchAll(/<mergeCell[^>]*ref="([^"]*)"[^>]*\/>/g);
+                        const mergeCellMatches = mergeCellsContent.matchAll(
+                            /<mergeCell[^>]*ref="([^"]*)"[^>]*\/>/g,
+                        );
                         for (const mergeMatch of mergeCellMatches) {
                             const range = mergeMatch[1];
                             if (range) {
@@ -628,27 +665,39 @@ export class XlsxReader implements IReader {
                             }
                         }
                     }
-                    
+
                     // Parse hyperlinks
-                    const hyperlinksMatch = wsXml.match(/<hyperlinks[^>]*>([\s\S]*?)<\/hyperlinks>/);
+                    const hyperlinksMatch = wsXml.match(
+                        /<hyperlinks[^>]*>([\s\S]*?)<\/hyperlinks>/,
+                    );
                     if (hyperlinksMatch && hyperlinksMatch[1]) {
                         const hyperlinksContent = hyperlinksMatch[1];
-                        const hyperlinkMatches = hyperlinksContent.matchAll(/<hyperlink[^>]*ref="([^"]*)"[^>]*r:id="([^"]*)"(?:[^>]*location="([^"]*)")?[^>]*\/>/g);
+                        const hyperlinkMatches = hyperlinksContent.matchAll(
+                            /<hyperlink[^>]*ref="([^"]*)"[^>]*r:id="([^"]*)"(?:[^>]*location="([^"]*)")?[^>]*\/>/g,
+                        );
                         for (const linkMatch of hyperlinkMatches) {
                             const cellRef = linkMatch[1];
                             const rId = linkMatch[2];
                             const location = linkMatch[3];
-                            
+
                             if (cellRef && rId) {
                                 // Resolve rId to actual URL
-                                const hyperlinkRelPath = worksheetPath.replace('worksheets/', 'worksheets/_rels/').replace('.xml', '.xml.rels');
-                                const hyperlinkRelsFile = zip.files.find(f => f.path === hyperlinkRelPath);
-                                
+                                const hyperlinkRelPath = worksheetPath
+                                    .replace('worksheets/', 'worksheets/_rels/')
+                                    .replace('.xml', '.xml.rels');
+                                const hyperlinkRelsFile = zip.files.find(
+                                    (f) => f.path === hyperlinkRelPath,
+                                );
+
                                 if (hyperlinkRelsFile) {
                                     const relsContent = await hyperlinkRelsFile.buffer();
                                     const relsXml = relsContent.toString('utf-8');
-                                    const urlMatch = relsXml.match(new RegExp(`<Relationship[^>]*Id="${rId}"[^>]*Target="([^"]*)"`));
-                                    
+                                    const urlMatch = relsXml.match(
+                                        new RegExp(
+                                            `<Relationship[^>]*Id="${rId}"[^>]*Target="([^"]*)"`,
+                                        ),
+                                    );
+
                                     if (urlMatch && urlMatch[1]) {
                                         const url = urlMatch[1];
                                         const cell = worksheet.getCell(cellRef);
@@ -672,49 +721,77 @@ export class XlsxReader implements IReader {
                         const relsXml = await this.#readZipTextFile(zip, worksheetRelsPath);
                         if (relsXml) {
                             const rels = XlsxReader.#parseRelationshipsXml(relsXml);
-                            const commentsRel = rels.find(r => r.type === XlsxReader.#COMMENTS_REL_TYPE);
-                            const vmlRel = rels.find(r => r.type === XlsxReader.#VMLDRAWING_REL_TYPE);
+                            const commentsRel = rels.find(
+                                (r) => r.type === XlsxReader.#COMMENTS_REL_TYPE,
+                            );
+                            const vmlRel = rels.find(
+                                (r) => r.type === XlsxReader.#VMLDRAWING_REL_TYPE,
+                            );
 
                             // VML drawings may exist for classic comments; v1 skips geometry but must not crash.
                             if (vmlRel) {
-                                const _vmlPath = XlsxReader.#resolveRelationshipTarget(worksheetPath, vmlRel.target);
+                                const _vmlPath = XlsxReader.#resolveRelationshipTarget(
+                                    worksheetPath,
+                                    vmlRel.target,
+                                );
                                 // Intentionally ignored for now.
                                 void _vmlPath;
                             }
 
                             if (commentsRel) {
-                                const commentsPath = XlsxReader.#resolveRelationshipTarget(worksheetPath, commentsRel.target);
+                                const commentsPath = XlsxReader.#resolveRelationshipTarget(
+                                    worksheetPath,
+                                    commentsRel.target,
+                                );
                                 const commentsXml = await this.#readZipTextFile(zip, commentsPath);
                                 if (commentsXml) {
                                     const authors: string[] = [];
-                                    const authorsSection = commentsXml.match(/<authors[^>]*>([\s\S]*?)<\/authors>/);
+                                    const authorsSection = commentsXml.match(
+                                        /<authors[^>]*>([\s\S]*?)<\/authors>/,
+                                    );
                                     if (authorsSection && authorsSection[1]) {
-                                        const authorMatches = authorsSection[1].matchAll(/<author[^>]*>([\s\S]*?)<\/author>/g);
+                                        const authorMatches = authorsSection[1].matchAll(
+                                            /<author[^>]*>([\s\S]*?)<\/author>/g,
+                                        );
                                         for (const a of authorMatches) {
                                             const raw = a[1] ?? '';
                                             authors.push(XlsxReader.decodeXmlEntities(raw));
                                         }
                                     }
 
-                                    const commentListSection = commentsXml.match(/<commentList[^>]*>([\s\S]*?)<\/commentList>/);
+                                    const commentListSection = commentsXml.match(
+                                        /<commentList[^>]*>([\s\S]*?)<\/commentList>/,
+                                    );
                                     const commentListXml = commentListSection?.[1] ?? '';
-                                    const commentMatches = commentListXml.matchAll(/<comment\b([^>]*)>([\s\S]*?)<\/comment>/g);
+                                    const commentMatches = commentListXml.matchAll(
+                                        /<comment\b([^>]*)>([\s\S]*?)<\/comment>/g,
+                                    );
                                     for (const c of commentMatches) {
                                         const attrs = c[1] ?? '';
                                         const inner = c[2] ?? '';
 
                                         const ref = XlsxReader.#extractXmlAttribute(attrs, 'ref');
-                                        const authorIdStr = XlsxReader.#extractXmlAttribute(attrs, 'authorId');
+                                        const authorIdStr = XlsxReader.#extractXmlAttribute(
+                                            attrs,
+                                            'authorId',
+                                        );
                                         if (!ref) {
                                             continue;
                                         }
 
-                                        const authorId = authorIdStr ? Number.parseInt(authorIdStr, 10) : NaN;
-                                        const author = Number.isFinite(authorId) && authorId >= 0 && authorId < authors.length
-                                            ? (authors[authorId] ?? 'Author')
-                                            : 'Author';
+                                        const authorId = authorIdStr
+                                            ? Number.parseInt(authorIdStr, 10)
+                                            : NaN;
+                                        const author =
+                                            Number.isFinite(authorId) &&
+                                            authorId >= 0 &&
+                                            authorId < authors.length
+                                                ? (authors[authorId] ?? 'Author')
+                                                : 'Author';
 
-                                        const textMatch = inner.match(/<text\b[^>]*>([\s\S]*?)<\/text>/);
+                                        const textMatch = inner.match(
+                                            /<text\b[^>]*>([\s\S]*?)<\/text>/,
+                                        );
                                         const textXml = textMatch?.[1] ?? '';
                                         const richText = XlsxReader.#parseRichTextFromXml(textXml);
 
@@ -730,60 +807,92 @@ export class XlsxReader implements IReader {
                             }
                         }
                     }
-                    
+
                     // Parse data validations
                     if (!this.#readDataOnly) {
-                        const dataValidationsMatch = wsXml.match(/<dataValidations[^>]*>([\s\S]*?)<\/dataValidations>/);
+                        const dataValidationsMatch = wsXml.match(
+                            /<dataValidations[^>]*>([\s\S]*?)<\/dataValidations>/,
+                        );
                         if (dataValidationsMatch && dataValidationsMatch[1]) {
                             const dataValidationsContent = dataValidationsMatch[1];
-                            const dataValidationMatches = dataValidationsContent.matchAll(/<dataValidation([^>]*)>([\s\S]*?)<\/dataValidation>/g);
-                            
+                            const dataValidationMatches = dataValidationsContent.matchAll(
+                                /<dataValidation([^>]*)>([\s\S]*?)<\/dataValidation>/g,
+                            );
+
                             for (const dvMatch of dataValidationMatches) {
                                 const dvAttrs = dvMatch[1];
                                 const dvContent = dvMatch[2];
-                                
+
                                 if (!dvAttrs || !dvContent) continue;
-                                
+
                                 // Parse attributes
                                 const typeMatch = dvAttrs.match(/type="([^"]*)"/);
                                 const errorStyleMatch = dvAttrs.match(/errorStyle="([^"]*)"/);
                                 const operatorMatch = dvAttrs.match(/operator="([^"]*)"/);
                                 const allowBlankMatch = dvAttrs.match(/allowBlank="([^"]*)"/);
                                 const showDropDownMatch = dvAttrs.match(/showDropDown="([^"]*)"/);
-                                const showInputMessageMatch = dvAttrs.match(/showInputMessage="([^"]*)"/);
-                                const showErrorMessageMatch = dvAttrs.match(/showErrorMessage="([^"]*)"/);
+                                const showInputMessageMatch = dvAttrs.match(
+                                    /showInputMessage="([^"]*)"/,
+                                );
+                                const showErrorMessageMatch = dvAttrs.match(
+                                    /showErrorMessage="([^"]*)"/,
+                                );
                                 const errorTitleMatch = dvAttrs.match(/errorTitle="([^"]*)"/);
                                 const errorMatch = dvAttrs.match(/error="([^"]*)"/);
                                 const promptTitleMatch = dvAttrs.match(/promptTitle="([^"]*)"/);
                                 const promptMatch = dvAttrs.match(/prompt="([^"]*)"/);
                                 const sqrefMatch = dvAttrs.match(/sqref="([^"]*)"/);
-                                
+
                                 // Parse formulas
-                                const formula1Match = dvContent.match(/<formula1>([^<]*)<\/formula1>/);
-                                const formula2Match = dvContent.match(/<formula2>([^<]*)<\/formula2>/);
-                                
+                                const formula1Match = dvContent.match(
+                                    /<formula1>([^<]*)<\/formula1>/,
+                                );
+                                const formula2Match = dvContent.match(
+                                    /<formula2>([^<]*)<\/formula2>/,
+                                );
+
                                 if (sqrefMatch && sqrefMatch[1]) {
                                     const sqref = sqrefMatch[1];
-                                    
+
                                     // Create data validation
-                                    const { DataValidation } = await import('../core/data-validation.ts');
+                                    const { DataValidation } =
+                                        await import('../core/data-validation.ts');
                                     const dataValidation = new DataValidation();
-                                    
-                                    if (typeMatch && typeMatch[1]) dataValidation.setType(typeMatch[1]);
-                                    if (errorStyleMatch && errorStyleMatch[1]) dataValidation.setErrorStyle(errorStyleMatch[1]);
-                                    if (operatorMatch && operatorMatch[1]) dataValidation.setOperator(operatorMatch[1]);
-                                    if (allowBlankMatch && allowBlankMatch[1]) dataValidation.setAllowBlank(allowBlankMatch[1] === '1');
-                                    if (showDropDownMatch && showDropDownMatch[1]) dataValidation.setShowDropDown(showDropDownMatch[1] === '0'); // Note: inverted
-                                    if (showInputMessageMatch && showInputMessageMatch[1]) dataValidation.setShowInputMessage(showInputMessageMatch[1] === '1');
-                                    if (showErrorMessageMatch && showErrorMessageMatch[1]) dataValidation.setShowErrorMessage(showErrorMessageMatch[1] === '1');
-                                    if (errorTitleMatch && errorTitleMatch[1]) dataValidation.setErrorTitle(errorTitleMatch[1]);
-                                    if (errorMatch && errorMatch[1]) dataValidation.setError(errorMatch[1]);
-                                    if (promptTitleMatch && promptTitleMatch[1]) dataValidation.setPromptTitle(promptTitleMatch[1]);
-                                    if (promptMatch && promptMatch[1]) dataValidation.setPrompt(promptMatch[1]);
+
+                                    if (typeMatch && typeMatch[1])
+                                        dataValidation.setType(typeMatch[1]);
+                                    if (errorStyleMatch && errorStyleMatch[1])
+                                        dataValidation.setErrorStyle(errorStyleMatch[1]);
+                                    if (operatorMatch && operatorMatch[1])
+                                        dataValidation.setOperator(operatorMatch[1]);
+                                    if (allowBlankMatch && allowBlankMatch[1])
+                                        dataValidation.setAllowBlank(allowBlankMatch[1] === '1');
+                                    if (showDropDownMatch && showDropDownMatch[1])
+                                        dataValidation.setShowDropDown(
+                                            showDropDownMatch[1] === '0',
+                                        ); // Note: inverted
+                                    if (showInputMessageMatch && showInputMessageMatch[1])
+                                        dataValidation.setShowInputMessage(
+                                            showInputMessageMatch[1] === '1',
+                                        );
+                                    if (showErrorMessageMatch && showErrorMessageMatch[1])
+                                        dataValidation.setShowErrorMessage(
+                                            showErrorMessageMatch[1] === '1',
+                                        );
+                                    if (errorTitleMatch && errorTitleMatch[1])
+                                        dataValidation.setErrorTitle(errorTitleMatch[1]);
+                                    if (errorMatch && errorMatch[1])
+                                        dataValidation.setError(errorMatch[1]);
+                                    if (promptTitleMatch && promptTitleMatch[1])
+                                        dataValidation.setPromptTitle(promptTitleMatch[1]);
+                                    if (promptMatch && promptMatch[1])
+                                        dataValidation.setPrompt(promptMatch[1]);
                                     dataValidation.setSqref(sqref);
-                                    if (formula1Match && formula1Match[1]) dataValidation.setFormula1(formula1Match[1]);
-                                    if (formula2Match && formula2Match[1]) dataValidation.setFormula2(formula2Match[1]);
-                                    
+                                    if (formula1Match && formula1Match[1])
+                                        dataValidation.setFormula1(formula1Match[1]);
+                                    if (formula2Match && formula2Match[1])
+                                        dataValidation.setFormula2(formula2Match[1]);
+
                                     worksheet.setDataValidation(sqref, dataValidation);
                                 }
                             }
@@ -791,7 +900,7 @@ export class XlsxReader implements IReader {
                     }
                 }
             }
-            
+
             return spreadsheet;
         } catch (error) {
             if (error instanceof Error) {

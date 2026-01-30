@@ -1,8 +1,8 @@
 import { Worksheet } from '../core/worksheet.ts';
+import { RichText } from '../rich-text/rich-text.ts';
+import { Coordinate } from '../utils/coordinate.ts';
 import { Column } from './auto-filter/column.ts';
 import { Rule } from './auto-filter/column/rule.ts';
-import { Coordinate } from '../utils/coordinate.ts';
-import { RichText } from '../rich-text/rich-text.ts';
 
 export class AutoFilter {
     #worksheet: Worksheet | null;
@@ -186,7 +186,9 @@ export class AutoFilter {
         }
 
         const worksheet = this.#worksheet;
-        let [[startColumn, startRow], [endColumn, endRow]] = Coordinate.rangeBoundaries(this.#range);
+        let [[startColumn, startRow], [endColumn, endRow]] = Coordinate.rangeBoundaries(
+            this.#range,
+        );
 
         if (startRow === endRow) {
             endRow = this.#autoExtendRange(worksheet, startRow, startColumn, endColumn);
@@ -204,7 +206,13 @@ export class AutoFilter {
                 continue;
             }
 
-            const test = this.#buildColumnTest(worksheet, column, columnIndex, startRow + 1, endRow);
+            const test = this.#buildColumnTest(
+                worksheet,
+                column,
+                columnIndex,
+                startRow + 1,
+                endRow,
+            );
             if (test) {
                 columnTests.set(columnIndex, test);
             }
@@ -241,7 +249,7 @@ export class AutoFilter {
         column: Column,
         columnIndex: number,
         startRow: number,
-        endRow: number
+        endRow: number,
     ): ((value: unknown) => boolean) | null {
         const filterType = column.getFilterType();
         const rules = column.getRules();
@@ -287,7 +295,7 @@ export class AutoFilter {
                     return true;
                 }
 
-                const results = rules.map(rule => this.#matchesCustomRule(value, rule));
+                const results = rules.map((rule) => this.#matchesCustomRule(value, rule));
                 return joinAnd ? results.every(Boolean) : results.some(Boolean);
             };
         }
@@ -299,7 +307,10 @@ export class AutoFilter {
             }
 
             const grouping = rule.getGrouping();
-            if (grouping === Rule.AUTOFILTER_RULETYPE_DYNAMIC_ABOVEAVERAGE || grouping === Rule.AUTOFILTER_RULETYPE_DYNAMIC_BELOWAVERAGE) {
+            if (
+                grouping === Rule.AUTOFILTER_RULETYPE_DYNAMIC_ABOVEAVERAGE ||
+                grouping === Rule.AUTOFILTER_RULETYPE_DYNAMIC_BELOWAVERAGE
+            ) {
                 const values = this.#collectNumericValues(worksheet, columnIndex, startRow, endRow);
                 if (values.length === 0) {
                     return () => false;
@@ -355,12 +366,15 @@ export class AutoFilter {
                 return () => false;
             }
 
-            const count = rule.getOperator() === Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_PERCENT
-                ? Math.max(1, Math.ceil(values.length * (Number(rule.getValue()) / 100)))
-                : Math.max(1, Math.floor(Number(rule.getValue())));
+            const count =
+                rule.getOperator() === Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_PERCENT
+                    ? Math.max(1, Math.ceil(values.length * (Number(rule.getValue()) / 100)))
+                    : Math.max(1, Math.floor(Number(rule.getValue())));
             const isTop = rule.getGrouping() !== Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_BOTTOM;
             const sorted = values.slice().sort((a, b) => a - b);
-            const thresholdIndex = isTop ? Math.max(0, sorted.length - count) : Math.min(sorted.length - 1, count - 1);
+            const thresholdIndex = isTop
+                ? Math.max(0, sorted.length - count)
+                : Math.min(sorted.length - 1, count - 1);
             const threshold = sorted[thresholdIndex]!;
 
             column.setAttribute('maxVal', threshold);
@@ -377,7 +391,12 @@ export class AutoFilter {
         return null;
     }
 
-    #autoExtendRange(worksheet: Worksheet, startRow: number, startColumn: number, endColumn: number): number {
+    #autoExtendRange(
+        worksheet: Worksheet,
+        startRow: number,
+        startColumn: number,
+        endColumn: number,
+    ): number {
         const cells = worksheet.getCellCollection().getCells();
         const rowsWithData = new Set<number>();
         let maxRow = startRow;
@@ -408,7 +427,12 @@ export class AutoFilter {
         return maxRow;
     }
 
-    #collectNumericValues(worksheet: Worksheet, columnIndex: number, startRow: number, endRow: number): number[] {
+    #collectNumericValues(
+        worksheet: Worksheet,
+        columnIndex: number,
+        startRow: number,
+        endRow: number,
+    ): number[] {
         const values: number[] = [];
         for (let row = startRow; row <= endRow; row++) {
             const coordinate = `${Coordinate.stringFromColumnIndex(columnIndex)}${row}`;
@@ -446,9 +470,12 @@ export class AutoFilter {
     }
 
     #compare(operator: string, value: string | number, ruleValue: string | number): boolean {
-        const comparison = typeof value === 'number' && typeof ruleValue === 'number'
-            ? value - ruleValue
-            : String(value).localeCompare(String(ruleValue), undefined, { sensitivity: 'accent' });
+        const comparison =
+            typeof value === 'number' && typeof ruleValue === 'number'
+                ? value - ruleValue
+                : String(value).localeCompare(String(ruleValue), undefined, {
+                      sensitivity: 'accent',
+                  });
 
         switch (operator) {
             case Rule.AUTOFILTER_COLUMN_RULE_NOTEQUAL:
@@ -467,7 +494,12 @@ export class AutoFilter {
         }
     }
 
-    #collectDateGroupValues(rule: Rule, dateSet: Set<string>, timeSet: Set<string>, dateTimeSet: Set<string>): void {
+    #collectDateGroupValues(
+        rule: Rule,
+        dateSet: Set<string>,
+        timeSet: Set<string>,
+        dateTimeSet: Set<string>,
+    ): void {
         const value = rule.getValue() as Record<string, number>;
         const grouping = rule.getGrouping();
 
@@ -493,7 +525,12 @@ export class AutoFilter {
         }
     }
 
-    #matchesDateGroup(value: unknown, dateSet: Set<string>, timeSet: Set<string>, dateTimeSet: Set<string>): boolean {
+    #matchesDateGroup(
+        value: unknown,
+        dateSet: Set<string>,
+        timeSet: Set<string>,
+        dateTimeSet: Set<string>,
+    ): boolean {
         const numericValue = this.#excelDateValue(value);
         if (numericValue === null) {
             return false;
@@ -556,7 +593,8 @@ export class AutoFilter {
             return addDays(date, -weekday);
         };
 
-        const startOfMonth = (date: Date): Date => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+        const startOfMonth = (date: Date): Date =>
+            new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
         const startOfQuarter = (date: Date): Date => {
             const quarterStartMonth = Math.floor(date.getUTCMonth() / 3) * 3;
             return new Date(Date.UTC(date.getUTCFullYear(), quarterStartMonth, 1));
@@ -610,14 +648,32 @@ export class AutoFilter {
                 break;
             case Rule.AUTOFILTER_RULETYPE_DYNAMIC_LASTQUARTER: {
                 const currentQuarterStart = startOfQuarter(today);
-                start = new Date(Date.UTC(currentQuarterStart.getUTCFullYear(), currentQuarterStart.getUTCMonth() - 3, 1));
+                start = new Date(
+                    Date.UTC(
+                        currentQuarterStart.getUTCFullYear(),
+                        currentQuarterStart.getUTCMonth() - 3,
+                        1,
+                    ),
+                );
                 end = currentQuarterStart;
                 break;
             }
             case Rule.AUTOFILTER_RULETYPE_DYNAMIC_NEXTQUARTER: {
-                const nextQuarterStart = new Date(Date.UTC(startOfQuarter(today).getUTCFullYear(), startOfQuarter(today).getUTCMonth() + 3, 1));
+                const nextQuarterStart = new Date(
+                    Date.UTC(
+                        startOfQuarter(today).getUTCFullYear(),
+                        startOfQuarter(today).getUTCMonth() + 3,
+                        1,
+                    ),
+                );
                 start = nextQuarterStart;
-                end = new Date(Date.UTC(nextQuarterStart.getUTCFullYear(), nextQuarterStart.getUTCMonth() + 3, 1));
+                end = new Date(
+                    Date.UTC(
+                        nextQuarterStart.getUTCFullYear(),
+                        nextQuarterStart.getUTCMonth() + 3,
+                        1,
+                    ),
+                );
                 break;
             }
             case Rule.AUTOFILTER_RULETYPE_DYNAMIC_THISYEAR:

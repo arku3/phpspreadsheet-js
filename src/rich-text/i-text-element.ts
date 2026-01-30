@@ -26,4 +26,3 @@ export interface ITextElement {
      */
     getHashCode(): string;
 }
-

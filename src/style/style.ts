@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { Coordinate } from '../utils/coordinate.ts';
 import { Alignment } from './alignment.ts';
 import { Borders } from './borders.ts';
 import { Fill } from './fill.ts';
@@ -6,7 +7,6 @@ import { Font } from './font.ts';
 import { NumberFormat } from './number-format.ts';
 import { Protection } from './protection.ts';
 import { Supervisor } from './supervisor.ts';
-import { Coordinate } from '../utils/coordinate.ts';
 
 /**
  * Style class.
@@ -264,14 +264,20 @@ export class Style extends Supervisor {
                     newStyle.applyFromArray(styleArray);
 
                     const existing = workbook.getCellXfByHashCode(newStyle.getHashCode());
-                    const newIndex = existing === false ? this.addStyleToWorkbook(workbook, newStyle) : existing.getIndex();
+                    const newIndex =
+                        existing === false
+                            ? this.addStyleToWorkbook(workbook, newStyle)
+                            : existing.getIndex();
                     cell.setXfIndex(newIndex);
                 }
             }
         }
     }
 
-    private addStyleToWorkbook(workbook: { addCellXf: (style: Style) => void }, style: Style): number {
+    private addStyleToWorkbook(
+        workbook: { addCellXf: (style: Style) => void },
+        style: Style,
+    ): number {
         workbook.addCellXf(style);
         return style.getIndex();
     }
@@ -286,14 +292,14 @@ export class Style extends Supervisor {
         return createHash('md5')
             .update(
                 this.#fill.getHashCode() +
-                this.#font.getHashCode() +
-                this.#borders.getHashCode() +
-                this.#alignment.getHashCode() +
-                this.#numberFormat.getHashCode() +
-                this.#protection.getHashCode() +
-                (this.#quotePrefix ? 't' : 'f') +
-                (this.#checkBox ? 't' : 'f') +
-                'Style'
+                    this.#font.getHashCode() +
+                    this.#borders.getHashCode() +
+                    this.#alignment.getHashCode() +
+                    this.#numberFormat.getHashCode() +
+                    this.#protection.getHashCode() +
+                    (this.#quotePrefix ? 't' : 'f') +
+                    (this.#checkBox ? 't' : 'f') +
+                    'Style',
             )
             .digest('hex');
     }
@@ -407,8 +413,8 @@ export class Style extends Supervisor {
     private static splitRanges(selection: string): string[] {
         return selection
             .split(/[\s,]+/)
-            .map(range => range.trim())
-            .filter(range => range.length > 0);
+            .map((range) => range.trim())
+            .filter((range) => range.length > 0);
     }
 
     private static getFirstCoordinateFromSelection(selection: string): string {
@@ -420,7 +426,12 @@ export class Style extends Supervisor {
         return first.toUpperCase();
     }
 
-    private static normalizeRange(range: string): { startCol: number; startRow: number; endCol: number; endRow: number } {
+    private static normalizeRange(range: string): {
+        startCol: number;
+        startRow: number;
+        endCol: number;
+        endRow: number;
+    } {
         const parts = range.split(':');
         const start = parts[0] ?? 'A1';
         const end = parts[1] ?? start;
