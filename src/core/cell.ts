@@ -162,4 +162,100 @@ export class Cell {
     public clearCalculationCache(): void {
         this.#calculatedValue = undefined;
     }
+
+    /**
+     * Check if this cell is in a merged range.
+     *
+     * @returns True if cell is in a merge range
+     */
+    public isInMergeRange(): boolean {
+        return this.getMergeRange() !== null;
+    }
+
+    /**
+     * Check if this cell is the master (top-left) cell in a merged range.
+     *
+     * @returns True if this is the master cell holding the value
+     */
+    public isMergeRangeValueCell(): boolean {
+        const mergeRange = this.getMergeRange();
+        if (!mergeRange) {
+            return false;
+        }
+
+        const split = Coordinate.splitRange(mergeRange);
+        const firstPair = split[0];
+        if (!firstPair || firstPair.length < 2) {
+            return false;
+        }
+        const [startCell] = firstPair;
+        return this.getCoordinate() === startCell;
+    }
+
+    /**
+     * Get the merge range if this cell is in one.
+     *
+     * @returns The merge range string (e.g., 'A1:B2') or null
+     */
+    public getMergeRange(): string | null {
+        const worksheet = this.getWorksheet();
+        const mergeCells = worksheet.getMergeCells();
+
+        for (const mergeRange of Object.values(mergeCells)) {
+            if (this.isInRange(mergeRange)) {
+                return mergeRange;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if this cell is within a given range.
+     *
+     * @param range The range to check (e.g., 'A1:B2')
+     * @returns True if cell is in the range
+     */
+    public isInRange(range: string): boolean {
+        const match = this.getCoordinate().match(/^([A-Z]+)(\d+)$/);
+        if (!match) return false;
+        
+        const cellCol = match[1]!;
+        const cellRow = match[2]!;
+        const cellColIndex = Coordinate.columnIndexFromString(cellCol);
+        const cellRowNum = parseInt(cellRow, 10);
+
+        const [[minCol, minRow], [maxCol, maxRow]] = Coordinate.rangeBoundaries(range);
+
+        return cellColIndex >= minCol && 
+               cellColIndex <= maxCol && 
+               cellRowNum >= minRow && 
+               cellRowNum <= maxRow;
+    }
+
+    /**
+     * Get the formatted value of this cell.
+     * 
+     * @returns The formatted value as string
+     */
+    public getFormattedValue(): string {
+        const value = this.getValue();
+        
+        if (value === null || value === undefined) {
+            return '';
+        }
+
+        // TODO: Implement actual number formatting when NumberFormat engine is ready
+        // For now, return string representation
+        return String(value);
+    }
+
+    /**
+     * Check if this cell contains a formula.
+     *
+     * @returns True if cell contains a formula
+     */
+    public isFormula(): boolean {
+        return this.#dataType === DataType.TYPE_FORMULA;
+    }
 }

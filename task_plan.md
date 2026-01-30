@@ -18,8 +18,8 @@ Complete systematic parity fixes identified in the review and implement the XLSX
             - [x] Implement Worksheet management: `duplicateWorksheetByTitle`, `removeSheetByIndex`, `sheetNameExists`.
             - [x] Implement Active Sheet management: `setActiveSheetIndex`, `setActiveSheetIndexByName`.
             - [x] Implement `Spreadsheet.getSheetNames()`, `getSheetByCodeName()`.
-            - [ ] Implement `Cell.isInMergeRange()`, `getMergeRange()`, and `getFormattedValue()`.
-            - [ ] Implement `Cell.isFormula()`, `isLocked()`, `isHiddenOnFormulaBar()`.
+            - [x] Implement `Cell.isInMergeRange()`, `getMergeRange()`, and `getFormattedValue()`.
+            - [x] Implement `Cell.isFormula()`, `isLocked()`, `isHiddenOnFormulaBar()`.
             - [ ] Implement `Cell.getHyperlink()` and `getDataValidation()` support.
         
         - [ ] **Style Module Fixes**
