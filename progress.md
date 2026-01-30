@@ -1,6 +1,7 @@
 # Progress - Systematic Parity Review & Fixes
 
 ## Session Log
+- [2026-01-30] Implemented classic cell comments (Excel notes): `Comment` model + Worksheet/Cell APIs, and XLSX writer support (comments*.xml + vmlDrawing*.vml + legacyDrawing + rels/content types) with tests.
 - [2026-01-30] Aligned Color API with PHP tint behavior, fixed Style export array, and adjusted XLSX writer fill colors.
 - [2026-01-30] Updated worksheet row breaks handling and verify scripts; verified XLSX output with PhpSpreadsheet.
 - [2026-01-30] Conducted deep systematic parity audit of Core, Style, I/O, and Calculation modules.

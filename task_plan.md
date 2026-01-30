@@ -8,6 +8,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
 - [ ] Phase 15: I/O Extension & Graphics <!-- id: 54 -->
     - [x] Systematic Writer Parity Review and Verification against PHP. <!-- id: 56 -->
     - [x] Align Style and Worksheet API with PhpSpreadsheet (API Parity). <!-- id: 57 -->
+    - [x] Implement classic cell comments (notes) writing (xl/comments*.xml + vmlDrawing). <!-- id: 66 -->
     
     - [ ] **Parity Fixes (Mandatory before Reader)** <!-- id: 58 -->
         - [ ] **Core Module Fixes**
@@ -42,6 +43,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
             - [x] Refactor Relationship IDs (`rId`) in `Workbook.ts` to be dynamic.
             - [x] Support multiple `cellStyleXfs` instead of one hardcoded entry.
             - [x] Fix Rich Text superscript/subscript parity between Styles and StringTable.
+            - [x] Implement classic cell comments (notes) writing (comments*.xml + legacyDrawing + vmlDrawing).
         
         - [ ] **Memory & Disposal**
             - [ ] Implement `disconnectWorksheets()` and `disconnectCells()` circular reference breaking.
@@ -55,6 +57,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [x] **Merge Cells Reading** - Parse <mergeCells> and apply merge ranges.
         - [x] **Hyperlinks Reading** - Parse <hyperlinks>, resolve URLs via relationships.
         - [x] **Data Validation Reading** - FULLY IMPLEMENTED with complete I/O support.
+        - [ ] **Comments Reading** - Parse comments.xml (author/text) and note VML (visibility/geometry where available).
     - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
 
 - [x] Phase 15b: Data Validation Infrastructure (COMPLETE) <!-- id: 60 -->

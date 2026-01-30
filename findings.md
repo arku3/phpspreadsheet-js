@@ -1,20 +1,19 @@
 # Findings - Parity Review (TS vs PHP)
 
-## 1. Style Module
-- **Font**: Missing theme-specific properties (Latin, EastAsian, etc.).
-- **NumberFormat**: Missing `toFormattedString` rendering engine. Currently only a data container.
-- **Color**: `setTint` removed for I/O parity, but PHP maintains it internally.
+## Current Gaps (Highest Priority)
 
-## 2. Core Module
-- **Worksheet**: Missing `getHighestRow`/`getHighestColumn` and row/column manipulation (insert/delete).
-- **Cell**: Missing merged cell state (`isInMergeRange`), data validation, and hyperlinks.
-- **Memory**: Circular reference management (PHP `disconnect` logic) is absent in TS.
+## 1. Memory & Disposal
+- **Cell/Worksheet disconnect**: Circular reference breaking is still incomplete (need `disconnectCells()` and wiring through disposal paths).
 
-## 3. I/O Module (XLSX Writer)
-- **Missing Parts**: Charts, Drawings, Tables, and Comments are not implemented.
-- **Shared Strings**: Missing control character sanitization (`controlCharacterPHP2OOXML`).
-- **Extensibility**: Relationship IDs are hardcoded, making it difficult to add new parts.
+## 2. I/O Module (XLSX)
+- **Drawings / Images**: Worksheet drawings and images are not implemented.
+- **Charts**: Not implemented.
+- **Comments**: Classic comments/notes are implemented for XLSX writing; comments reading is still pending. Threaded comments are not implemented.
+- **VML pass-through**: If a worksheet contains legacy VML shapes that are not notes, round-trip preservation is not fully implemented.
 
-## 4. Calculation Module
-- **Engine**: Parser and Tokenizer are high-parity.
-- **Functions**: Only ~15% coverage (Core subset). Missing ~300+ functions (Financial, Engineering, Statistical).
+## 3. Calculation Module
+- **Function coverage**: Major categories exist, but there are still many Excel functions missing vs PhpSpreadsheet.
+- **Edge-case parity**: Continue aligning function semantics and error propagation to PhpSpreadsheet.
+
+## 4. Performance & Scalability
+- **Cell caching**: Pluggable caching for large datasets remains unimplemented.
