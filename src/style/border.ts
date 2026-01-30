@@ -44,9 +44,8 @@ export class Border extends Supervisor {
     constructor(isSupervisor: boolean = false) {
         super(isSupervisor);
         this.#color = new Color(Color.COLOR_BLACK, isSupervisor);
-        if (isSupervisor) {
-            this.#color.bindParent(this, 'color');
-        }
+        // Bind for both supervisor and non-supervisor so Color can resolve shared components.
+        this.#color.bindParent(this, 'color');
     }
 
     /**
@@ -103,7 +102,7 @@ export class Border extends Supervisor {
     public setBorderStyle(style: string | boolean): this {
         if (this.isSupervisor) {
             const styleArray = this.getStyleArray({ borderStyle: style });
-            (this.parent as any).applyFromArray(styleArray);
+            this.getActiveSheet().getStyle(this.getSelectedCells()).applyFromArray(styleArray);
         } else {
             if (!style) {
                 this.#borderStyle = Border.BORDER_NONE;
@@ -129,7 +128,7 @@ export class Border extends Supervisor {
     public setColor(color: Color): this {
         if (this.isSupervisor) {
             const styleArray = this.getStyleArray({ color: { argb: color.getARGB() } });
-            (this.parent as any).applyFromArray(styleArray);
+            this.getActiveSheet().getStyle(this.getSelectedCells()).applyFromArray(styleArray);
         } else {
             this.#color = color;
         }
@@ -144,7 +143,7 @@ export class Border extends Supervisor {
     public applyFromArray(styleArray: Record<string, unknown>): this {
         if (this.isSupervisor) {
             const styleArrayLocal = this.getStyleArray(styleArray);
-            (this.parent as any).applyFromArray(styleArrayLocal);
+            this.getActiveSheet().getStyle(this.getSelectedCells()).applyFromArray(styleArrayLocal);
             return this;
         }
 

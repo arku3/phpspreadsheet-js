@@ -36,22 +36,22 @@ export class NumberFormatter {
     /**
      * Get built-in format info by format code.
      */
-    private static getBuiltInFormat(format: string): { type: string; decimals: number } | null {
+    private static getBuiltInFormat(format: string): { type: string; decimals: number; thousands: boolean } | null {
         // Common built-in format codes
-        const formatMap: Record<string, { type: string; decimals: number }> = {
-            'General': { type: 'general', decimals: 0 },
-            '0': { type: 'number', decimals: 0 },
-            '0.00': { type: 'number', decimals: 2 },
-            '#,##0': { type: 'number', decimals: 0 },
-            '#,##0.00': { type: 'number', decimals: 2 },
-            '0%': { type: 'percentage', decimals: 0 },
-            '0.00%': { type: 'percentage', decimals: 2 },
-            '$#,##0': { type: 'currency', decimals: 0 },
-            '$#,##0.00': { type: 'currency', decimals: 2 },
-            'yyyy-mm-dd': { type: 'date', decimals: 0 },
-            'm/d/yyyy': { type: 'date', decimals: 0 },
-            'h:mm:ss': { type: 'time', decimals: 0 },
-            'h:mm': { type: 'time', decimals: 0 },
+        const formatMap: Record<string, { type: string; decimals: number; thousands: boolean }> = {
+            'General': { type: 'general', decimals: 0, thousands: false },
+            '0': { type: 'number', decimals: 0, thousands: false },
+            '0.00': { type: 'number', decimals: 2, thousands: false },
+            '#,##0': { type: 'number', decimals: 0, thousands: true },
+            '#,##0.00': { type: 'number', decimals: 2, thousands: true },
+            '0%': { type: 'percentage', decimals: 0, thousands: false },
+            '0.00%': { type: 'percentage', decimals: 2, thousands: false },
+            '$#,##0': { type: 'currency', decimals: 0, thousands: false },
+            '$#,##0.00': { type: 'currency', decimals: 2, thousands: false },
+            'yyyy-mm-dd': { type: 'date', decimals: 0, thousands: false },
+            'm/d/yyyy': { type: 'date', decimals: 0, thousands: false },
+            'h:mm:ss': { type: 'time', decimals: 0, thousands: false },
+            'h:mm': { type: 'time', decimals: 0, thousands: false },
         };
 
         return formatMap[format] || null;
@@ -60,12 +60,12 @@ export class NumberFormatter {
     /**
      * Format using built-in format type.
      */
-    private static formatWithBuiltin(value: number, format: { type: string; decimals: number }): string {
+    private static formatWithBuiltin(value: number, format: { type: string; decimals: number; thousands: boolean }): string {
         switch (format.type) {
             case 'general':
                 return this.formatGeneral(value);
             case 'number':
-                return this.formatNumber(value, format.decimals, false);
+                return this.formatNumber(value, format.decimals, format.thousands);
             case 'percentage':
                 return this.formatPercentage(value, format.decimals);
             case 'currency':

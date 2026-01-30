@@ -17,6 +17,19 @@ import { ConditionalIconSet } from '../../style/conditional-formatting/condition
  * Generates worksheet XMLs.
  */
 export class Worksheet extends WriterPart {
+    private static normalizeConditionalTopLeftCell(cellRef: string): string {
+        const cleaned = (cellRef ?? '').replace(/\$/g, '').toUpperCase();
+        if (cleaned === '') return 'A1';
+
+        // Column-only refs like "D" can happen for column ranges like "D:D".
+        // Conditional formatting formulas require an A1-style cell reference (e.g. "D1").
+        if (/^[A-Z]+$/.test(cleaned)) return `${cleaned}1`;
+        // Row-only refs like "1" can happen for row ranges like "1:1".
+        if (/^\d+$/.test(cleaned)) return `A${cleaned}`;
+
+        return cleaned;
+    }
+
     /**
      * Write worksheet to XML format.
      */
@@ -585,7 +598,7 @@ export class Worksheet extends WriterPart {
             const cellRange = Coordinate.splitRange(cellCoordinate.replace(/\$/g, '').toUpperCase());
             const firstRange = cellRange[0];
             const firstPair = firstRange ? firstRange[0] : undefined;
-            const topLeftCell = firstPair?.[0] ?? 'A1';
+            const topLeftCell = Worksheet.normalizeConditionalTopLeftCell(firstPair?.[0] ?? 'A1');
 
             for (const conditional of styles) {
                 const type = conditional.getConditionType();
@@ -662,31 +675,93 @@ export class Worksheet extends WriterPart {
         if (!colorScale) return;
         const cs = rule.ele('colorScale');
 
+        const writeCfvo = (type: string, val: string | number | boolean | null): void => {
+            const cfvo = cs.ele('cfvo', { type });
+            if (val !== null) cfvo.att('val', String(val));
+        };
+
         const minCfvo = colorScale.getMinimumConditionalFormatValueObject();
-        const minColor = colorScale.getMinimumColor();
-        if (minCfvo) {
-            const cfvo = cs.ele('cfvo', { type: minCfvo.getType() });
-            if (minCfvo.getValue() !== null) cfvo.att('val', String(minCfvo.getValue()));
+        const minArgb = colorScale.getMinimumColor()?.getARGB() ?? null;
+        const useMin = minCfvo !== null || minArgb !== null;
+        if (useMin) {
+            let type = 'min';
+            let value: string | number | boolean | null = null;
+            if (minCfvo !== null) {
+                const typex = minCfvo.getType();
+                if (typex === 'formula') {
+                    const formula = minCfvo.getCellFormula();
+                    if (formula !== null) {
+                        type = typex;
+                        value = formula;
+                    }
+                } else {
+                    type = typex;
+                    const defaults: Record<string, string> = { number: '0', percent: '0', percentile: '10' };
+                    value = minCfvo.getValue() ?? defaults[type] ?? null;
+                }
+            }
+            writeCfvo(type, value);
         }
 
         const midCfvo = colorScale.getMidpointConditionalFormatValueObject();
-        if (midCfvo) {
-            const cfvo = cs.ele('cfvo', { type: midCfvo.getType() });
-            if (midCfvo.getValue() !== null) cfvo.att('val', String(midCfvo.getValue()));
+        const midArgb = colorScale.getMidpointColor()?.getARGB() ?? null;
+        const useMid = midCfvo !== null || midArgb !== null;
+        if (useMid) {
+            let type = 'percentile';
+            let value: string | number | boolean | null = '50';
+            if (midCfvo !== null) {
+                type = midCfvo.getType();
+                if (type === 'formula') {
+                    const formula = midCfvo.getCellFormula();
+                    if (formula !== null) {
+                        value = formula;
+                    } else {
+                        type = 'percentile';
+                        value = '50';
+                    }
+                } else {
+                    const defaults: Record<string, string> = { number: '0', percent: '50', percentile: '50' };
+                    value = midCfvo.getValue() ?? defaults[type] ?? null;
+                }
+            }
+            writeCfvo(type, value);
         }
 
         const maxCfvo = colorScale.getMaximumConditionalFormatValueObject();
-        const maxColor = colorScale.getMaximumColor();
-        if (maxCfvo) {
-            const cfvo = cs.ele('cfvo', { type: maxCfvo.getType() });
-            if (maxCfvo.getValue() !== null) cfvo.att('val', String(maxCfvo.getValue()));
+        const maxArgb = colorScale.getMaximumColor()?.getARGB() ?? null;
+        const useMax = maxCfvo !== null || maxArgb !== null;
+        if (useMax) {
+            let type = 'max';
+            let value: string | number | boolean | null = null;
+            if (maxCfvo !== null) {
+                const typex = maxCfvo.getType();
+                if (typex === 'formula') {
+                    const formula = maxCfvo.getCellFormula();
+                    if (formula !== null) {
+                        type = typex;
+                        value = formula;
+                    }
+                } else {
+                    type = typex;
+                    const defaults: Record<string, string> = { number: '0', percent: '100', percentile: '90' };
+                    value = maxCfvo.getValue() ?? defaults[type] ?? null;
+                }
+            }
+            writeCfvo(type, value);
         }
 
-        if (minColor && minColor.getARGB()) cs.ele('color', { rgb: minColor.getARGB() });
-        if (colorScale.getMidpointColor() && colorScale.getMidpointColor()!.getARGB()) {
-            cs.ele('color', { rgb: colorScale.getMidpointColor()!.getARGB() });
+        if (useMin) {
+            const color = cs.ele('color');
+            if (minArgb !== null) color.att('rgb', minArgb);
         }
-        if (maxColor && maxColor.getARGB()) cs.ele('color', { rgb: maxColor.getARGB() });
+        if (useMid) {
+            const color = cs.ele('color');
+            if (midArgb !== null) color.att('rgb', midArgb);
+        }
+        if (useMax) {
+            const color = cs.ele('color');
+            if (maxArgb !== null) color.att('rgb', maxArgb);
+        }
     }
 
     private writeDataBarElements(rule: any, dataBar: ConditionalDataBar | null): void {
@@ -695,15 +770,19 @@ export class Worksheet extends WriterPart {
         if (dataBar.getShowValue() !== null) db.att('showValue', dataBar.getShowValue() ? '1' : '0');
 
         const minCfvo = dataBar.getMinimumConditionalFormatValueObject();
-        if (minCfvo) {
-            const cfvo = db.ele('cfvo', { type: minCfvo.getType() });
-            if (minCfvo.getValue() !== null) cfvo.att('val', String(minCfvo.getValue()));
+        {
+            const type = minCfvo?.getType() ?? 'min';
+            const val = type === 'formula' ? (minCfvo?.getCellFormula() ?? null) : (minCfvo?.getValue() ?? null);
+            const cfvo = db.ele('cfvo', { type });
+            if (val !== null) cfvo.att('val', String(val));
         }
 
         const maxCfvo = dataBar.getMaximumConditionalFormatValueObject();
-        if (maxCfvo) {
-            const cfvo = db.ele('cfvo', { type: maxCfvo.getType() });
-            if (maxCfvo.getValue() !== null) cfvo.att('val', String(maxCfvo.getValue()));
+        {
+            const type = maxCfvo?.getType() ?? 'max';
+            const val = type === 'formula' ? (maxCfvo?.getCellFormula() ?? null) : (maxCfvo?.getValue() ?? null);
+            const cfvo = db.ele('cfvo', { type });
+            if (val !== null) cfvo.att('val', String(val));
         }
 
         if (dataBar.getColor()) {

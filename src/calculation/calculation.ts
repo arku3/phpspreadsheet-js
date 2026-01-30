@@ -479,7 +479,7 @@ export class Calculation {
                     const colData = [];
                     for (let r = minRow; r <= maxRow; r++) {
                         const coord = Coordinate.stringFromCoordinate(c, r);
-                        colData.push(targetWorksheet.getCell(coord).getValue());
+                        colData.push(targetWorksheet.getCell(coord).getCalculatedValue());
                     }
                     result.push(colData);
                 }
@@ -488,6 +488,6 @@ export class Calculation {
         }
 
         const cell = targetWorksheet.getCell(reference);
-        return cell.getValue();
+        return cell.getCalculatedValue();
     }
 }

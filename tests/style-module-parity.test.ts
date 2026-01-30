@@ -93,11 +93,11 @@ describe('Style Module Parity Fixes', () => {
             expect(alignment.getTextRotation()).toBe(90);
         });
 
-        it('should accept rotation value of 255 for vertical text', () => {
+        it('should accept rotation value of 255 for vertical (stacked) text', () => {
             const alignment = new Alignment();
             
             alignment.setTextRotation(255);
-            expect(alignment.getTextRotation()).toBe(255);
+            expect(alignment.getTextRotation()).toBe(-165);
         });
 
         it('should throw error for rotation values outside valid range', () => {
@@ -186,7 +186,7 @@ describe('Style Module Parity Fixes', () => {
             const format = makeFormat('yyyy-mm-dd');
             
             // Excel date serial number for 2024-01-15
-            expect(format.toFormattedString(45276)).toContain('2024');
+            expect(format.toFormattedString(45306)).toContain('2024');
         });
 
         it('should format Excel time fraction', () => {

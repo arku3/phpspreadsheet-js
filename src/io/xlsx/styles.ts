@@ -241,7 +241,12 @@ export class Styles extends WriterPart {
         const al = xf.ele('alignment');
         if (align.getHorizontal()) al.att('horizontal', align.getHorizontal()!);
         if (align.getVertical()) al.att('vertical', align.getVertical()!);
-        if (align.getTextRotation() !== 0) al.att('textRotation', align.getTextRotation());
+        if (align.getTextRotation() !== 0) {
+            const textRotation = align.getTextRotation() >= 0
+                ? align.getTextRotation()
+                : 90 - align.getTextRotation();
+            al.att('textRotation', textRotation);
+        }
         if (align.getWrapText()) al.att('wrapText', 'true');
         if (align.getShrinkToFit()) al.att('shrinkToFit', 'true');
         if (align.getIndent() > 0) al.att('indent', align.getIndent());
@@ -263,7 +268,10 @@ export class Styles extends WriterPart {
      * Get all unique styles.
      */
     public allStyles(spreadsheet: Spreadsheet): InternalStyle[] {
-        return spreadsheet.getCellXfCollection();
+        // Include both cellXfs and cellStyleXfs.
+        // cellStyleXfs always contain the "Normal" style (and potentially others)
+        // which may differ from the default cellXf if user code mutates styles.
+        return [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()];
     }
 
     /**
@@ -297,7 +305,7 @@ export class Styles extends WriterPart {
         fill1.setFillType('gray125');
         fills.set(fill1.getHashCode(), fill1);
 
-        for (const style of spreadsheet.getCellXfCollection()) {
+        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
             const fill = style.getFill();
             fills.set(fill.getHashCode(), fill);
         }
@@ -310,7 +318,7 @@ export class Styles extends WriterPart {
      */
     public allFonts(spreadsheet: Spreadsheet): Font[] {
         const fonts = new Map<string, Font>();
-        for (const style of spreadsheet.getCellXfCollection()) {
+        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
             const font = style.getFont();
             fonts.set(font.getHashCode(), font);
         }
@@ -322,7 +330,7 @@ export class Styles extends WriterPart {
      */
     public allBorders(spreadsheet: Spreadsheet): Borders[] {
         const borders = new Map<string, Borders>();
-        for (const style of spreadsheet.getCellXfCollection()) {
+        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
             const border = style.getBorders();
             borders.set(border.getHashCode(), border);
         }
@@ -334,7 +342,7 @@ export class Styles extends WriterPart {
      */
     public allNumberFormats(spreadsheet: Spreadsheet): NumberFormat[] {
         const formats = new Map<string, NumberFormat>();
-        for (const style of spreadsheet.getCellXfCollection()) {
+        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
             const format = style.getNumberFormat();
             if (format.getBuiltInFormatCode() === false) {
                 formats.set(format.getHashCode(), format);

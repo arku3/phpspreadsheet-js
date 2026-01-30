@@ -56,10 +56,9 @@ export class Fill extends Supervisor {
         super(isSupervisor);
         this.#startColor = new Color(Color.COLOR_WHITE, isSupervisor);
         this.#endColor = new Color(Color.COLOR_BLACK, isSupervisor);
-        if (isSupervisor) {
-            this.#startColor.bindParent(this, 'startColor');
-            this.#endColor.bindParent(this, 'endColor');
-        }
+        // Bind for both supervisor and non-supervisor so Color can resolve shared components.
+        this.#startColor.bindParent(this, 'startColor');
+        this.#endColor.bindParent(this, 'endColor');
     }
 
     /**

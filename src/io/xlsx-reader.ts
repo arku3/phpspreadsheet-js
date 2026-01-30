@@ -227,6 +227,16 @@ export class XlsxReader implements IReader {
                     lastColumnLetter = maxCol > 0 ? Coordinate.stringFromColumnIndex(maxCol) : 'A';
                 }
 
+                // PhpSpreadsheet behavior: an empty sheet defaults to A1 (1x1)
+                // This covers cases where the worksheet XML omits <dimension> and contains no rows/cells.
+                if (totalRows === 0) {
+                    totalRows = 1;
+                }
+                if (lastColumnIndex === 0) {
+                    lastColumnIndex = 1;
+                    lastColumnLetter = 'A';
+                }
+
                 const totalColumns = lastColumnIndex;
 
                 worksheetInfo.push({
@@ -367,6 +377,9 @@ export class XlsxReader implements IReader {
             
             // Add styles to spreadsheet if available
             if (styleData && styleData.cellXfs.length > 0) {
+                // Replace the default style collection to keep xf indices aligned
+                // with the file (xfIndex 0 must refer to the first parsed cellXf).
+                spreadsheet.removeCellXfByIndex(0);
                 for (const cellXf of styleData.cellXfs) {
                     spreadsheet.addCellXf(cellXf);
                 }
@@ -443,56 +456,8 @@ export class XlsxReader implements IReader {
                     
                     // Apply style if available and not in data-only mode
                     if (styleIndex !== null && !this.#readDataOnly && styleData) {
-                        const cellStyle = spreadsheet.getCellXfByIndex(styleIndex);
-                        if (cellStyle) {
-                            // Copy style properties manually since exportArray is private
-                            const targetStyle = cell.getStyle();
-                            targetStyle.getFont().applyFromArray({
-                                name: cellStyle.getFont().getName(),
-                                size: cellStyle.getFont().getSize(),
-                                bold: cellStyle.getFont().getBold(),
-                                italic: cellStyle.getFont().getItalic(),
-                                underline: cellStyle.getFont().getUnderline(),
-                                strikethrough: cellStyle.getFont().getStrikethrough(),
-                                color: { argb: cellStyle.getFont().getColor().getARGB() }
-                            });
-                            targetStyle.getFill().applyFromArray({
-                                fillType: cellStyle.getFill().getFillType(),
-                                startColor: { argb: cellStyle.getFill().getStartColor().getARGB() },
-                                endColor: { argb: cellStyle.getFill().getEndColor().getARGB() }
-                            });
-                            targetStyle.getBorders().applyFromArray({
-                                left: {
-                                    borderStyle: cellStyle.getBorders().getLeft().getBorderStyle(),
-                                    color: { argb: cellStyle.getBorders().getLeft().getColor().getARGB() }
-                                },
-                                right: {
-                                    borderStyle: cellStyle.getBorders().getRight().getBorderStyle(),
-                                    color: { argb: cellStyle.getBorders().getRight().getColor().getARGB() }
-                                },
-                                top: {
-                                    borderStyle: cellStyle.getBorders().getTop().getBorderStyle(),
-                                    color: { argb: cellStyle.getBorders().getTop().getColor().getARGB() }
-                                },
-                                bottom: {
-                                    borderStyle: cellStyle.getBorders().getBottom().getBorderStyle(),
-                                    color: { argb: cellStyle.getBorders().getBottom().getColor().getARGB() }
-                                },
-                                diagonal: {
-                                    borderStyle: cellStyle.getBorders().getDiagonal().getBorderStyle(),
-                                    color: { argb: cellStyle.getBorders().getDiagonal().getColor().getARGB() }
-                                }
-                            });
-                            targetStyle.getAlignment().applyFromArray({
-                                horizontal: cellStyle.getAlignment().getHorizontal(),
-                                vertical: cellStyle.getAlignment().getVertical(),
-                                textRotation: cellStyle.getAlignment().getTextRotation(),
-                                wrapText: cellStyle.getAlignment().getWrapText()
-                            });
-                            targetStyle.getNumberFormat().applyFromArray({
-                                formatCode: cellStyle.getNumberFormat().getFormatCode()
-                            });
-                        }
+                        // Assign xf index directly; styles are stored in the workbook collection.
+                        cell.setXfIndex(styleIndex);
                     }
                     
                     if (formulaMatch && formulaMatch[1]) {

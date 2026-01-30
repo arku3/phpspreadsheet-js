@@ -28,6 +28,11 @@ export class FunctionRegistry {
     }
 
     public register(name: string, implementation: FunctionImplementation, minArgs: number = 0, maxArgs: number | null = null): void {
+        // Some registrations use -1 to mean "no maximum" (infinite varargs).
+        // Normalize to null so validation logic is consistent.
+        if (maxArgs !== null && maxArgs < 0) {
+            maxArgs = null;
+        }
         this.#functions.set(name.toUpperCase(), {
             implementation,
             minArgs,

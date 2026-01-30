@@ -43,7 +43,8 @@ describe('Calculation Engine - DateTime Functions', () => {
     describe('YEAR', () => {
         it('should extract year from date', () => {
             const { spreadsheet, calculation } = setup();
-            spreadsheet.getActiveSheet().getCell('A1').setValue(45276);
+            // Excel date serial number for 2024-01-15
+            spreadsheet.getActiveSheet().getCell('A1').setValue(45306);
             
             const result = calculation.calculateFormula('=YEAR(A1)', spreadsheet.getActiveSheet(), 'B1');
             
@@ -54,7 +55,8 @@ describe('Calculation Engine - DateTime Functions', () => {
     describe('MONTH', () => {
         it('should extract month from date', () => {
             const { spreadsheet, calculation } = setup();
-            spreadsheet.getActiveSheet().getCell('A1').setValue(45276);
+            // Excel date serial number for 2024-01-15
+            spreadsheet.getActiveSheet().getCell('A1').setValue(45306);
             
             const result = calculation.calculateFormula('=MONTH(A1)', spreadsheet.getActiveSheet(), 'B1');
             
@@ -65,7 +67,8 @@ describe('Calculation Engine - DateTime Functions', () => {
     describe('DAY', () => {
         it('should extract day from date', () => {
             const { spreadsheet, calculation } = setup();
-            spreadsheet.getActiveSheet().getCell('A1').setValue(45276);
+            // Excel date serial number for 2024-01-15
+            spreadsheet.getActiveSheet().getCell('A1').setValue(45306);
             
             const result = calculation.calculateFormula('=DAY(A1)', spreadsheet.getActiveSheet(), 'B1');
             
@@ -76,7 +79,8 @@ describe('Calculation Engine - DateTime Functions', () => {
     describe('WEEKDAY', () => {
         it('should return day of week with default returnType', () => {
             const { spreadsheet, calculation } = setup();
-            spreadsheet.getActiveSheet().getCell('A1').setValue(45276);
+            // Excel date serial number for 2024-01-15
+            spreadsheet.getActiveSheet().getCell('A1').setValue(45306);
             
             const result = calculation.calculateFormula('=WEEKDAY(A1)', spreadsheet.getActiveSheet(), 'B1');
             
@@ -107,8 +111,9 @@ describe('Calculation Engine - DateTime Functions', () => {
     describe('DATEDIF', () => {
         it('should calculate days between dates', () => {
             const { spreadsheet, calculation } = setup();
-            spreadsheet.getActiveSheet().getCell('A1').setValue(45276);
-            spreadsheet.getActiveSheet().getCell('A2').setValue(45286);
+            // Excel date serial numbers for 2024-01-15 and 2024-01-25
+            spreadsheet.getActiveSheet().getCell('A1').setValue(45306);
+            spreadsheet.getActiveSheet().getCell('A2').setValue(45316);
             
             const result = calculation.calculateFormula('=DATEDIF(A1,A2,"D")', spreadsheet.getActiveSheet(), 'B1');
             

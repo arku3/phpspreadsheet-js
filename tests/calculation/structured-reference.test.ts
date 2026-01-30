@@ -41,6 +41,32 @@ describe("Structured References", () => {
         expect(resultRow3).toBe(40);
     });
 
+    test("Evaluate Structured Reference [[#This Row],[Column]]", () => {
+        const sheet = spreadsheet.getActiveSheet();
+
+        // Setup Table data
+        sheet.setCellValue("A1", "Product");
+        sheet.setCellValue("B1", "Price");
+        sheet.setCellValue("A2", "Apple");
+        sheet.setCellValue("B2", 10);
+        sheet.setCellValue("A3", "Orange");
+        sheet.setCellValue("B3", 20);
+
+        // Create Table
+        const table = new Table("Sales", "A1:B3", sheet);
+        table.addColumn("Product");
+        table.addColumn("Price");
+        sheet.addTable(table);
+
+        const formula = "=Sales[[#This Row],[Price]] * 2";
+
+        const resultRow2 = calculation.calculateFormula(formula, sheet, "C2");
+        expect(resultRow2).toBe(20);
+
+        const resultRow3 = calculation.calculateFormula(formula, sheet, "C3");
+        expect(resultRow3).toBe(40);
+    });
+
     test("Evaluate Structured Reference [Column] (Range)", () => {
         const sheet = spreadsheet.getActiveSheet();
         

@@ -24,8 +24,8 @@ describe("Named Formulas", () => {
         
         sheet.setCellValue("B1", "=MY_SUM + 5");
         
-        // This is expected to fail or return the formula string currently
-        const result = sheet.getCell("B1").getValue();
+        // getValue() returns the raw value/formula; use getCalculatedValue() to evaluate
+        const result = sheet.getCell("B1").getCalculatedValue();
         expect(result).toBe(35);
     });
 });

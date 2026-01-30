@@ -5,6 +5,10 @@ import { Supervisor } from './supervisor.ts';
  * Alignment style.
  */
 export class Alignment extends Supervisor {
+    // Rotation constants
+    public static readonly TEXTROTATION_STACK_EXCEL = 255;
+    public static readonly TEXTROTATION_STACK_PHPSPREADSHEET = -165;
+
     // Horizontal alignment styles
     public static readonly HORIZONTAL_GENERAL = 'general';
     public static readonly HORIZONTAL_LEFT = 'left';
@@ -148,11 +152,25 @@ export class Alignment extends Supervisor {
      * Set text rotation.
      */
     public setTextRotation(rotation: number): this {
+        if (!Number.isFinite(rotation) || !Number.isInteger(rotation)) {
+            throw new Error('Text rotation should be a value between -90 and 90.');
+        }
+
+        // Excel2007 value 255 => PhpSpreadsheet value -165
+        let normalized = rotation;
+        if (normalized === Alignment.TEXTROTATION_STACK_EXCEL) {
+            normalized = Alignment.TEXTROTATION_STACK_PHPSPREADSHEET;
+        }
+
+        if (!((normalized >= -90 && normalized <= 90) || normalized === Alignment.TEXTROTATION_STACK_PHPSPREADSHEET)) {
+            throw new Error('Text rotation should be a value between -90 and 90.');
+        }
+
         if (this.isSupervisor) {
-            const styleArray = this.getStyleArray({ textRotation: rotation });
+            const styleArray = this.getStyleArray({ textRotation: normalized });
             (this.parent as any).applyFromArray(styleArray);
         } else {
-            this.#textRotation = rotation;
+            this.#textRotation = normalized;
         }
         return this;
     }

@@ -102,6 +102,10 @@ export class NumberFormat extends Supervisor {
                 formatCode = NumberFormat.FORMAT_GENERAL;
             }
             this.#formatCode = formatCode;
+
+            // If the format code is explicitly set, treat it as a custom number format
+            // unless it's the built-in General format.
+            this.#builtInFormatCode = formatCode === NumberFormat.FORMAT_GENERAL ? 0 : false;
         }
         return this;
     }
@@ -163,6 +167,9 @@ export class NumberFormat extends Supervisor {
      * @returns The formatted string
      */
     public toFormattedString(value: number | string | null | undefined): string {
-        return NumberFormatter.toFormattedString(value, this.#formatCode);
+        // If this NumberFormat is a supervisor, read the current format from the
+        // shared component (i.e., the cell's current xf style). Using #formatCode
+        // here would ignore mutations done through xfIndex/style changes.
+        return NumberFormatter.toFormattedString(value, this.getFormatCode());
     }
 }

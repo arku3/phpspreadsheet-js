@@ -39,9 +39,9 @@ export class Font extends Supervisor {
     constructor(isSupervisor: boolean = false) {
         super(isSupervisor);
         this.#color = new Color(Color.COLOR_BLACK, isSupervisor);
-        if (isSupervisor) {
-            this.#color.bindParent(this, 'color');
-        }
+        // Bind for both supervisor and non-supervisor so Color knows its parent property.
+        // Non-supervisor Color is still used by the supervisor chain for reading values.
+        this.#color.bindParent(this, 'color');
     }
 
     /**

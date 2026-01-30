@@ -37,7 +37,6 @@ describe('XlsxReader Full Reading', () => {
         sheet3.getCell('B1').setValue('=Sales Data!B2');
 
         const writer = new XlsxWriter(spreadsheet);
-        await writer.save(multiSheetFile);
 
         // Create a simple single-sheet file
         const simpleSpreadsheet = new Spreadsheet();
@@ -45,8 +44,11 @@ describe('XlsxReader Full Reading', () => {
         simpleSpreadsheet.getActiveSheet().getCell('A1').setValue('Hello');
         
         const simpleWriter = new XlsxWriter(simpleSpreadsheet);
-        await simpleWriter.save(simpleFile);
-    });
+        await Promise.all([
+            writer.save(multiSheetFile),
+            simpleWriter.save(simpleFile),
+        ]);
+    }, 30_000);
 
     afterAll(() => {
         if (fs.existsSync(multiSheetFile)) {
@@ -55,7 +57,7 @@ describe('XlsxReader Full Reading', () => {
         if (fs.existsSync(simpleFile)) {
             fs.unlinkSync(simpleFile);
         }
-    });
+    }, 30_000);
 
     it('should list worksheet names from multi-sheet file', async () => {
         const reader = new XlsxReader();

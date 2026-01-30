@@ -70,23 +70,27 @@ export class StylesReader extends ReaderPart {
         }
 
         // Parse cellStyleXfs (named styles)
-        const cellStyleXfMatches = xmlContent.matchAll(/<cellStyleXf[^>]*>([\s\S]*?)<\/cellStyleXf>/g);
-        for (const match of cellStyleXfMatches) {
-            const xfContent = match[1]!;
-            const style = this.parseCellXf(match[0]!, xfContent, styles);
-            styles.cellStyleXfs.push(style);
+        const cellStyleXfsSection = xmlContent.match(/<cellStyleXfs[^>]*>([\s\S]*?)<\/cellStyleXfs>/);
+        if (cellStyleXfsSection && cellStyleXfsSection[1]) {
+            const xfMatches = cellStyleXfsSection[1].matchAll(/<xf[^>]*>([\s\S]*?)<\/xf>/g);
+            for (const match of xfMatches) {
+                const xfTag = match[0]!;
+                const xfContent = match[1]!;
+                const style = this.parseCellXf(xfTag, xfContent, styles);
+                styles.cellStyleXfs.push(style);
+            }
         }
 
         // Parse cellXfs (cell styles)
-        const cellXfMatches = xmlContent.matchAll(/<xf[^>]*>([\s\S]*?)<\/xf>/g);
-        for (const match of cellXfMatches) {
-            const xfTag = match[0]!;
-            // Skip cellStyleXf entries
-            if (xfTag.includes('cellStyleXf')) continue;
-            
-            const xfContent = match[1]!;
-            const style = this.parseCellXf(xfTag, xfContent, styles);
-            styles.cellXfs.push(style);
+        const cellXfsSection = xmlContent.match(/<cellXfs[^>]*>([\s\S]*?)<\/cellXfs>/);
+        if (cellXfsSection && cellXfsSection[1]) {
+            const xfMatches = cellXfsSection[1].matchAll(/<xf[^>]*>([\s\S]*?)<\/xf>/g);
+            for (const match of xfMatches) {
+                const xfTag = match[0]!;
+                const xfContent = match[1]!;
+                const style = this.parseCellXf(xfTag, xfContent, styles);
+                styles.cellXfs.push(style);
+            }
         }
 
         return styles;
@@ -111,13 +115,17 @@ export class StylesReader extends ReaderPart {
         }
 
         // Parse bold
-        if (fontContent.includes('<b/>') || fontContent.includes('<b ')) {
-            font.setBold(true);
+        const boldTagMatch = fontContent.match(/<b(?:[^>]*)\/>/);
+        if (boldTagMatch) {
+            const isFalse = /val="0"/.test(boldTagMatch[0]);
+            font.setBold(!isFalse);
         }
 
         // Parse italic
-        if (fontContent.includes('<i/>') || fontContent.includes('<i ')) {
-            font.setItalic(true);
+        const italicTagMatch = fontContent.match(/<i(?:[^>]*)\/>/);
+        if (italicTagMatch) {
+            const isFalse = /val="0"/.test(italicTagMatch[0]);
+            font.setItalic(!isFalse);
         }
 
         // Parse underline
@@ -129,8 +137,10 @@ export class StylesReader extends ReaderPart {
         }
 
         // Parse strikethrough
-        if (fontContent.includes('<strike/>')) {
-            font.setStrikethrough(true);
+        const strikeTagMatch = fontContent.match(/<strike(?:[^>]*)\/>/);
+        if (strikeTagMatch) {
+            const isFalse = /val="0"/.test(strikeTagMatch[0]);
+            font.setStrikethrough(!isFalse);
         }
 
         // Parse color
@@ -186,9 +196,9 @@ export class StylesReader extends ReaderPart {
         const borders = new Borders();
 
         // Parse left border
-        const leftMatch = borderContent.match(/<left>([\s\S]*?)<\/left>/);
+        const leftMatch = borderContent.match(/<left[^>]*>([\s\S]*?)<\/left>/);
         if (leftMatch) {
-            const leftBorder = this.parseBorder(leftMatch[1]!);
+            const leftBorder = this.parseBorder(leftMatch[0]!);
             borders.getLeft().applyFromArray({
                 borderStyle: leftBorder.getBorderStyle(),
                 color: { argb: leftBorder.getColor().getARGB() }
@@ -196,9 +206,9 @@ export class StylesReader extends ReaderPart {
         }
 
         // Parse right border
-        const rightMatch = borderContent.match(/<right>([\s\S]*?)<\/right>/);
+        const rightMatch = borderContent.match(/<right[^>]*>([\s\S]*?)<\/right>/);
         if (rightMatch) {
-            const rightBorder = this.parseBorder(rightMatch[1]!);
+            const rightBorder = this.parseBorder(rightMatch[0]!);
             borders.getRight().applyFromArray({
                 borderStyle: rightBorder.getBorderStyle(),
                 color: { argb: rightBorder.getColor().getARGB() }
@@ -206,9 +216,9 @@ export class StylesReader extends ReaderPart {
         }
 
         // Parse top border
-        const topMatch = borderContent.match(/<top>([\s\S]*?)<\/top>/);
+        const topMatch = borderContent.match(/<top[^>]*>([\s\S]*?)<\/top>/);
         if (topMatch) {
-            const topBorder = this.parseBorder(topMatch[1]!);
+            const topBorder = this.parseBorder(topMatch[0]!);
             borders.getTop().applyFromArray({
                 borderStyle: topBorder.getBorderStyle(),
                 color: { argb: topBorder.getColor().getARGB() }
@@ -216,9 +226,9 @@ export class StylesReader extends ReaderPart {
         }
 
         // Parse bottom border
-        const bottomMatch = borderContent.match(/<bottom>([\s\S]*?)<\/bottom>/);
+        const bottomMatch = borderContent.match(/<bottom[^>]*>([\s\S]*?)<\/bottom>/);
         if (bottomMatch) {
-            const bottomBorder = this.parseBorder(bottomMatch[1]!);
+            const bottomBorder = this.parseBorder(bottomMatch[0]!);
             borders.getBottom().applyFromArray({
                 borderStyle: bottomBorder.getBorderStyle(),
                 color: { argb: bottomBorder.getColor().getARGB() }
@@ -226,9 +236,9 @@ export class StylesReader extends ReaderPart {
         }
 
         // Parse diagonal border
-        const diagonalMatch = borderContent.match(/<diagonal>([\s\S]*?)<\/diagonal>/);
+        const diagonalMatch = borderContent.match(/<diagonal[^>]*>([\s\S]*?)<\/diagonal>/);
         if (diagonalMatch) {
-            const diagonalBorder = this.parseBorder(diagonalMatch[1]!);
+            const diagonalBorder = this.parseBorder(diagonalMatch[0]!);
             borders.getDiagonal().applyFromArray({
                 borderStyle: diagonalBorder.getBorderStyle(),
                 color: { argb: diagonalBorder.getColor().getARGB() }
@@ -371,7 +381,12 @@ export class StylesReader extends ReaderPart {
 
         const textRotationMatch = alignmentAttrs.match(/textRotation="([^"]*)"/);
         if (textRotationMatch) {
-            alignment.setTextRotation(parseInt(textRotationMatch[1]!, 10));
+            let textRotation = parseInt(textRotationMatch[1]!, 10);
+            // Excel stores 91..180 as -1..-90, and 255 as stacked.
+            if (textRotation > 90) {
+                textRotation = 90 - textRotation;
+            }
+            alignment.setTextRotation(textRotation);
         }
 
         const wrapTextMatch = alignmentAttrs.match(/wrapText="([^"]*)"/);

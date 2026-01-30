@@ -105,7 +105,21 @@ export class Color extends Supervisor {
         if (!this.parent) {
             throw new Error('No parent found.');
         }
-        return (this.parent as any).getSharedComponent().getColor();
+
+        // Color can be used as a direct font/border color (`color`) or as a fill
+        // start/end color (`startColor`/`endColor`). Resolve via the bound property.
+        const key = (this as any).parentPropertyName || 'color';
+        const sharedParent = (this.parent as any).getSharedComponent();
+        if (key === 'startColor' && typeof sharedParent.getStartColor === 'function') {
+            return sharedParent.getStartColor();
+        }
+        if (key === 'endColor' && typeof sharedParent.getEndColor === 'function') {
+            return sharedParent.getEndColor();
+        }
+        if (typeof sharedParent.getColor === 'function') {
+            return sharedParent.getColor();
+        }
+        throw new Error(`Unsupported color parent property: ${String(key)}`);
     }
 
     /**
@@ -152,7 +166,7 @@ export class Color extends Supervisor {
     public setARGB(colorValue: string = Color.COLOR_BLACK): void {
         if (this.isSupervisor) {
             const styleArray = this.getStyleArray({ argb: colorValue, theme: -1 });
-            (this.parent as any).applyFromArray(styleArray);
+            this.getActiveSheet().getStyle(this.getSelectedCells()).applyFromArray(styleArray);
         } else {
             this.#theme = -1;
             this.#argb = this.validateColor(colorValue);
@@ -227,7 +241,7 @@ export class Color extends Supervisor {
     public setTheme(theme: number): void {
         if (this.isSupervisor) {
             const styleArray = this.getStyleArray({ theme: theme });
-            (this.parent as any).applyFromArray(styleArray);
+            this.getActiveSheet().getStyle(this.getSelectedCells()).applyFromArray(styleArray);
         } else {
             this.#theme = theme;
         }
@@ -253,7 +267,7 @@ export class Color extends Supervisor {
     public setHasChanged(value: boolean): void {
         if (this.isSupervisor) {
             const styleArray = this.getStyleArray({ hasChanged: value });
-            (this.parent as any).applyFromArray(styleArray);
+            this.getActiveSheet().getStyle(this.getSelectedCells()).applyFromArray(styleArray);
         } else {
             this.#hasChanged = value;
         }
@@ -279,7 +293,7 @@ export class Color extends Supervisor {
     public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number; hasChanged?: boolean }): this {
         if (this.isSupervisor) {
             const styleArrayLocal = this.getStyleArray(styleArray);
-            (this.parent as any).applyFromArray(styleArrayLocal);
+            this.getActiveSheet().getStyle(this.getSelectedCells()).applyFromArray(styleArrayLocal);
             return this;
         }
 

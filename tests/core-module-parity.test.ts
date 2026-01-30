@@ -272,7 +272,8 @@ describe('Core Module Parity Fixes', () => {
             spreadsheet.createSheet('Sheet2');
             spreadsheet.createSheet('Sheet3');
             
-            spreadsheet.removeSheetByIndex(1);
+            // PhpSpreadsheet uses 0-based sheet indices, including the default sheet.
+            spreadsheet.removeSheetByIndex(2);
             
             // Default sheet + Sheet1 + Sheet3 = 3 sheets (Sheet2 removed)
             expect(spreadsheet.getSheetCount()).toBe(3);
@@ -414,14 +415,16 @@ describe('Core Module Parity Fixes', () => {
             expect(cell.isLocked()).toBe(true);
         });
 
-        it('should return null for hyperlink placeholder', () => {
+        it('should return empty hyperlink instance by default', () => {
             const spreadsheet = new Spreadsheet();
             const worksheet = spreadsheet.getActiveSheet();
             
             const cell = worksheet.getCell('A1');
             
-            // Placeholder returns null
-            expect(cell.getHyperlink()).toBeNull();
+            // Align with PhpSpreadsheet: getHyperlink() returns an object; use hasHyperlink/isEmpty to test presence.
+            expect(cell.getHyperlink()).not.toBeNull();
+            expect(cell.getHyperlink().isEmpty()).toBe(true);
+            expect(cell.hasHyperlink()).toBe(false);
         });
 
         it('should return null for data validation placeholder', () => {

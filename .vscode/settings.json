@@ -1,5 +1,3 @@
 {
-    "i18n-ally.localesPaths": [
-        "php-src/src/PhpSpreadsheet/Calculation/locale"
-    ]
+"typescript.experimental.useTsgo": true
 }

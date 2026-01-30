@@ -90,7 +90,8 @@ describe('XLSX Worksheet Writer - Conditional Formatting', () => {
         
         expect(xml).toContain('<conditionalFormatting sqref="C1:C10">');
         expect(xml).toContain('<cfRule type="iconSet"');
-        expect(xml).toContain('<iconSet iconSet="3Arrows">');
+        // xmlbuilder2 self-closes empty elements; accept either form.
+        expect(xml).toMatch(/<iconSet iconSet="3Arrows"(?:\/>|>)/);
         expect(xml).toContain('<cfvo type="percent" val="0"/>');
         expect(xml).toContain('<cfvo type="percent" val="33"/>');
         expect(xml).toContain('<cfvo type="percent" val="67"/>');

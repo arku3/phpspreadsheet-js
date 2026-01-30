@@ -150,7 +150,10 @@ export class Cell {
      * Get cell style.
      */
     public getStyle(): Style {
-        return this.#worksheet.getParent().getCellXfByIndex(this.#xfIndex);
+        // Match PhpSpreadsheet behavior: Cell::getStyle() returns a supervisor style
+        // bound to this cell coordinate, so mutations create/update an xf entry and
+        // update this cell's xfIndex rather than mutating a shared Style instance.
+        return this.#worksheet.getStyle(this.getCoordinate());
     }
 
     /**

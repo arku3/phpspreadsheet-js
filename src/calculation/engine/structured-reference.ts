@@ -26,6 +26,8 @@ export class StructuredReference {
         const worksheet = cell.getWorksheet();
         const workbook = worksheet.getParent();
 
+        const [cellCol1, cellRow1] = Coordinate.indexesFromString(cell.getCoordinate());
+
         // 1. Identify Table Name and Reference part
         // Syntax: TableName[[#Specifier],[Column]] or [Column]
         let tableName = '';
@@ -47,7 +49,7 @@ export class StructuredReference {
             table = worksheet.getTableByName(tableName);
             if (!table) {
                 // Check workbook-wide tables
-                for (let i = 0; i < 100; i++) { // Mock loop to find table across sheets if needed
+                for (let i = 0; i < workbook.getSheetCount(); i++) {
                     const sheet = workbook.getSheet(i);
                     if (!sheet) break;
                     table = sheet.getTableByName(tableName);
@@ -60,9 +62,7 @@ export class StructuredReference {
             for (const t of tables) {
                 const boundaries = t.getRangeBoundaries();
                 const [[minCol, minRow], [maxCol, maxRow]] = boundaries;
-                const cellCol = cell.getColumn();
-                const cellRow = cell.getRow();
-                if (cellCol >= minCol && cellCol <= maxCol && cellRow >= minRow && cellRow <= maxRow) {
+                if (cellCol1 >= minCol && cellCol1 <= maxCol && cellRow1 >= minRow && cellRow1 <= maxRow) {
                     table = t;
                     break;
                 }
@@ -90,25 +90,102 @@ export class StructuredReference {
         
         if (reference.includes('[@') || reference.includes('[#This Row]')) {
             // Current row reference
-            return this.resolveRowReference(reference, table, cell.getRow());
+            const cellRef = this.resolveRowReference(reference, table, cellRow1);
+            if (cellRef === '#REF!') return cellRef;
+
+            const tableSheet = table.getWorksheet();
+            if (tableSheet !== worksheet) {
+                return `'${tableSheet.getTitle()}'!${cellRef}`;
+            }
+
+            return cellRef;
         }
 
-        return this.resolveColumnReference(reference, table, headerRow, firstDataRow, lastDataRow, totalsRow);
+        const rangeRef = this.resolveColumnReference(reference, table, headerRow, firstDataRow, lastDataRow, totalsRow);
+        if (rangeRef === '#REF!') return rangeRef;
+
+        const tableSheet = table.getWorksheet();
+        if (tableSheet !== worksheet) {
+            return `'${tableSheet.getTitle()}'!${rangeRef}`;
+        }
+
+        return rangeRef;
     }
 
     private resolveRowReference(reference: string, table: Table, row: number): string {
-        // [@ColumnName]
-        const colNameMatch = reference.match(/\[?@\[?([^\]]+)\]?\]?/);
-        if (colNameMatch && colNameMatch[1]) {
-            const colName = colNameMatch[1];
-            const column = table.getColumn(colName);
-            if (column) {
-                const [[minCol]] = table.getRangeBoundaries();
-                const colIndex = minCol + column.getIndex();
-                return Coordinate.stringFromCoordinate(colIndex, row);
+        // Supports [@Column] and [[#This Row],[Column]]
+
+        const extractTopLevelGroups = (text: string): string[] => {
+            const groups: string[] = [];
+            let depth = 0;
+            let start = -1;
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                if (c === '[') {
+                    if (depth === 0) start = i;
+                    depth++;
+                } else if (c === ']') {
+                    depth = Math.max(0, depth - 1);
+                    if (depth === 0 && start !== -1) {
+                        groups.push(text.slice(start + 1, i));
+                        start = -1;
+                    }
+                }
             }
+            return groups;
+        };
+
+        // PhpSpreadsheet removes the "[#This Row]," marker before column substitution.
+        let working = reference;
+        if (working.includes(`[${StructuredReference.ITEM_SPECIFIER_THIS_ROW}],`)) {
+            working = working.replace(`[${StructuredReference.ITEM_SPECIFIER_THIS_ROW}],`, '');
         }
-        return '#REF!';
+        if (working.includes(`[${StructuredReference.ITEM_SPECIFIER_THIS_ROW}]`)) {
+            working = working.replace(`[${StructuredReference.ITEM_SPECIFIER_THIS_ROW}]`, '');
+        }
+
+        // Fast-path for [@Column]
+        const atMatch = working.match(/\[@([^\]]+)\]/);
+        if (atMatch?.[1]) {
+            const colName = atMatch[1].trim();
+            const column = table.getColumn(colName);
+            if (!column) return '#REF!';
+            const [[minCol]] = table.getRangeBoundaries();
+            return Coordinate.stringFromCoordinate(minCol + column.getIndex(), row);
+        }
+
+        // General case: find the first non-# group, drilling into nested brackets.
+        const groups = extractTopLevelGroups(working);
+        let colName = '';
+        for (const group of groups) {
+            const trimmed = group.trim();
+            if (!trimmed) continue;
+            if (trimmed.startsWith('#')) continue;
+
+            // Nested form: [[Column]] -> outer group content is "[Column]".
+            if (trimmed.includes('[')) {
+                const inner = extractTopLevelGroups(trimmed)
+                    .map(s => s.trim())
+                    .find(s => s !== '' && !s.startsWith('#'));
+                if (inner) {
+                    colName = inner;
+                    break;
+                }
+            }
+
+            colName = trimmed;
+            break;
+        }
+
+        colName = colName.trim();
+        if (!colName) return '#REF!';
+
+        const column = table.getColumn(colName);
+        if (!column) return '#REF!';
+
+        const [[minCol]] = table.getRangeBoundaries();
+        const colIndex = minCol + column.getIndex();
+        return Coordinate.stringFromCoordinate(colIndex, row);
     }
 
     private resolveColumnReference(
