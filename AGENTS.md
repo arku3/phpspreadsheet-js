@@ -124,7 +124,7 @@ As the project grows, follow this intended structure:
 - **Commit Messages:** Use descriptive, conventional commit messages (e.g., `feat:`, `fix:`, `docs:`) that reflect the work done.
 
 ### Parallelism & Subagents
-- **Subagents:** For complex tasks with independent sub-tasks (e.g., refactoring multiple files, performing multiple parity reviews), proactively use the `task` tool with `subagent_type: "general"` or `"explore"` to execute them in parallel.
+- **Default to Subagents:** When a task can be decomposed, use subagents aggressively. Prefer one subagent per failing test cluster, per file, or per independent parity check. Ask them not only provide insight, but actually make edit.
 - **Task Decomposition:** Break down large requests into smaller, actionable tasks that can be delegated to subagents.
 - **Reporting:** Ensure subagents provide a clear summary of their work and any identified issues.
 - **PHP Parity:** When delegating tasks to subagents, ALWAYS remind them to check the original implementation with the PHP counterpart in `php-src/src/PhpSpreadsheet/` to ensure parity and review logic.
