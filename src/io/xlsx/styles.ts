@@ -56,12 +56,10 @@ export class Styles extends WriterPart {
         });
 
         // cellStyleXfs
-        const cellStyleXfs = root.ele('cellStyleXfs', { count: 1 });
-        cellStyleXfs.ele('xf', {
-            numFmtId: 0,
-            fontId: 0,
-            fillId: 0,
-            borderId: 0
+        const cellStyleXfCollection = spreadsheet.getCellStyleXfCollection();
+        const cellStyleXfs = root.ele('cellStyleXfs', { count: cellStyleXfCollection.length });
+        cellStyleXfCollection.forEach((cellStyleXf) => {
+            this.writeCellStyleXf(cellStyleXfs, cellStyleXf, spreadsheet, '');
         });
 
         // cellXfs

@@ -37,7 +37,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [ ] **I/O Module (Writer) Fixes**
             - [x] Implement `SharedStrings.controlCharacterPHP2OOXML` sanitization.
             - [x] Refactor Relationship IDs (`rId`) in `Workbook.ts` to be dynamic.
-            - [ ] Support multiple `cellStyleXfs` instead of one hardcoded entry.
+            - [x] Support multiple `cellStyleXfs` instead of one hardcoded entry.
             - [ ] Fix Rich Text superscript/subscript parity between Styles and StringTable.
         
         - [ ] **Memory & Disposal**
