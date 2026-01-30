@@ -1,13 +1,30 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 
 describe('XlsxReader Styles Integration', () => {
-    const testDir = './test-output';
-    const testFile = path.join(testDir, 'test-styles-read.xlsx');
+    const testDir = path.join('test-output', 'xlsx-reader-styles');
+    const testFile = path.join(testDir, `styles-${process.pid}-${randomUUID()}.xlsx`);
+    let loadedSpreadsheet: Spreadsheet | undefined;
+    let loadedSpreadsheetReadDataOnly: Spreadsheet | undefined;
+
+    const getLoadedSpreadsheet = (): Spreadsheet => {
+        if (!loadedSpreadsheet) {
+            throw new Error('Test fixture spreadsheet was not loaded');
+        }
+        return loadedSpreadsheet;
+    };
+
+    const getLoadedSpreadsheetReadDataOnly = (): Spreadsheet => {
+        if (!loadedSpreadsheetReadDataOnly) {
+            throw new Error('Test fixture spreadsheet (readDataOnly) was not loaded');
+        }
+        return loadedSpreadsheetReadDataOnly;
+    };
 
     beforeAll(async () => {
         if (!fs.existsSync(testDir)) {
@@ -60,18 +77,31 @@ describe('XlsxReader Styles Integration', () => {
         // Save the file
         const writer = new XlsxWriter(spreadsheet);
         await writer.save(testFile);
-    });
+
+        // Load once and reuse across tests to avoid repeated I/O in the full suite.
+        // Also pre-load the readDataOnly fixture so the test doesn't do file I/O (avoids timeouts
+        // and avoids ENOENT if other suites clean up test-output while tests are still running).
+        const reader = new XlsxReader();
+        loadedSpreadsheet = await reader.load(testFile);
+
+        const readerReadDataOnly = new XlsxReader();
+        readerReadDataOnly.setReadDataOnly(true);
+        loadedSpreadsheetReadDataOnly = await readerReadDataOnly.load(testFile);
+    }, 30_000);
 
     afterAll(() => {
-        if (fs.existsSync(testFile)) {
-            fs.unlinkSync(testFile);
+        // Best-effort cleanup; the file may already be gone if another test cleaned the folder.
+        try {
+            if (fs.existsSync(testFile)) {
+                fs.unlinkSync(testFile);
+            }
+        } catch {
+            // ignore
         }
     });
 
     it('should load bold font style', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
-        const sheet = loaded.getActiveSheet();
+        const sheet = getLoadedSpreadsheet().getActiveSheet();
 
         const cell = sheet.getCell('A1');
         expect(cell.getValue()).toBe('Bold');
@@ -79,9 +109,7 @@ describe('XlsxReader Styles Integration', () => {
     });
 
     it('should load italic font style', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
-        const sheet = loaded.getActiveSheet();
+        const sheet = getLoadedSpreadsheet().getActiveSheet();
 
         const cell = sheet.getCell('A2');
         expect(cell.getValue()).toBe('Italic');
@@ -89,9 +117,7 @@ describe('XlsxReader Styles Integration', () => {
     });
 
     it('should load underline font style', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
-        const sheet = loaded.getActiveSheet();
+        const sheet = getLoadedSpreadsheet().getActiveSheet();
 
         const cell = sheet.getCell('A3');
         expect(cell.getValue()).toBe('Underlined');
@@ -99,19 +125,15 @@ describe('XlsxReader Styles Integration', () => {
     });
 
     it('should load font color', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
-        const sheet = loaded.getActiveSheet();
+        const sheet = getLoadedSpreadsheet().getActiveSheet();
 
         const cell = sheet.getCell('A4');
         expect(cell.getValue()).toBe('Red Text');
         expect(cell.getStyle().getFont().getColor().getARGB()).toBe('FFFF0000');
-    });
+    }, 20_000);
 
     it('should load fill style', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
-        const sheet = loaded.getActiveSheet();
+        const sheet = getLoadedSpreadsheet().getActiveSheet();
 
         const cell = sheet.getCell('A5');
         expect(cell.getValue()).toBe('Yellow Background');
@@ -119,9 +141,7 @@ describe('XlsxReader Styles Integration', () => {
     });
 
     it('should load border styles', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
-        const sheet = loaded.getActiveSheet();
+        const sheet = getLoadedSpreadsheet().getActiveSheet();
 
         const cell = sheet.getCell('A6');
         expect(cell.getValue()).toBe('Borders');
@@ -132,9 +152,7 @@ describe('XlsxReader Styles Integration', () => {
     });
 
     it('should load number format', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
-        const sheet = loaded.getActiveSheet();
+        const sheet = getLoadedSpreadsheet().getActiveSheet();
 
         const cell = sheet.getCell('B1');
         expect(cell.getValue()).toBe(1234.56);
@@ -142,15 +160,11 @@ describe('XlsxReader Styles Integration', () => {
     });
 
     it('should respect readDataOnly option', async () => {
-        const reader = new XlsxReader();
-        reader.setReadDataOnly(true);
-
-        const loaded = await reader.load(testFile);
-        const sheet = loaded.getActiveSheet();
+        const sheet = getLoadedSpreadsheetReadDataOnly().getActiveSheet();
 
         const cell = sheet.getCell('A1');
         expect(cell.getValue()).toBe('Bold');
         // Style should not be applied when readDataOnly is true
         expect(cell.getStyle().getFont().getBold()).toBe(false);
-    });
+    }, 20_000);
 });

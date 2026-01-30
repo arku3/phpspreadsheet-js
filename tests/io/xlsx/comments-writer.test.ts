@@ -11,7 +11,10 @@ describe('XlsxWriter Classic Comments', () => {
     const testDir = path.resolve(process.cwd(), 'test-output', 'xlsx-comments-writer');
 
     const createTestFile = async (): Promise<string> => {
-        const testFile = path.join(testDir, `test-comments-${crypto.randomUUID()}.xlsx`);
+        const testFile = path.join(
+            testDir,
+            `test-comments-${process.pid}-${crypto.randomUUID()}.xlsx`,
+        );
 
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
@@ -38,7 +41,8 @@ describe('XlsxWriter Classic Comments', () => {
     test('writes required parts and relationships', async () => {
         const testFile = await createTestFile();
         try {
-            const zip = await unzipper.Open.file(testFile);
+            const xlsxBuffer = await fs.promises.readFile(testFile);
+            const zip = await unzipper.Open.buffer(xlsxBuffer);
 
             const typesFile = zip.files.find((f) => f.path === '[Content_Types].xml');
             expect(typesFile).toBeDefined();
@@ -102,5 +106,5 @@ describe('XlsxWriter Classic Comments', () => {
         } finally {
             await fs.promises.unlink(testFile).catch(() => undefined);
         }
-    }, 15_000);
+    }, 30_000);
 });

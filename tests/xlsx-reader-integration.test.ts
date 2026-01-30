@@ -6,12 +6,23 @@ import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 
 describe('XlsxReader Load Integration', () => {
-    const testDir = './test-output';
+    const SETUP_TIMEOUT_MS = 30_000;
+    const SLOW_TEST_TIMEOUT_MS = 20_000;
+
+    // Use a dedicated folder to avoid collisions with other integration tests
+    // that also write into ./test-output.
+    const testDir = path.resolve(process.cwd(), 'test-output', 'xlsx-reader-integration');
     const testFile = path.join(testDir, 'test-load.xlsx');
+
+    let loadedOnce: Spreadsheet;
 
     beforeAll(async () => {
         if (!fs.existsSync(testDir)) {
             fs.mkdirSync(testDir, { recursive: true });
+        }
+
+        if (fs.existsSync(testFile)) {
+            fs.unlinkSync(testFile);
         }
 
         // Create a comprehensive XLSX file with various data types
@@ -48,7 +59,12 @@ describe('XlsxReader Load Integration', () => {
         // Save the file
         const writer = new XlsxWriter(spreadsheet);
         await writer.save(testFile);
-    });
+
+        // Load once for the rest of the assertions to avoid repeated IO.
+        // This makes the suite stable under full-suite contention.
+        const reader = new XlsxReader();
+        loadedOnce = await reader.load(testFile);
+    }, SETUP_TIMEOUT_MS);
 
     afterAll(() => {
         if (fs.existsSync(testFile)) {
@@ -57,8 +73,7 @@ describe('XlsxReader Load Integration', () => {
     });
 
     it('should load spreadsheet with correct worksheet structure', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
+        const loaded = loadedOnce;
 
         expect(loaded).toBeDefined();
         expect(loaded).toBeInstanceOf(Spreadsheet);
@@ -69,8 +84,7 @@ describe('XlsxReader Load Integration', () => {
     });
 
     it('should load string values correctly', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
+        const loaded = loadedOnce;
         const sheet = loaded.getActiveSheet();
 
         expect(sheet.getCell('A1').getValue()).toBe('Product');
@@ -80,8 +94,7 @@ describe('XlsxReader Load Integration', () => {
     });
 
     it('should load numeric values correctly', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
+        const loaded = loadedOnce;
         const sheet = loaded.getActiveSheet();
 
         expect(sheet.getCell('B2').getValue()).toBe(10);
@@ -92,8 +105,7 @@ describe('XlsxReader Load Integration', () => {
     });
 
     it('should load decimal values correctly', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
+        const loaded = loadedOnce;
         const sheet = loaded.getActiveSheet();
 
         expect(sheet.getCell('C2').getValue()).toBe(29.99);
@@ -103,8 +115,7 @@ describe('XlsxReader Load Integration', () => {
     });
 
     it('should load formulas correctly', async () => {
-        const reader = new XlsxReader();
-        const loaded = await reader.load(testFile);
+        const loaded = loadedOnce;
         const sheet = loaded.getActiveSheet();
 
         const formulaCell = sheet.getCell('D2');
@@ -112,40 +123,51 @@ describe('XlsxReader Load Integration', () => {
         expect(formulaCell.isFormula()).toBe(true);
     });
 
-    it('should load multi-sheet file correctly', async () => {
-        const multiFile = path.join(testDir, 'test-multi-load.xlsx');
+    it(
+        'should load multi-sheet file correctly',
+        async () => {
+            const multiFile = path.join(testDir, 'test-multi-load.xlsx');
 
-        // Create multi-sheet file
-        const spreadsheet = new Spreadsheet();
-        const sheet1 = spreadsheet.getActiveSheet();
-        sheet1.setTitle('Sheet1');
-        sheet1.getCell('A1').setValue('Data from Sheet1');
+            try {
+                // Create multi-sheet file
+                const spreadsheet = new Spreadsheet();
+                const sheet1 = spreadsheet.getActiveSheet();
+                sheet1.setTitle('Sheet1');
+                sheet1.getCell('A1').setValue('Data from Sheet1');
 
-        const sheet2 = spreadsheet.createSheet();
-        sheet2.setTitle('Sheet2');
-        sheet2.getCell('A1').setValue('Data from Sheet2');
+                const sheet2 = spreadsheet.createSheet();
+                sheet2.setTitle('Sheet2');
+                sheet2.getCell('A1').setValue('Data from Sheet2');
 
-        const writer = new XlsxWriter(spreadsheet);
-        await writer.save(multiFile);
+                if (fs.existsSync(multiFile)) {
+                    fs.unlinkSync(multiFile);
+                }
 
-        // Load and verify
-        const reader = new XlsxReader();
-        const loaded = await reader.load(multiFile);
+                const writer = new XlsxWriter(spreadsheet);
+                await writer.save(multiFile);
 
-        // Expect 2 sheets (Sheet1 and Sheet2)
-        expect(loaded.getSheetCount()).toBe(2);
+                // Load and verify
+                const reader = new XlsxReader();
+                const loaded = await reader.load(multiFile);
 
-        const loadedSheet1 = loaded.getSheetByName('Sheet1');
-        const loadedSheet2 = loaded.getSheetByName('Sheet2');
+                // Expect 2 sheets (Sheet1 and Sheet2)
+                expect(loaded.getSheetCount()).toBe(2);
 
-        expect(loadedSheet1).toBeDefined();
-        expect(loadedSheet2).toBeDefined();
-        expect(loadedSheet1!.getCell('A1').getValue()).toBe('Data from Sheet1');
-        expect(loadedSheet2!.getCell('A1').getValue()).toBe('Data from Sheet2');
+                const loadedSheet1 = loaded.getSheetByName('Sheet1');
+                const loadedSheet2 = loaded.getSheetByName('Sheet2');
 
-        // Cleanup
-        fs.unlinkSync(multiFile);
-    });
+                expect(loadedSheet1).toBeDefined();
+                expect(loadedSheet2).toBeDefined();
+                expect(loadedSheet1!.getCell('A1').getValue()).toBe('Data from Sheet1');
+                expect(loadedSheet2!.getCell('A1').getValue()).toBe('Data from Sheet2');
+            } finally {
+                if (fs.existsSync(multiFile)) {
+                    fs.unlinkSync(multiFile);
+                }
+            }
+        },
+        SLOW_TEST_TIMEOUT_MS,
+    );
 
     it('should respect read filter', async () => {
         const reader = new XlsxReader();
