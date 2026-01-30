@@ -1,5 +1,7 @@
 import { create } from 'xmlbuilder2';
 import { Spreadsheet } from '../../core/spreadsheet.ts';
+import { Drawing } from '../../worksheet/drawing/drawing.ts';
+import { DrawingML } from './drawingml.ts';
 import { WriterPart } from './writer-part.ts';
 
 /**
@@ -74,6 +76,17 @@ export class ContentTypes extends WriterPart {
             );
         }
 
+        // Worksheet drawings (DrawingML)
+        for (let i = 0; i < sheetCount; i++) {
+            const sheet = spreadsheet.getSheet(i);
+            if (sheet.getDrawingCollection().length === 0) continue;
+            this.writeOverrideContentType(
+                root,
+                `/xl/drawings/drawing${i + 1}.xml`,
+                'application/vnd.openxmlformats-officedocument.drawing+xml',
+            );
+        }
+
         // Shared strings
         this.writeOverrideContentType(
             root,
@@ -103,6 +116,27 @@ export class ContentTypes extends WriterPart {
                     'application/vnd.openxmlformats-officedocument.spreadsheetml.comments+xml',
                 );
             }
+        }
+
+        // Image defaults used by drawings
+        const imageExtensions = new Set<string>();
+        for (let i = 0; i < sheetCount; i++) {
+            const sheet = spreadsheet.getSheet(i);
+            for (const d of sheet.getDrawingCollection()) {
+                // Only Drawing is supported for now.
+                if (d instanceof Drawing) {
+                    try {
+                        const ext = DrawingML.inferImageExtensionForContentTypes(d);
+                        if (ext) imageExtensions.add(ext.toLowerCase());
+                    } catch {
+                        // ignore; writer will throw later if unsupported
+                    }
+                }
+            }
+        }
+
+        for (const ext of imageExtensions) {
+            this.writeDefaultContentType(root, ext, DrawingML.contentTypeForImageExtension(ext));
         }
 
         return root.end({ prettyPrint: true });

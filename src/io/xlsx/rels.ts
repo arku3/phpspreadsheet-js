@@ -183,6 +183,16 @@ export class Rels extends WriterPart {
             });
         }
 
+        // Worksheet drawings (DrawingML)
+        // Use a stable non-numeric relationship id so hyperlink rId1.. assumptions remain intact.
+        if (worksheet.getDrawingCollection().length > 0) {
+            relationships.push({
+                id: 'rId_drawing1',
+                type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing',
+                target: `../drawings/drawing${worksheetId}.xml`,
+            });
+        }
+
         // Classic comments (note): worksheet -> vml + comments
         // Use PhpSpreadsheet-compatible relationship ids so the worksheet XML can refer
         // to a stable legacyDrawing id without consuming numeric rIds.

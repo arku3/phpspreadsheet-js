@@ -11,6 +11,7 @@ import type { IWriter } from './i-writer.ts';
 import { Comments } from './xlsx/comments.ts';
 import { ContentTypes } from './xlsx/content-types.ts';
 import { DocProps } from './xlsx/doc-props.ts';
+import { DrawingML } from './xlsx/drawingml.ts';
 import { Rels } from './xlsx/rels.ts';
 import { StringTable } from './xlsx/string-table.ts';
 import { Styles } from './xlsx/styles.ts';
@@ -44,6 +45,7 @@ export class XlsxWriter implements IWriter {
     #writerPartDocProps: DocProps;
     #writerPartTheme: Theme;
     #writerPartComments: Comments;
+    #writerPartDrawingML: DrawingML;
 
     constructor(spreadsheet: Spreadsheet) {
         this.#spreadsheet = spreadsheet;
@@ -57,6 +59,7 @@ export class XlsxWriter implements IWriter {
         this.#writerPartDocProps = new DocProps(this);
         this.#writerPartTheme = new Theme(this);
         this.#writerPartComments = new Comments(this);
+        this.#writerPartDrawingML = new DrawingML(this);
     }
 
     public getFontHashTable(): HashTable<Font> {
@@ -200,6 +203,8 @@ export class XlsxWriter implements IWriter {
             );
 
             // 7. Add worksheets
+            let nextImageDataIndex = 1;
+            const mediaWritten = new Set<string>();
             for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
                 const sheet = this.#spreadsheet.getSheet(i);
                 archive.append(this.#writerPartWorksheet.writeWorksheet(sheet, this.#stringTable), {
@@ -222,6 +227,29 @@ export class XlsxWriter implements IWriter {
                     archive.append(this.#writerPartComments.writeVmlDrawing(sheet), {
                         name: `xl/drawings/vmlDrawing${i + 1}.vml`,
                     });
+                }
+
+                // Worksheet drawings (DrawingML)
+                const drawingParts = this.#writerPartDrawingML.writeWorksheetDrawingParts(
+                    sheet,
+                    i + 1,
+                    nextImageDataIndex,
+                );
+                if (drawingParts) {
+                    nextImageDataIndex = drawingParts.nextImageDataIndex;
+                    archive.append(drawingParts.drawingXml, {
+                        name: `xl/drawings/drawing${i + 1}.xml`,
+                    });
+                    archive.append(drawingParts.drawingRelsXml, {
+                        name: `xl/drawings/_rels/drawing${i + 1}.xml.rels`,
+                    });
+
+                    for (const media of drawingParts.mediaFiles) {
+                        const zipPath = `xl/media/${media.filename}`;
+                        if (mediaWritten.has(zipPath)) continue;
+                        mediaWritten.add(zipPath);
+                        archive.append(Buffer.from(media.data), { name: zipPath });
+                    }
                 }
             }
 

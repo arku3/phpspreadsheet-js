@@ -72,9 +72,6 @@ export class Worksheet extends WriterPart {
         // hyperlinks
         this.writeHyperlinks(root, worksheet);
 
-        // legacyDrawing (classic comments)
-        this.writeLegacyDrawing(root, worksheet);
-
         // pageMargins
         const margins = worksheet.getPageMargins();
         root.ele('pageMargins', {
@@ -89,6 +86,12 @@ export class Worksheet extends WriterPart {
         // pageSetup
         this.writePageSetup(root, worksheet);
 
+        // drawing (DrawingML worksheet images)
+        this.writeDrawing(root, worksheet);
+
+        // legacyDrawing (classic comments)
+        this.writeLegacyDrawing(root, worksheet);
+
         return root.end({ prettyPrint: true });
     }
 
@@ -102,6 +105,16 @@ export class Worksheet extends WriterPart {
 
         root.ele('legacyDrawing', {
             'r:id': 'rId_comments_vml1',
+        });
+    }
+
+    private writeDrawing(root: any, worksheet: CoreWorksheet): void {
+        if (worksheet.getDrawingCollection().length === 0) {
+            return;
+        }
+
+        root.ele('drawing', {
+            'r:id': 'rId_drawing1',
         });
     }
 
