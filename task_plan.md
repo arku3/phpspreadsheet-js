@@ -30,7 +30,9 @@ Complete systematic parity fixes identified in the review and implement the XLSX
 
         - [ ] **Calculation Engine Fixes**
             - [x] Implement `DateTimeExcel` category (TODAY, NOW, DATE, YEAR, MONTH, DAY, WEEKDAY, TIME, HOUR, MINUTE, DATEDIF, EOMONTH, EDATE).
-            - [ ] Implement missing categories: `Financial`, `Engineering`, `Statistical`.
+            - [x] Implement `Financial` category (FV, PV, PMT, NPER, RATE, NPV, IRR).
+            - [ ] Implement `Engineering` category.
+            - [ ] Implement additional `Statistical` functions.
             - [ ] Add support for R1C1 reference conversion.
             - [ ] Implement `Calculation.getFunctions()` metadata retrieval.
             - [ ] Implement intersection (` `) and union (`,`) operator evaluation parity.
