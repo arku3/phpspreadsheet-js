@@ -125,6 +125,7 @@ As the project grows, follow this intended structure:
 
 ### Parallelism & Subagents
 - **Default to Subagents:** When a task can be decomposed, use subagents aggressively. Prefer one subagent per failing test cluster, per file, or per independent parity check. Ask them not only provide insight, but actually make edit.
+- **Senior Delegation:** Treat yourself as the integrator/reviewer. Default to outsourcing implementation work to subagents even when you can only run one at a time; reserve your time for architecture decisions, reviewing diffs, resolving conflicts, running tests, and landing clean commits.
 - **Concurrent Safety:** When instructing subagents, explicitly tell them to avoid undoing, removing, reformatting, or otherwise modifying files that are outside their assigned scope (these may be concurrent work from other subagents).
 - **Dependency Safety:** Do not run subagents concurrently on dependent tasks. Sequence work where one task needs another's output (e.g., define/land public APIs before writing tests; finish exploration/decision before implementation).
 - **Task Decomposition:** Break down large requests into smaller, actionable tasks that can be delegated to subagents.
