@@ -935,4 +935,552 @@ export class Worksheet {
         const range = `A1:${highest.column}${highest.row}`;
         return this.rangeToArray(range, nullValue, calculateFormulas, formatData, returnCellRef, ignoreHidden);
     }
+
+    /**
+     * Insert a new row(s) before a specific row.
+     *
+     * @param before Row number to insert before
+     * @param numberOfRows Number of rows to insert
+     */
+    public insertNewRowBefore(before: number, numberOfRows: number = 1): this {
+        if (before < 1) {
+            throw new Error('Rows can only be inserted before at least row 1.');
+        }
+        
+        // Shift cells down
+        this.#shiftCellsDown(before, numberOfRows);
+        
+        // Adjust merge cells
+        this.#adjustMergeCellsAfterRowInsert(before, numberOfRows);
+        
+        // Adjust row dimensions
+        this.#adjustRowDimensionsAfterInsert(before, numberOfRows);
+        
+        // Clear calculation cache
+        this.clearCalculationCache();
+        
+        return this;
+    }
+
+    /**
+     * Insert a new column(s) before a specific column.
+     *
+     * @param before Column letter to insert before (e.g. 'A')
+     * @param numberOfColumns Number of columns to insert
+     */
+    public insertNewColumnBefore(before: string, numberOfColumns: number = 1): this {
+        const beforeIndex = Coordinate.columnIndexFromString(before);
+        if (beforeIndex < 1) {
+            throw new Error('Columns can only be inserted before at least column A.');
+        }
+        
+        // Shift cells right
+        this.#shiftCellsRight(before, numberOfColumns);
+        
+        // Adjust merge cells
+        this.#adjustMergeCellsAfterColumnInsert(before, numberOfColumns);
+        
+        // Adjust column dimensions
+        this.#adjustColumnDimensionsAfterInsert(before, numberOfColumns);
+        
+        // Clear calculation cache
+        this.clearCalculationCache();
+        
+        return this;
+    }
+
+    /**
+     * Remove row(s) from the worksheet.
+     *
+     * @param row Row number to start removing from
+     * @param numberOfRows Number of rows to remove
+     */
+    public removeRow(row: number, numberOfRows: number = 1): this {
+        // Clean up merge cells that overlap with deleted rows
+        this.#cleanupMergeCellsForRowDelete(row, numberOfRows);
+        
+        // Save and remove affected row dimensions
+        const savedDimensions = this.#saveAndRemoveRowDimensions(row, numberOfRows);
+        
+        // Remove cells in the deleted rows
+        for (let i = 0; i < numberOfRows; i++) {
+            this.#cellCollection.removeRow(row + i);
+        }
+        
+        // Shift remaining cells up
+        this.#shiftCellsUp(row + numberOfRows, numberOfRows);
+        
+        // Restore row dimensions with adjusted indices
+        this.#restoreRowDimensions(savedDimensions, row, -numberOfRows);
+        
+        // Clear calculation cache
+        this.clearCalculationCache();
+        
+        return this;
+    }
+
+    /**
+     * Remove column(s) from the worksheet.
+     *
+     * @param column Column letter to start removing from (e.g. 'A')
+     * @param numberOfColumns Number of columns to remove
+     */
+    public removeColumn(column: string, numberOfColumns: number = 1): this {
+        const startColIndex = Coordinate.columnIndexFromString(column);
+        
+        // Clean up merge cells that overlap with deleted columns
+        this.#cleanupMergeCellsForColumnDelete(column, numberOfColumns);
+        
+        // Save and remove affected column dimensions
+        const savedDimensions = this.#saveAndRemoveColumnDimensions(column, numberOfColumns);
+        
+        // Remove cells in the deleted columns
+        for (let i = 0; i < numberOfColumns; i++) {
+            const colToRemove = Coordinate.stringFromColumnIndex(startColIndex + i);
+            this.#cellCollection.removeColumn(colToRemove);
+        }
+        
+        // Shift remaining cells left
+        const colAfterDeleted = Coordinate.stringFromColumnIndex(startColIndex + numberOfColumns);
+        this.#shiftCellsLeft(colAfterDeleted, numberOfColumns);
+        
+        // Restore column dimensions with adjusted indices
+        this.#restoreColumnDimensions(savedDimensions, column, -numberOfColumns);
+        
+        // Clear calculation cache
+        this.clearCalculationCache();
+        
+        return this;
+    }
+
+    /**
+     * Shift cells down when inserting rows.
+     */
+    #shiftCellsDown(beforeRow: number, numberOfRows: number): void {
+        const cellsToMove: Array<{ oldCoord: string; cell: Cell }> = [];
+        
+        // Collect cells that need to be moved (from bottom to top)
+        for (const coordinate of this.#cellCollection.getCoordinates()) {
+            const [colIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
+            if (rowIndex >= beforeRow) {
+                const cell = this.#cellCollection.get(coordinate);
+                if (cell) {
+                    cellsToMove.push({ oldCoord: coordinate, cell });
+                }
+            }
+        }
+        
+        // Sort by row descending to avoid overwriting
+        cellsToMove.sort((a, b) => {
+            const [, rowA] = Coordinate.indexesFromString(a.oldCoord);
+            const [, rowB] = Coordinate.indexesFromString(b.oldCoord);
+            return rowB - rowA;
+        });
+        
+        // Move cells
+        for (const { oldCoord, cell } of cellsToMove) {
+            const [colIndex, rowIndex] = Coordinate.indexesFromString(oldCoord);
+            const newRow = rowIndex + numberOfRows;
+            const newCoord = `${Coordinate.stringFromColumnIndex(colIndex)}${newRow}`;
+            
+            this.#cellCollection.delete(oldCoord);
+            cell.setRow(newRow - 1); // Convert to 0-indexed
+            this.#cellCollection.add(newCoord, cell);
+        }
+    }
+
+    /**
+     * Shift cells right when inserting columns.
+     */
+    #shiftCellsRight(beforeCol: string, numberOfCols: number): void {
+        const beforeColIndex = Coordinate.columnIndexFromString(beforeCol);
+        const cellsToMove: Array<{ oldCoord: string; cell: Cell }> = [];
+        
+        // Collect cells that need to be moved (from right to left)
+        for (const coordinate of this.#cellCollection.getCoordinates()) {
+            const [colIndex] = Coordinate.indexesFromString(coordinate);
+            if (colIndex >= beforeColIndex) {
+                const cell = this.#cellCollection.get(coordinate);
+                if (cell) {
+                    cellsToMove.push({ oldCoord: coordinate, cell });
+                }
+            }
+        }
+        
+        // Sort by column descending to avoid overwriting
+        cellsToMove.sort((a, b) => {
+            const [colA] = Coordinate.indexesFromString(a.oldCoord);
+            const [colB] = Coordinate.indexesFromString(b.oldCoord);
+            return colB - colA;
+        });
+        
+        // Move cells
+        for (const { oldCoord, cell } of cellsToMove) {
+            const [colIndex, rowIndex] = Coordinate.indexesFromString(oldCoord);
+            const newCol = colIndex + numberOfCols;
+            const newCoord = `${Coordinate.stringFromColumnIndex(newCol)}${rowIndex}`;
+            
+            this.#cellCollection.delete(oldCoord);
+            cell.setColumn(newCol - 1); // Convert to 0-indexed
+            this.#cellCollection.add(newCoord, cell);
+        }
+    }
+
+    /**
+     * Shift cells up when removing rows.
+     */
+    #shiftCellsUp(fromRow: number, numberOfRows: number): void {
+        const cellsToMove: Array<{ oldCoord: string; cell: Cell }> = [];
+        
+        // Collect cells that need to be moved (from top to bottom of affected area)
+        for (const coordinate of this.#cellCollection.getCoordinates()) {
+            const [colIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
+            if (rowIndex >= fromRow) {
+                const cell = this.#cellCollection.get(coordinate);
+                if (cell) {
+                    cellsToMove.push({ oldCoord: coordinate, cell });
+                }
+            }
+        }
+        
+        // Sort by row ascending
+        cellsToMove.sort((a, b) => {
+            const [, rowA] = Coordinate.indexesFromString(a.oldCoord);
+            const [, rowB] = Coordinate.indexesFromString(b.oldCoord);
+            return rowA - rowB;
+        });
+        
+        // Move cells
+        for (const { oldCoord, cell } of cellsToMove) {
+            const [colIndex, rowIndex] = Coordinate.indexesFromString(oldCoord);
+            const newRow = rowIndex - numberOfRows;
+            if (newRow < 1) continue; // Don't move into invalid rows
+            
+            const newCoord = `${Coordinate.stringFromColumnIndex(colIndex)}${newRow}`;
+            
+            this.#cellCollection.delete(oldCoord);
+            cell.setRow(newRow - 1); // Convert to 0-indexed
+            this.#cellCollection.add(newCoord, cell);
+        }
+    }
+
+    /**
+     * Shift cells left when removing columns.
+     */
+    #shiftCellsLeft(fromCol: string, numberOfCols: number): void {
+        const fromColIndex = Coordinate.columnIndexFromString(fromCol);
+        const cellsToMove: Array<{ oldCoord: string; cell: Cell }> = [];
+        
+        // Collect cells that need to be moved (from left to right of affected area)
+        for (const coordinate of this.#cellCollection.getCoordinates()) {
+            const [colIndex] = Coordinate.indexesFromString(coordinate);
+            if (colIndex >= fromColIndex) {
+                const cell = this.#cellCollection.get(coordinate);
+                if (cell) {
+                    cellsToMove.push({ oldCoord: coordinate, cell });
+                }
+            }
+        }
+        
+        // Sort by column ascending
+        cellsToMove.sort((a, b) => {
+            const [colA] = Coordinate.indexesFromString(a.oldCoord);
+            const [colB] = Coordinate.indexesFromString(b.oldCoord);
+            return colA - colB;
+        });
+        
+        // Move cells
+        for (const { oldCoord, cell } of cellsToMove) {
+            const [colIndex, rowIndex] = Coordinate.indexesFromString(oldCoord);
+            const newCol = colIndex - numberOfCols;
+            if (newCol < 1) continue; // Don't move into invalid columns
+            
+            const newCoord = `${Coordinate.stringFromColumnIndex(newCol)}${rowIndex}`;
+            
+            this.#cellCollection.delete(oldCoord);
+            cell.setColumn(newCol - 1); // Convert to 0-indexed
+            this.#cellCollection.add(newCoord, cell);
+        }
+    }
+
+    /**
+     * Adjust merge cells after row insert.
+     */
+    #adjustMergeCellsAfterRowInsert(beforeRow: number, numberOfRows: number): void {
+        const newMergeCells: Record<string, string> = {};
+        
+        for (const [range] of Object.entries(this.#mergeCells)) {
+            const [[startCol, startRow], [endCol, endRow]] = Coordinate.rangeBoundaries(range);
+            
+            if (endRow < beforeRow) {
+                // Range entirely before insertion - unchanged
+                newMergeCells[range] = range;
+            } else if (startRow >= beforeRow) {
+                // Range entirely after insertion - shift down
+                const newStartRow = startRow + numberOfRows;
+                const newEndRow = endRow + numberOfRows;
+                const newRange = `${Coordinate.stringFromColumnIndex(startCol)}${newStartRow}:${Coordinate.stringFromColumnIndex(endCol)}${newEndRow}`;
+                newMergeCells[newRange] = newRange;
+            } else {
+                // Range straddles insertion - expand
+                const newEndRow = endRow + numberOfRows;
+                const newRange = `${Coordinate.stringFromColumnIndex(startCol)}${startRow}:${Coordinate.stringFromColumnIndex(endCol)}${newEndRow}`;
+                newMergeCells[newRange] = newRange;
+            }
+        }
+        
+        this.#mergeCells = newMergeCells;
+    }
+
+    /**
+     * Adjust merge cells after column insert.
+     */
+    #adjustMergeCellsAfterColumnInsert(beforeCol: string, numberOfCols: number): void {
+        const beforeColIndex = Coordinate.columnIndexFromString(beforeCol);
+        const newMergeCells: Record<string, string> = {};
+        
+        for (const [range] of Object.entries(this.#mergeCells)) {
+            const [[startCol, startRow], [endCol, endRow]] = Coordinate.rangeBoundaries(range);
+            
+            if (endCol < beforeColIndex) {
+                // Range entirely before insertion - unchanged
+                newMergeCells[range] = range;
+            } else if (startCol >= beforeColIndex) {
+                // Range entirely after insertion - shift right
+                const newStartCol = startCol + numberOfCols;
+                const newEndCol = endCol + numberOfCols;
+                const newRange = `${Coordinate.stringFromColumnIndex(newStartCol)}${startRow}:${Coordinate.stringFromColumnIndex(newEndCol)}${endRow}`;
+                newMergeCells[newRange] = newRange;
+            } else {
+                // Range straddles insertion - expand
+                const newEndCol = endCol + numberOfCols;
+                const newRange = `${Coordinate.stringFromColumnIndex(startCol)}${startRow}:${Coordinate.stringFromColumnIndex(newEndCol)}${endRow}`;
+                newMergeCells[newRange] = newRange;
+            }
+        }
+        
+        this.#mergeCells = newMergeCells;
+    }
+
+    /**
+     * Clean up merge cells for row deletion.
+     */
+    #cleanupMergeCellsForRowDelete(startRow: number, numberOfRows: number): void {
+        const newMergeCells: Record<string, string> = {};
+        const endRow = startRow + numberOfRows - 1;
+        
+        for (const [range] of Object.entries(this.#mergeCells)) {
+            const [[startCol, rangeStartRow], [endCol, rangeEndRow]] = Coordinate.rangeBoundaries(range);
+            
+            if (rangeEndRow < startRow) {
+                // Range entirely before deletion - unchanged
+                newMergeCells[range] = range;
+            } else if (rangeStartRow > endRow) {
+                // Range entirely after deletion - shift up
+                const newStartRow = rangeStartRow - numberOfRows;
+                const newEndRow = rangeEndRow - numberOfRows;
+                const newRange = `${Coordinate.stringFromColumnIndex(startCol)}${newStartRow}:${Coordinate.stringFromColumnIndex(endCol)}${newEndRow}`;
+                newMergeCells[newRange] = newRange;
+            } else if (rangeStartRow >= startRow && rangeEndRow <= endRow) {
+                // Range entirely within deleted area - remove
+                continue;
+            } else {
+                // Range partially overlaps - adjust or remove
+                if (rangeStartRow < startRow && rangeEndRow > endRow) {
+                    // Range extends before and after - shrink
+                    const newEndRow = rangeEndRow - numberOfRows;
+                    const newRange = `${Coordinate.stringFromColumnIndex(startCol)}${rangeStartRow}:${Coordinate.stringFromColumnIndex(endCol)}${newEndRow}`;
+                    newMergeCells[newRange] = newRange;
+                } else if (rangeStartRow >= startRow) {
+                    // Range starts within deleted area - move start
+                    const newStartRow = endRow + 1 - numberOfRows;
+                    const newEndRow = rangeEndRow - numberOfRows;
+                    if (newStartRow <= newEndRow) {
+                        const newRange = `${Coordinate.stringFromColumnIndex(startCol)}${newStartRow}:${Coordinate.stringFromColumnIndex(endCol)}${newEndRow}`;
+                        newMergeCells[newRange] = newRange;
+                    }
+                } else {
+                    // Range ends within deleted area - shrink end
+                    const newEndRow = startRow - 1;
+                    const newRange = `${Coordinate.stringFromColumnIndex(startCol)}${rangeStartRow}:${Coordinate.stringFromColumnIndex(endCol)}${newEndRow}`;
+                    newMergeCells[newRange] = newRange;
+                }
+            }
+        }
+        
+        this.#mergeCells = newMergeCells;
+    }
+
+    /**
+     * Clean up merge cells for column deletion.
+     */
+    #cleanupMergeCellsForColumnDelete(startCol: string, numberOfCols: number): void {
+        const startColIndex = Coordinate.columnIndexFromString(startCol);
+        const endColIndex = startColIndex + numberOfCols - 1;
+        const newMergeCells: Record<string, string> = {};
+        
+        for (const [range] of Object.entries(this.#mergeCells)) {
+            const [[rangeStartCol, startRow], [rangeEndCol, endRow]] = Coordinate.rangeBoundaries(range);
+            
+            if (rangeEndCol < startColIndex) {
+                // Range entirely before deletion - unchanged
+                newMergeCells[range] = range;
+            } else if (rangeStartCol > endColIndex) {
+                // Range entirely after deletion - shift left
+                const newStartCol = rangeStartCol - numberOfCols;
+                const newEndCol = rangeEndCol - numberOfCols;
+                const newRange = `${Coordinate.stringFromColumnIndex(newStartCol)}${startRow}:${Coordinate.stringFromColumnIndex(newEndCol)}${endRow}`;
+                newMergeCells[newRange] = newRange;
+            } else if (rangeStartCol >= startColIndex && rangeEndCol <= endColIndex) {
+                // Range entirely within deleted area - remove
+                continue;
+            } else {
+                // Range partially overlaps - adjust or remove
+                if (rangeStartCol < startColIndex && rangeEndCol > endColIndex) {
+                    // Range extends before and after - shrink
+                    const newEndCol = rangeEndCol - numberOfCols;
+                    const newRange = `${Coordinate.stringFromColumnIndex(rangeStartCol)}${startRow}:${Coordinate.stringFromColumnIndex(newEndCol)}${endRow}`;
+                    newMergeCells[newRange] = newRange;
+                } else if (rangeStartCol >= startColIndex) {
+                    // Range starts within deleted area - move start
+                    const newStartCol = endColIndex + 1 - numberOfCols;
+                    const newEndCol = rangeEndCol - numberOfCols;
+                    if (newStartCol <= newEndCol) {
+                        const newRange = `${Coordinate.stringFromColumnIndex(newStartCol)}${startRow}:${Coordinate.stringFromColumnIndex(newEndCol)}${endRow}`;
+                        newMergeCells[newRange] = newRange;
+                    }
+                } else {
+                    // Range ends within deleted area - shrink end
+                    const newEndCol = startColIndex - 1;
+                    const newRange = `${Coordinate.stringFromColumnIndex(rangeStartCol)}${startRow}:${Coordinate.stringFromColumnIndex(newEndCol)}${endRow}`;
+                    newMergeCells[newRange] = newRange;
+                }
+            }
+        }
+        
+        this.#mergeCells = newMergeCells;
+    }
+
+    /**
+     * Adjust row dimensions after insert.
+     */
+    #adjustRowDimensionsAfterInsert(beforeRow: number, numberOfRows: number): void {
+        const newDimensions = new Map<number, RowDimension>();
+        
+        for (const [row, dimension] of this.#rowDimensions.entries()) {
+            if (row < beforeRow) {
+                // Dimensions before insertion point - unchanged
+                newDimensions.set(row, dimension);
+            } else {
+                // Dimensions at or after insertion point - shift down
+                const newRow = row + numberOfRows;
+                dimension.setRowIndex(newRow);
+                newDimensions.set(newRow, dimension);
+            }
+        }
+        
+        this.#rowDimensions = newDimensions;
+    }
+
+    /**
+     * Adjust column dimensions after insert.
+     */
+    #adjustColumnDimensionsAfterInsert(beforeCol: string, numberOfCols: number): void {
+        const beforeColIndex = Coordinate.columnIndexFromString(beforeCol);
+        const newDimensions = new Map<string, ColumnDimension>();
+        
+        for (const [col, dimension] of this.#columnDimensions.entries()) {
+            const colIndex = Coordinate.columnIndexFromString(col);
+            if (colIndex < beforeColIndex) {
+                // Dimensions before insertion point - unchanged
+                newDimensions.set(col, dimension);
+            } else {
+                // Dimensions at or after insertion point - shift right
+                const newColIndex = colIndex + numberOfCols;
+                const newCol = Coordinate.stringFromColumnIndex(newColIndex);
+                dimension.setColumnIndex(newCol);
+                newDimensions.set(newCol, dimension);
+            }
+        }
+        
+        this.#columnDimensions = newDimensions;
+    }
+
+    /**
+     * Save and remove row dimensions for a range.
+     */
+    #saveAndRemoveRowDimensions(startRow: number, numberOfRows: number): Map<number, RowDimension> {
+        const saved = new Map<number, RowDimension>();
+        const endRow = startRow + numberOfRows;
+        
+        for (let row = endRow; row <= this.getHighestRow(); row++) {
+            const dimension = this.#rowDimensions.get(row);
+            if (dimension) {
+                saved.set(row, dimension);
+            }
+        }
+        
+        // Remove dimensions in the deleted range
+        for (let i = 0; i < numberOfRows; i++) {
+            this.#rowDimensions.delete(startRow + i);
+        }
+        
+        return saved;
+    }
+
+    /**
+     * Save and remove column dimensions for a range.
+     */
+    #saveAndRemoveColumnDimensions(startCol: string, numberOfCols: number): Map<string, ColumnDimension> {
+        const saved = new Map<string, ColumnDimension>();
+        const startColIndex = Coordinate.columnIndexFromString(startCol);
+        const endColIndex = startColIndex + numberOfCols;
+        const highestColIndex = Coordinate.columnIndexFromString(this.getHighestColumn());
+        
+        for (let col = endColIndex; col <= highestColIndex; col++) {
+            const colLetter = Coordinate.stringFromColumnIndex(col);
+            const dimension = this.#columnDimensions.get(colLetter);
+            if (dimension) {
+                saved.set(colLetter, dimension);
+            }
+        }
+        
+        // Remove dimensions in the deleted range
+        for (let i = 0; i < numberOfCols; i++) {
+            const colToRemove = Coordinate.stringFromColumnIndex(startColIndex + i);
+            this.#columnDimensions.delete(colToRemove);
+        }
+        
+        return saved;
+    }
+
+    /**
+     * Restore row dimensions with adjusted indices.
+     */
+    #restoreRowDimensions(saved: Map<number, RowDimension>, startRow: number, rowDelta: number): void {
+        for (const [oldRow, dimension] of saved.entries()) {
+            const newRow = oldRow + rowDelta;
+            if (newRow >= startRow) {
+                dimension.setRowIndex(newRow);
+                this.#rowDimensions.set(newRow, dimension);
+            }
+        }
+    }
+
+    /**
+     * Restore column dimensions with adjusted indices.
+     */
+    #restoreColumnDimensions(saved: Map<string, ColumnDimension>, startCol: string, colDelta: number): void {
+        const startColIndex = Coordinate.columnIndexFromString(startCol);
+        
+        for (const [oldCol, dimension] of saved.entries()) {
+            const oldColIndex = Coordinate.columnIndexFromString(oldCol);
+            const newColIndex = oldColIndex + colDelta;
+            if (newColIndex >= startColIndex) {
+                const newCol = Coordinate.stringFromColumnIndex(newColIndex);
+                dimension.setColumnIndex(newCol);
+                this.#columnDimensions.set(newCol, dimension);
+            }
+        }
+    }
 }

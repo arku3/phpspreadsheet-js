@@ -126,4 +126,41 @@ export class CellCollection {
 
         return maxRow;
     }
+
+    /**
+     * Remove all cells in a specific row.
+     *
+     * @param row Row number to remove
+     */
+    public removeRow(row: number): void {
+        const coordsToDelete: string[] = [];
+        for (const coordinate of this.#cells.keys()) {
+            const [, rowIndex] = Coordinate.indexesFromString(coordinate);
+            if (rowIndex === row) {
+                coordsToDelete.push(coordinate);
+            }
+        }
+        for (const coord of coordsToDelete) {
+            this.#cells.delete(coord);
+        }
+    }
+
+    /**
+     * Remove all cells in a specific column.
+     *
+     * @param column Column letter to remove
+     */
+    public removeColumn(column: string): void {
+        const targetColIndex = Coordinate.columnIndexFromString(column);
+        const coordsToDelete: string[] = [];
+        for (const coordinate of this.#cells.keys()) {
+            const [colIndex] = Coordinate.indexesFromString(coordinate);
+            if (colIndex === targetColIndex) {
+                coordsToDelete.push(coordinate);
+            }
+        }
+        for (const coord of coordsToDelete) {
+            this.#cells.delete(coord);
+        }
+    }
 }

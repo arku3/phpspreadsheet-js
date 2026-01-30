@@ -108,10 +108,24 @@ export class Cell {
     }
 
     /**
+     * Set column (0-indexed).
+     */
+    public setColumn(column: number): void {
+        this.#column = column;
+    }
+
+    /**
      * Get row (0-indexed).
      */
     public getRow(): number {
         return this.#row;
+    }
+
+    /**
+     * Set row (0-indexed).
+     */
+    public setRow(row: number): void {
+        this.#row = row;
     }
 
     /**
