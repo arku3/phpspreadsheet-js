@@ -246,9 +246,9 @@ export class Cell {
             return '';
         }
 
-        // TODO: Implement actual number formatting when NumberFormat engine is ready
-        // For now, return string representation
-        return String(value);
+        // Use the cell's style number format to format the value
+        const numberFormat = this.getStyle().getNumberFormat();
+        return numberFormat.toFormattedString(value);
     }
 
     /**

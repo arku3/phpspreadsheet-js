@@ -23,9 +23,9 @@ Complete systematic parity fixes identified in the review and implement the XLSX
             - [x] Implement `Cell.getHyperlink()` and `getDataValidation()` support (with placeholders).
         
         - [ ] **Style Module Fixes**
+            - [x] Add `NumberFormat.toFormattedString()` rendering engine (Complex Task).
             - [ ] Add missing Font properties: Latin, EastAsian, ComplexScript, StrikeType, Cap, BaseLine.
             - [ ] Add `Alignment` rotation range validation (-90 to 90, 255).
-            - [ ] Add `NumberFormat.toFormattedString()` rendering engine (Complex Task).
             - [ ] Add `Color.setHyperlinkTheme()` and `hasChanged` tracking.
 
         - [ ] **Calculation Engine Fixes**

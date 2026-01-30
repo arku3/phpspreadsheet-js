@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Supervisor } from './supervisor.ts';
+import { NumberFormatter } from './number-formatter.ts';
 
 /**
  * Number format style.
@@ -106,16 +107,6 @@ export class NumberFormat extends Supervisor {
     }
 
     /**
-     * Get built-in format code.
-     */
-    public getBuiltInFormatCode(): number | false {
-        if (this.isSupervisor) {
-            return this.getSharedComponent().getBuiltInFormatCode();
-        }
-        return this.#builtInFormatCode;
-    }
-
-    /**
      * Set built-in format code.
      */
     public setBuiltInFormatCode(index: number): this {
@@ -150,15 +141,28 @@ export class NumberFormat extends Supervisor {
      * Get hash code.
      */
     public getHashCode(): string {
+        return this.#formatCode;
+    }
+
+    /**
+     * Get built-in format code.
+     *
+     * @returns Built-in format code
+     */
+    public getBuiltInFormatCode(): number | false {
         if (this.isSupervisor) {
-            return this.getSharedComponent().getHashCode();
+            return this.getSharedComponent().getBuiltInFormatCode();
         }
-        return createHash('md5')
-            .update(
-                this.#formatCode +
-                (this.#builtInFormatCode === false ? 'f' : this.#builtInFormatCode) +
-                'NumberFormat'
-            )
-            .digest('hex');
+        return this.#builtInFormatCode;
+    }
+
+    /**
+     * Format a value according to this number format.
+     *
+     * @param value The value to format
+     * @returns The formatted string
+     */
+    public toFormattedString(value: number | string | null | undefined): string {
+        return NumberFormatter.toFormattedString(value, this.#formatCode);
     }
 }
