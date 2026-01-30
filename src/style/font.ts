@@ -12,6 +12,11 @@ export class Font extends Supervisor {
     public static readonly UNDERLINE_SINGLE = 'single';
     public static readonly UNDERLINE_SINGLEACCOUNTING = 'singleAccounting';
 
+    // Capitalization constants
+    public static readonly CAP_ALL = 'all';
+    public static readonly CAP_SMALL = 'small';
+    public static readonly CAP_NONE = 'none';
+
     #name: string = 'Calibri';
     #size: number = 11;
     #bold: boolean = false;
@@ -22,6 +27,14 @@ export class Font extends Supervisor {
     #strikethrough: boolean = false;
     #color: Color;
     #scheme: string = '';
+    
+    // Chart and theme-specific font properties
+    #cap: string = Font.CAP_NONE;
+    #latin: string = '';
+    #eastAsian: string = '';
+    #complexScript: string = '';
+    #baseLine: number = 0;
+    #strikeType: string = '';
 
     constructor(isSupervisor: boolean = false) {
         super(isSupervisor);
@@ -222,6 +235,110 @@ export class Font extends Supervisor {
         return this;
     }
 
+    // Chart and theme-specific font properties
+
+    public getCap(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getCap();
+        }
+        return this.#cap;
+    }
+
+    public setCap(cap: string): this {
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ cap: cap });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#cap = cap || Font.CAP_NONE;
+        }
+        return this;
+    }
+
+    public getLatin(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getLatin();
+        }
+        return this.#latin;
+    }
+
+    public setLatin(latin: string): this {
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ latin: latin });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#latin = latin;
+        }
+        return this;
+    }
+
+    public getEastAsian(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getEastAsian();
+        }
+        return this.#eastAsian;
+    }
+
+    public setEastAsian(eastAsian: string): this {
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ eastAsian: eastAsian });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#eastAsian = eastAsian;
+        }
+        return this;
+    }
+
+    public getComplexScript(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getComplexScript();
+        }
+        return this.#complexScript;
+    }
+
+    public setComplexScript(complexScript: string): this {
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ complexScript: complexScript });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#complexScript = complexScript;
+        }
+        return this;
+    }
+
+    public getBaseLine(): number {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getBaseLine();
+        }
+        return this.#baseLine;
+    }
+
+    public setBaseLine(baseLine: number): this {
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ baseLine: baseLine });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#baseLine = baseLine;
+        }
+        return this;
+    }
+
+    public getStrikeType(): string {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getStrikeType();
+        }
+        return this.#strikeType;
+    }
+
+    public setStrikeType(strikeType: string): this {
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ strikeType: strikeType });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#strikeType = strikeType;
+        }
+        return this;
+    }
+
     /**
      * Apply styles from array.
      *
@@ -264,6 +381,24 @@ export class Font extends Supervisor {
         if (styleArray.scheme !== undefined) {
             this.setScheme(String(styleArray.scheme));
         }
+        if (styleArray.cap !== undefined) {
+            this.setCap(String(styleArray.cap));
+        }
+        if (styleArray.latin !== undefined) {
+            this.setLatin(String(styleArray.latin));
+        }
+        if (styleArray.eastAsian !== undefined) {
+            this.setEastAsian(String(styleArray.eastAsian));
+        }
+        if (styleArray.complexScript !== undefined) {
+            this.setComplexScript(String(styleArray.complexScript));
+        }
+        if (styleArray.baseLine !== undefined) {
+            this.setBaseLine(Number(styleArray.baseLine));
+        }
+        if (styleArray.strikeType !== undefined) {
+            this.setStrikeType(String(styleArray.strikeType));
+        }
         return this;
     }
 
@@ -286,6 +421,12 @@ export class Font extends Supervisor {
                 (this.#strikethrough ? 't' : 'f') +
                 this.#color.getHashCode() +
                 this.#scheme +
+                this.#cap +
+                this.#latin +
+                this.#eastAsian +
+                this.#complexScript +
+                this.#baseLine +
+                this.#strikeType +
                 'Font'
             )
             .digest('hex');
@@ -306,6 +447,12 @@ export class Font extends Supervisor {
         clone.#strikethrough = this.#strikethrough;
         clone.#color = this.#color.clone();
         clone.#scheme = this.#scheme;
+        clone.#cap = this.#cap;
+        clone.#latin = this.#latin;
+        clone.#eastAsian = this.#eastAsian;
+        clone.#complexScript = this.#complexScript;
+        clone.#baseLine = this.#baseLine;
+        clone.#strikeType = this.#strikeType;
         return clone;
     }
 }
