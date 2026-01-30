@@ -1,5 +1,6 @@
 import type { IReader, WorksheetInfo } from './i-reader.ts';
 import { Spreadsheet } from '../core/spreadsheet.ts';
+import { Coordinate } from '../utils/coordinate.ts';
 import { open } from 'node:fs/promises';
 import unzipper from 'unzipper';
 
@@ -104,8 +105,141 @@ export class XlsxReader implements IReader {
      * Return worksheet info.
      */
     async listWorksheetInfo(filename: string): Promise<WorksheetInfo[]> {
-        // TODO: Parse worksheets to get dimensions
-        return [];
+        try {
+            const zip = await unzipper.Open.file(filename);
+            const relsFile = zip.files.find(f => f.path === '_rels/.rels');
+            if (!relsFile) {
+                throw new Error('Invalid XLSX file: missing _rels/.rels');
+            }
+
+            const relsContent = await relsFile.buffer();
+            const relsXml = relsContent.toString('utf-8');
+
+            const workbookMatch = relsXml.match(/Target="([^"]*workbook\.xml)"/);
+            if (!workbookMatch) {
+                throw new Error('Invalid XLSX file: cannot find workbook.xml in _rels/.rels');
+            }
+
+            const workbookPath = (workbookMatch[1] ?? '').replace(/^\//, '');
+            if (!workbookPath) {
+                throw new Error('Invalid XLSX file: cannot determine workbook path');
+            }
+            const workbookRelPath = workbookPath.replace('xl/', 'xl/_rels/').replace('.xml', '.xml.rels');
+
+            const workbookFile = zip.files.find(f => f.path === workbookPath);
+            if (!workbookFile) {
+                throw new Error(`Invalid XLSX file: missing ${workbookPath}`);
+            }
+
+            const workbookContent = await workbookFile.buffer();
+            const workbookXml = workbookContent.toString('utf-8');
+
+            // Parse workbook relationships to find worksheet paths
+            const workbookRelsFile = zip.files.find(f => f.path === workbookRelPath);
+            const worksheetPaths: Map<string, string> = new Map();
+
+            if (workbookRelsFile) {
+                const relsContent = await workbookRelsFile.buffer();
+                const relsXml = relsContent.toString('utf-8');
+
+                const worksheetMatches = relsXml.matchAll(/<Relationship[^>]*Id="([^"]+)"[^>]*Type="[^"]*worksheet"[^>]*Target="([^"]+)"/g);
+                for (const match of worksheetMatches) {
+                    const rId = match[1];
+                    const target = match[2];
+                    if (rId && target) {
+                        const cleanTarget = target.replace(/^\//, '');
+                        worksheetPaths.set(rId, cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`);
+                    }
+                }
+            }
+
+            // Parse sheets from workbook.xml
+            const sheetMatches = workbookXml.matchAll(/<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"(?:[^>]*state="([^"]*)")?[^>]*r:id="([^"]+)"/g);
+            const sheets: { name: string; rId: string; state: string }[] = [];
+            for (const match of sheetMatches) {
+                const name = match[1];
+                const state = match[3];
+                const rId = match[4];
+                if (name && rId) {
+                    sheets.push({ name, rId, state: state || 'visible' });
+                }
+            }
+
+            const worksheetInfo: WorksheetInfo[] = [];
+
+            // Get info for each worksheet
+            for (const sheetInfo of sheets) {
+                const worksheetPath = worksheetPaths.get(sheetInfo.rId);
+                if (!worksheetPath) {
+                    continue;
+                }
+
+                const wsFile = zip.files.find(f => f.path === worksheetPath);
+                if (!wsFile) {
+                    continue;
+                }
+
+                const wsContent = await wsFile.buffer();
+                const wsXml = wsContent.toString('utf-8');
+
+                // Find dimension from <dimension> tag if present
+                let totalRows = 0;
+                let lastColumnIndex = 0;
+                let lastColumnLetter = 'A';
+
+                const dimensionMatch = wsXml.match(/<dimension[^>]*ref="([^"]+)"/);
+                if (dimensionMatch && dimensionMatch[1]) {
+                    const range = dimensionMatch[1];
+                    const boundaries = Coordinate.rangeBoundaries(range);
+                    if (boundaries) {
+                        const [[, startRow], [endCol, endRow]] = boundaries;
+                        totalRows = endRow;
+                        lastColumnIndex = endCol;
+                        lastColumnLetter = Coordinate.stringFromColumnIndex(endCol);
+                    }
+                } else {
+                    // Parse cell references to find max row and column
+                    const cellMatches = wsXml.matchAll(/<c[^>]*r="([A-Z]+\d+)"/g);
+                    let maxRow = 0;
+                    let maxCol = 0;
+
+                    for (const cellMatch of cellMatches) {
+                        const cellRef = cellMatch[1];
+                        if (cellRef) {
+                            const [colIndex, rowIndex] = Coordinate.indexesFromString(cellRef);
+                            if (rowIndex > maxRow) {
+                                maxRow = rowIndex;
+                            }
+                            if (colIndex > maxCol) {
+                                maxCol = colIndex;
+                            }
+                        }
+                    }
+
+                    totalRows = maxRow;
+                    lastColumnIndex = maxCol;
+                    lastColumnLetter = maxCol > 0 ? Coordinate.stringFromColumnIndex(maxCol) : 'A';
+                }
+
+                const totalColumns = lastColumnIndex;
+
+                worksheetInfo.push({
+                    worksheetName: sheetInfo.name,
+                    lastColumnLetter: lastColumnLetter,
+                    lastColumnIndex: lastColumnIndex - 1, // Convert to 0-based
+                    totalRows: totalRows,
+                    totalColumns: totalColumns,
+                    sheetState: sheetInfo.state
+                });
+            }
+
+            return worksheetInfo;
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(`Failed to read worksheet info: ${error.message}`);
+            }
+            throw new Error('Failed to read worksheet info');
+        }
     }
 
     /**
