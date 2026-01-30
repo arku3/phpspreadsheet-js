@@ -58,7 +58,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [x] **Hyperlinks Reading** - Parse <hyperlinks>, resolve URLs via relationships.
         - [x] **Data Validation Reading** - FULLY IMPLEMENTED with complete I/O support.
         - [x] **Comments Reading** - Parse comments.xml (author/text) and note VML (visibility/geometry where available).
-    - [ ] Implement Worksheet Drawings (Images). <!-- id: 46 -->
+    - [x] Implement Worksheet Drawings (Images). <!-- id: 46 -->
 
 - [x] Phase 15b: Data Validation Infrastructure (COMPLETE) <!-- id: 60 -->
     - [x] Create `DataValidation` class in src/core/. <!-- id: 61 -->

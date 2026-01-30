@@ -3,10 +3,10 @@
 ## Current Gaps (Highest Priority)
 
 ## 1. Memory & Disposal
-- **Cell/Worksheet disconnect**: Circular reference breaking is still incomplete (need `disconnectCells()` and wiring through disposal paths).
+- **Cell/Worksheet disconnect**: Implemented `Worksheet.disconnectCells()` / `Spreadsheet.disconnectWorksheets()` cycle breaking; keep extending as new backrefs (drawings/charts) are added.
 
 ## 2. I/O Module (XLSX)
-- **Drawings / Images**: Worksheet drawings and images are not implemented.
+- **Drawings / Images**: Worksheet drawings/images (DrawingML) read/write is implemented (classic images); charts remain pending.
 - **Charts**: Not implemented.
 - **Comments**: Classic comments/notes read/write is implemented. Threaded comments are not implemented.
 - **VML pass-through**: If a worksheet contains legacy VML shapes that are not notes, round-trip preservation is not fully implemented.
