@@ -125,6 +125,7 @@ As the project grows, follow this intended structure:
 
 ### Parallelism & Subagents
 - **Default to Subagents:** When a task can be decomposed, use subagents aggressively. Prefer one subagent per failing test cluster, per file, or per independent parity check. Ask them not only provide insight, but actually make edit.
+- **Concurrent Safety:** When instructing subagents, explicitly tell them to avoid undoing, removing, reformatting, or otherwise modifying files that are outside their assigned scope (these may be concurrent work from other subagents).
 - **Task Decomposition:** Break down large requests into smaller, actionable tasks that can be delegated to subagents.
 - **Reporting:** Ensure subagents provide a clear summary of their work and any identified issues.
 - **PHP Parity:** When delegating tasks to subagents, ALWAYS remind them to check the original implementation with the PHP counterpart in `php-src/src/PhpSpreadsheet/` to ensure parity and review logic.
