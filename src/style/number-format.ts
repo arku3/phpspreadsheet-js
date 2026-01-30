@@ -46,10 +46,8 @@ export class NumberFormat extends Supervisor {
     public static readonly FORMAT_CURRENCY_USD = '$#,##0.00_-';
     public static readonly FORMAT_CURRENCY_EUR_INTEGER = '#,##0_-[$€]';
     public static readonly FORMAT_CURRENCY_EUR = '#,##0.00_-[$€]';
-    public static readonly FORMAT_ACCOUNTING_USD =
-        '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)';
-    public static readonly FORMAT_ACCOUNTING_EUR =
-        '_("€"* #,##0.00_);_("€"* \\(#,##0.00\\);_("€"* "-"??_);_(@_)';
+    public static readonly FORMAT_ACCOUNTING_USD = '_("$"* #,##0.00_);_("$"* \\(#,##0.00\\);_("$"* "-"??_);_(@_)';
+    public static readonly FORMAT_ACCOUNTING_EUR = '_("€"* #,##0.00_);_("€"* \\(#,##0.00\\);_("€"* "-"??_);_(@_)';
 
     /**
      * Format Code.

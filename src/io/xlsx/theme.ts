@@ -12,13 +12,10 @@ export class Theme extends WriterPart {
      */
     public writeTheme(spreadsheet: Spreadsheet): string {
         const theme = spreadsheet.getTheme();
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'a:theme',
-            {
-                'xmlns:a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
-                name: 'Office Theme',
-            },
-        );
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('a:theme', {
+            'xmlns:a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
+            name: 'Office Theme',
+        });
 
         const themeElements = root.ele('a:themeElements');
 

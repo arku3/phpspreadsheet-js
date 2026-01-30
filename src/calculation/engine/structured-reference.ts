@@ -62,12 +62,7 @@ export class StructuredReference {
             for (const t of tables) {
                 const boundaries = t.getRangeBoundaries();
                 const [[minCol, minRow], [maxCol, maxRow]] = boundaries;
-                if (
-                    cellCol1 >= minCol &&
-                    cellCol1 <= maxCol &&
-                    cellRow1 >= minRow &&
-                    cellRow1 <= maxRow
-                ) {
+                if (cellCol1 >= minCol && cellCol1 <= maxCol && cellRow1 >= minRow && cellRow1 <= maxRow) {
                     table = t;
                     break;
                 }
@@ -106,14 +101,7 @@ export class StructuredReference {
             return cellRef;
         }
 
-        const rangeRef = this.resolveColumnReference(
-            reference,
-            table,
-            headerRow,
-            firstDataRow,
-            lastDataRow,
-            totalsRow,
-        );
+        const rangeRef = this.resolveColumnReference(reference, table, headerRow, firstDataRow, lastDataRow, totalsRow);
         if (rangeRef === '#REF!') return rangeRef;
 
         const tableSheet = table.getWorksheet();

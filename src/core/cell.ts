@@ -36,13 +36,7 @@ export class Cell {
 
     #hyperlink: Hyperlink | null = null;
 
-    constructor(
-        value: any,
-        dataType: TDataType,
-        worksheet: Worksheet,
-        column: string | number,
-        row: number,
-    ) {
+    constructor(value: any, dataType: TDataType, worksheet: Worksheet, column: string | number, row: number) {
         this.#value = value;
         this.#dataType = dataType;
         this.#worksheet = worksheet;
@@ -73,11 +67,7 @@ export class Cell {
                     this.#throwDetached('getCalculatedValue');
                 }
                 const calculation = worksheet.getParent().getCalculationEngine();
-                this.#calculatedValue = calculation.calculateFormula(
-                    this.#value,
-                    worksheet,
-                    this.getCoordinate(),
-                );
+                this.#calculatedValue = calculation.calculateFormula(this.#value, worksheet, this.getCoordinate());
             }
             return this.#calculatedValue;
         }
@@ -284,12 +274,7 @@ export class Cell {
 
         const [[minCol, minRow], [maxCol, maxRow]] = Coordinate.rangeBoundaries(range);
 
-        return (
-            cellColIndex >= minCol &&
-            cellColIndex <= maxCol &&
-            cellRowNum >= minRow &&
-            cellRowNum <= maxRow
-        );
+        return cellColIndex >= minCol && cellColIndex <= maxCol && cellRowNum >= minRow && cellRowNum <= maxRow;
     }
 
     /**

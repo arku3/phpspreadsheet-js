@@ -36,10 +36,7 @@ async function run() {
     cellValueWizard.greaterThan(50);
     cellValueWizard.getStyle().getFont().setBold(true);
     cellValueWizard.getStyle().getFont().getColor().setARGB('FFFF0000');
-    sheet.addConditionalFormatting(
-        cellValueWizard.getCellRange(),
-        cellValueWizard.getConditional(),
-    );
+    sheet.addConditionalFormatting(cellValueWizard.getCellRange(), cellValueWizard.getConditional());
 
     for (let i = 1; i <= 10; i++) {
         sheet.setCellValue(`B${i}`, i * 10);
@@ -50,10 +47,7 @@ async function run() {
     textValueWizard.contains('error');
     textValueWizard.getStyle().getFill().setFillType(Fill.FILL_SOLID);
     textValueWizard.getStyle().getFill().getStartColor().setARGB('FFFFFF00');
-    sheet.addConditionalFormatting(
-        textValueWizard.getCellRange(),
-        textValueWizard.getConditional(),
-    );
+    sheet.addConditionalFormatting(textValueWizard.getCellRange(), textValueWizard.getConditional());
 
     sheet.setCellValue('C1', 'no problem');
     sheet.setCellValue('C2', 'this is an error');

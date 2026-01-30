@@ -18,12 +18,9 @@ export class Styles extends WriterPart {
      * Write styles to XML format.
      */
     public writeStyles(spreadsheet: Spreadsheet): string {
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'styleSheet',
-            {
-                xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
-            },
-        );
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('styleSheet', {
+            xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
+        });
 
         const writer = this.getParentWriter();
 
@@ -116,8 +113,7 @@ export class Styles extends WriterPart {
         const f = parent.ele('font');
         if (font.getBold() !== null) f.ele('b', { val: font.getBold() ? '1' : '0' });
         if (font.getItalic() !== null) f.ele('i', { val: font.getItalic() ? '1' : '0' });
-        if (font.getStrikethrough() !== null)
-            f.ele('strike', { val: font.getStrikethrough() ? '1' : '0' });
+        if (font.getStrikethrough() !== null) f.ele('strike', { val: font.getStrikethrough() ? '1' : '0' });
         if (font.getUnderline() !== null) f.ele('u', { val: font.getUnderline() });
 
         if (font.getSuperscript()) {
@@ -229,17 +225,13 @@ export class Styles extends WriterPart {
             xfId: 0,
             fontId: writer.getFontHashTable().getIndexForHashCode(style.getFont().getHashCode()),
             fillId: writer.getFillHashTable().getIndexForHashCode(style.getFill().getHashCode()),
-            borderId: writer
-                .getBordersHashTable()
-                .getIndexForHashCode(style.getBorders().getHashCode()),
+            borderId: writer.getBordersHashTable().getIndexForHashCode(style.getBorders().getHashCode()),
         });
 
         if (style.getNumberFormat().getBuiltInFormatCode() === false) {
             xf.att(
                 'numFmtId',
-                writer
-                    .getNumFmtHashTable()
-                    .getIndexForHashCode(style.getNumberFormat().getHashCode()) + 164,
+                writer.getNumFmtHashTable().getIndexForHashCode(style.getNumberFormat().getHashCode()) + 164,
             );
         } else {
             xf.att('numFmtId', style.getNumberFormat().getBuiltInFormatCode());
@@ -257,10 +249,7 @@ export class Styles extends WriterPart {
         if (align.getHorizontal()) al.att('horizontal', align.getHorizontal()!);
         if (align.getVertical()) al.att('vertical', align.getVertical()!);
         if (align.getTextRotation() !== 0) {
-            const textRotation =
-                align.getTextRotation() >= 0
-                    ? align.getTextRotation()
-                    : 90 - align.getTextRotation();
+            const textRotation = align.getTextRotation() >= 0 ? align.getTextRotation() : 90 - align.getTextRotation();
             al.att('textRotation', textRotation);
         }
         if (align.getWrapText()) al.att('wrapText', 'true');
@@ -297,10 +286,7 @@ export class Styles extends WriterPart {
         const styles: any[] = [];
         const sheetCount = spreadsheet.getSheetCount();
         for (let i = 0; i < sheetCount; i++) {
-            for (const conditionalStyles of spreadsheet
-                .getSheet(i)
-                .getConditionalStylesCollection()
-                .values()) {
+            for (const conditionalStyles of spreadsheet.getSheet(i).getConditionalStylesCollection().values()) {
                 for (const conditionalStyle of conditionalStyles) {
                     styles.push(conditionalStyle);
                 }
@@ -324,10 +310,7 @@ export class Styles extends WriterPart {
         fill1.setFillType('gray125');
         fills.set(fill1.getHashCode(), fill1);
 
-        for (const style of [
-            ...spreadsheet.getCellXfCollection(),
-            ...spreadsheet.getCellStyleXfCollection(),
-        ]) {
+        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
             const fill = style.getFill();
             fills.set(fill.getHashCode(), fill);
         }
@@ -340,10 +323,7 @@ export class Styles extends WriterPart {
      */
     public allFonts(spreadsheet: Spreadsheet): Font[] {
         const fonts = new Map<string, Font>();
-        for (const style of [
-            ...spreadsheet.getCellXfCollection(),
-            ...spreadsheet.getCellStyleXfCollection(),
-        ]) {
+        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
             const font = style.getFont();
             fonts.set(font.getHashCode(), font);
         }
@@ -355,10 +335,7 @@ export class Styles extends WriterPart {
      */
     public allBorders(spreadsheet: Spreadsheet): Borders[] {
         const borders = new Map<string, Borders>();
-        for (const style of [
-            ...spreadsheet.getCellXfCollection(),
-            ...spreadsheet.getCellStyleXfCollection(),
-        ]) {
+        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
             const border = style.getBorders();
             borders.set(border.getHashCode(), border);
         }
@@ -370,10 +347,7 @@ export class Styles extends WriterPart {
      */
     public allNumberFormats(spreadsheet: Spreadsheet): NumberFormat[] {
         const formats = new Map<string, NumberFormat>();
-        for (const style of [
-            ...spreadsheet.getCellXfCollection(),
-            ...spreadsheet.getCellStyleXfCollection(),
-        ]) {
+        for (const style of [...spreadsheet.getCellXfCollection(), ...spreadsheet.getCellStyleXfCollection()]) {
             const format = style.getNumberFormat();
             if (format.getBuiltInFormatCode() === false) {
                 formats.set(format.getHashCode(), format);

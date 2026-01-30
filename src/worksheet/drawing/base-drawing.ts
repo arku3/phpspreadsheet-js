@@ -153,8 +153,7 @@ export class BaseDrawing {
      * Empty string means unset.
      */
     public setCoordinates2(coordinates2: string): this {
-        this.#coordinates2 =
-            coordinates2 === '' ? '' : BaseDrawing.#normalizeCoordinate(coordinates2);
+        this.#coordinates2 = coordinates2 === '' ? '' : BaseDrawing.#normalizeCoordinate(coordinates2);
         return this;
     }
 

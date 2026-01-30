@@ -9,9 +9,7 @@ type ExpectedComment = {
 
 const normalizeNewlines = (value: string): string => value.replace(/\r\n/g, '\n');
 
-const getCommentsSnapshot = (sheet: {
-    getComments(): ReadonlyMap<string, any>;
-}): Map<string, ExpectedComment> => {
+const getCommentsSnapshot = (sheet: { getComments(): ReadonlyMap<string, any> }): Map<string, ExpectedComment> => {
     const out = new Map<string, ExpectedComment>();
     for (const [coord, comment] of sheet.getComments()) {
         out.set(coord, {
@@ -27,10 +25,7 @@ describe('XlsxReader Classic Comments', () => {
 
     const TEST_TIMEOUT_MS = 20_000;
 
-    const loadFixture = async (
-        filename: string,
-        options?: { readDataOnly?: boolean; sheetNames?: string[] },
-    ) => {
+    const loadFixture = async (filename: string, options?: { readDataOnly?: boolean; sheetNames?: string[] }) => {
         const file = path.join(fixturesDir, filename);
         const reader = new XlsxReader();
         if (options?.readDataOnly) {

@@ -88,10 +88,7 @@ export class Spreadsheet {
     /**
      * Get a defined name by name.
      */
-    public getDefinedName(
-        name: string,
-        worksheet: Worksheet | null = null,
-    ): DefinedName | undefined {
+    public getDefinedName(name: string, worksheet: Worksheet | null = null): DefinedName | undefined {
         return this.#definedNames.find((dn) => {
             if (dn.getName() !== name) return false;
             if (dn.getLocalOnly()) {
@@ -323,10 +320,7 @@ export class Spreadsheet {
             for (const rowDimension of sheet.getRowDimensions().values()) {
                 const xfIndex = rowDimension.getXfIndex();
                 if (xfIndex !== null) {
-                    countReferencesCellXf.set(
-                        xfIndex,
-                        (countReferencesCellXf.get(xfIndex) || 0) + 1,
-                    );
+                    countReferencesCellXf.set(xfIndex, (countReferencesCellXf.get(xfIndex) || 0) + 1);
                 }
             }
 
@@ -334,10 +328,7 @@ export class Spreadsheet {
             for (const columnDimension of sheet.getColumnDimensions().values()) {
                 const xfIndex = columnDimension.getXfIndex();
                 if (xfIndex !== null) {
-                    countReferencesCellXf.set(
-                        xfIndex,
-                        (countReferencesCellXf.get(xfIndex) || 0) + 1,
-                    );
+                    countReferencesCellXf.set(xfIndex, (countReferencesCellXf.get(xfIndex) || 0) + 1);
                 }
             }
         }

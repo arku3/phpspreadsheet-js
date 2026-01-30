@@ -19,9 +19,7 @@ export class StyleMerger {
 
     public mergeStyle(style: Style): void {
         if (style.getNumberFormat().getFormatCode() !== null) {
-            this.baseStyle
-                .getNumberFormat()
-                .setFormatCode(style.getNumberFormat().getFormatCode()!);
+            this.baseStyle.getNumberFormat().setFormatCode(style.getNumberFormat().getFormatCode()!);
         }
         this.mergeFontStyle(this.baseStyle.getFont(), style.getFont());
         this.mergeFillStyle(this.baseStyle.getFill(), style.getFill());
@@ -51,10 +49,7 @@ export class StyleMerger {
             baseFillStyle.setFillType(fillStyle.getFillType());
         }
         baseFillStyle.setRotation(fillStyle.getRotation());
-        if (
-            fillStyle.getStartColor().getARGB() !== null ||
-            fillStyle.getStartColor().getTheme() >= 0
-        ) {
+        if (fillStyle.getStartColor().getARGB() !== null || fillStyle.getStartColor().getTheme() >= 0) {
             baseFillStyle.setStartColor(fillStyle.getStartColor());
         }
         if (fillStyle.getEndColor().getARGB() !== null || fillStyle.getEndColor().getTheme() >= 0) {

@@ -12,10 +12,7 @@ export class NumberFormatter {
      * @param format The format code (e.g., '0.00', '#,##0', 'yyyy-mm-dd')
      * @returns The formatted string
      */
-    public static toFormattedString(
-        value: number | string | null | undefined,
-        format: string,
-    ): string {
+    public static toFormattedString(value: number | string | null | undefined, format: string): string {
         if (value === null || value === undefined) {
             return '';
         }
@@ -39,9 +36,7 @@ export class NumberFormatter {
     /**
      * Get built-in format info by format code.
      */
-    private static getBuiltInFormat(
-        format: string,
-    ): { type: string; decimals: number; thousands: boolean } | null {
+    private static getBuiltInFormat(format: string): { type: string; decimals: number; thousands: boolean } | null {
         // Common built-in format codes
         const formatMap: Record<string, { type: string; decimals: number; thousands: boolean }> = {
             General: { type: 'general', decimals: 0, thousands: false },
@@ -188,12 +183,7 @@ export class NumberFormatter {
         }
 
         // Handle time formats
-        if (
-            format.includes('h:') ||
-            format.includes('hh:') ||
-            format.includes(':mm') ||
-            format.includes(':ss')
-        ) {
+        if (format.includes('h:') || format.includes('hh:') || format.includes(':mm') || format.includes(':ss')) {
             return this.formatTime(value);
         }
 

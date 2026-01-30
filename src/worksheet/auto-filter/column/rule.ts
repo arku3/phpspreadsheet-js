@@ -130,10 +130,7 @@ export class Rule {
         Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_PERCENT,
     ];
 
-    static readonly #TOP_TEN_TYPE = [
-        Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_TOP,
-        Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_BOTTOM,
-    ];
+    static readonly #TOP_TEN_TYPE = [Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_TOP, Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_BOTTOM];
 
     #parent: Column | null;
     #ruleType: string = Rule.AUTOFILTER_RULETYPE_FILTER;

@@ -14,10 +14,7 @@ export class StringTable extends WriterPart {
     /**
      * Create worksheet stringtable.
      */
-    public createStringTable(
-        worksheet: Worksheet,
-        existingTable: (RichText | string)[] = [],
-    ): (RichText | string)[] {
+    public createStringTable(worksheet: Worksheet, existingTable: (RichText | string)[] = []): (RichText | string)[] {
         const aStringTable = [...existingTable];
         const aFlippedStringTable = this.flipStringTable(aStringTable);
 
@@ -90,8 +87,7 @@ export class StringTable extends WriterPart {
                     rPr.ele('b').att('val', font.getBold() ? 'true' : 'false');
                     rPr.ele('i').att('val', font.getItalic() ? 'true' : 'false');
                     if (font.getStrikethrough()) rPr.ele('strike').att('val', 'true');
-                    if (font.getColor().getARGB())
-                        rPr.ele('color').att('rgb', font.getColor().getARGB()!);
+                    if (font.getColor().getARGB()) rPr.ele('color').att('rgb', font.getColor().getARGB()!);
                     if (font.getSize()) rPr.ele('sz').att('val', String(font.getSize()));
                     if (font.getUnderline()) rPr.ele('u').att('val', font.getUnderline()!);
                     if (font.getSuperscript()) rPr.ele('vertAlign').att('val', 'superscript');

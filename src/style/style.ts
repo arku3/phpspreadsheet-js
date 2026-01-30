@@ -265,19 +265,14 @@ export class Style extends Supervisor {
 
                     const existing = workbook.getCellXfByHashCode(newStyle.getHashCode());
                     const newIndex =
-                        existing === false
-                            ? this.addStyleToWorkbook(workbook, newStyle)
-                            : existing.getIndex();
+                        existing === false ? this.addStyleToWorkbook(workbook, newStyle) : existing.getIndex();
                     cell.setXfIndex(newIndex);
                 }
             }
         }
     }
 
-    private addStyleToWorkbook(
-        workbook: { addCellXf: (style: Style) => void },
-        style: Style,
-    ): number {
+    private addStyleToWorkbook(workbook: { addCellXf: (style: Style) => void }, style: Style): number {
         workbook.addCellXf(style);
         return style.getIndex();
     }

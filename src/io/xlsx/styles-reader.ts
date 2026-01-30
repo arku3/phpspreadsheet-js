@@ -38,9 +38,7 @@ export class StylesReader extends ReaderPart {
         };
 
         // Parse number formats
-        const numFmtMatches = xmlContent.matchAll(
-            /<numFmt[^>]*numFmtId="(\d+)"[^>]*formatCode="([^"]*)"/g,
-        );
+        const numFmtMatches = xmlContent.matchAll(/<numFmt[^>]*numFmtId="(\d+)"[^>]*formatCode="([^"]*)"/g);
         for (const match of numFmtMatches) {
             const id = parseInt(match[1]!, 10);
             const formatCode = match[2]!;
@@ -72,9 +70,7 @@ export class StylesReader extends ReaderPart {
         }
 
         // Parse cellStyleXfs (named styles)
-        const cellStyleXfsSection = xmlContent.match(
-            /<cellStyleXfs[^>]*>([\s\S]*?)<\/cellStyleXfs>/,
-        );
+        const cellStyleXfsSection = xmlContent.match(/<cellStyleXfs[^>]*>([\s\S]*?)<\/cellStyleXfs>/);
         if (cellStyleXfsSection && cellStyleXfsSection[1]) {
             const xfMatches = cellStyleXfsSection[1].matchAll(/<xf[^>]*>([\s\S]*?)<\/xf>/g);
             for (const match of xfMatches) {

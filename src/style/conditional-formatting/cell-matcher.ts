@@ -45,16 +45,12 @@ export class CellMatcher {
         const firstRange = splitRange[0];
         if (firstRange && firstRange[0]) {
             this.referenceCell = firstRange[0];
-            [this.referenceColumn, this.referenceRow] = Coordinate.indexesFromString(
-                this.referenceCell,
-            );
+            [this.referenceColumn, this.referenceRow] = Coordinate.indexesFromString(this.referenceCell);
         }
 
         const absoluteRanges: string[] = [];
         for (const rangeSet of splitRange) {
-            const absoluteRange = rangeSet
-                .map((coord) => Coordinate.absoluteCoordinate(coord))
-                .join(':');
+            const absoluteRange = rangeSet.map((coord) => Coordinate.absoluteCoordinate(coord)).join(':');
             absoluteRanges.push(absoluteRange);
         }
         this.conditionalRange = absoluteRanges.join(',');
@@ -130,11 +126,10 @@ export class CellMatcher {
 
     protected processDuplicatesComparison(conditional: Conditional): boolean {
         const worksheetName = this.worksheet.getTitle();
-        const expression =
-            `=${CellMatcher.COMPARISON_DUPLICATES_OPERATORS[conditional.getConditionType()]}`
-                .replace('%s', worksheetName)
-                .replace('%s', this.conditionalRange)
-                .replace('%s', String(this.wrapValue(this.cell.getCalculatedValue())));
+        const expression = `=${CellMatcher.COMPARISON_DUPLICATES_OPERATORS[conditional.getConditionType()]}`
+            .replace('%s', worksheetName)
+            .replace('%s', this.conditionalRange)
+            .replace('%s', String(this.wrapValue(this.cell.getCalculatedValue())));
 
         return this.evaluateExpression(expression);
     }
@@ -153,17 +148,13 @@ export class CellMatcher {
         try {
             const calculation = this.worksheet.getParent().getCalculationEngine();
             calculation.flushInstance();
-            return Boolean(
-                calculation.calculateFormula(expression, this.worksheet, this.cell.getCoordinate()),
-            );
+            return Boolean(calculation.calculateFormula(expression, this.worksheet, this.cell.getCoordinate()));
         } catch (e) {
             return false;
         }
     }
 
-    protected adjustConditionsForCellReferences(
-        conditions: (string | number)[],
-    ): (string | number)[] {
+    protected adjustConditionsForCellReferences(conditions: (string | number)[]): (string | number)[] {
         return conditions.map((condition) => {
             if (typeof condition === 'string') {
                 return this.cellConditionCheck(condition);

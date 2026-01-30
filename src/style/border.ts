@@ -151,9 +151,7 @@ export class Border extends Supervisor {
             this.setBorderStyle(styleArray.borderStyle as string | boolean);
         }
         if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
-            this.getColor().applyFromArray(
-                styleArray.color as { rgb?: string; argb?: string; theme?: number },
-            );
+            this.getColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
         }
         return this;
     }

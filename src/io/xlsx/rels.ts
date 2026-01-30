@@ -221,10 +221,9 @@ export class Rels extends WriterPart {
      * Generate the XML from a list of relationships.
      */
     private writeRelationshipsXml(relationships: Relationship[]): string {
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'Relationships',
-            { xmlns: 'http://schemas.openxmlformats.org/package/2006/relationships' },
-        );
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('Relationships', {
+            xmlns: 'http://schemas.openxmlformats.org/package/2006/relationships',
+        });
 
         for (const rel of relationships) {
             const attrs: any = {

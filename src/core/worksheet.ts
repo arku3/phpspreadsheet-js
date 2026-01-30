@@ -136,9 +136,7 @@ export class Worksheet {
     public addDrawing(drawing: BaseDrawing): this {
         const existingWorksheet = drawing.getWorksheet();
         if (existingWorksheet !== null && existingWorksheet !== this) {
-            throw new Error(
-                'A Worksheet has already been assigned. Drawings can only exist on one Worksheet.',
-            );
+            throw new Error('A Worksheet has already been assigned. Drawings can only exist on one Worksheet.');
         }
 
         if (!this.#drawingCollection.includes(drawing)) {
@@ -331,13 +329,7 @@ export class Worksheet {
         let cell = this.#cellCollection.get(coordinate);
         if (!cell) {
             const [colIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
-            cell = new Cell(
-                null,
-                DataType.TYPE_NULL,
-                this,
-                Coordinate.stringFromColumnIndex(colIndex),
-                rowIndex,
-            );
+            cell = new Cell(null, DataType.TYPE_NULL, this, Coordinate.stringFromColumnIndex(colIndex), rowIndex);
             this.#cellCollection.add(coordinate, cell);
         }
         return cell;
@@ -642,9 +634,7 @@ export class Worksheet {
             this.#activePane = '';
         } else {
             const [colIndex, rowIndex] = Coordinate.indexesFromString(cellAddress);
-            const [startColIndex, startRowIndex] = Coordinate.indexesFromString(
-                this.#paneTopLeftCell,
-            );
+            const [startColIndex, startRowIndex] = Coordinate.indexesFromString(this.#paneTopLeftCell);
             this.#xSplit = Math.max(0, colIndex - startColIndex);
             this.#ySplit = Math.max(0, rowIndex - startRowIndex);
 
@@ -706,11 +696,7 @@ export class Worksheet {
             }
 
             this.setActivePane(activePane);
-            this.#panes[activePane] = new Pane(
-                activePane,
-                this.#selectedCells,
-                this.getActiveCell(),
-            );
+            this.#panes[activePane] = new Pane(activePane, this.#selectedCells, this.getActiveCell());
         }
     }
 
@@ -744,10 +730,7 @@ export class Worksheet {
         if (Worksheet.#VALID_FROZEN_STATE.includes(this.#paneState)) {
             const [baseCol, baseRow] = Coordinate.indexesFromString(this.#paneTopLeftCell);
             this.freezePane(
-                Coordinate.stringFromCoordinate(
-                    baseCol + this.#xSplit - 1,
-                    baseRow + this.#ySplit - 1,
-                ),
+                Coordinate.stringFromCoordinate(baseCol + this.#xSplit - 1, baseRow + this.#ySplit - 1),
                 this.#topLeftCell,
                 this.#paneState === Worksheet.PANE_FROZENSPLIT,
             );
@@ -770,10 +753,7 @@ export class Worksheet {
         if (Worksheet.#VALID_FROZEN_STATE.includes(this.#paneState)) {
             const [baseCol, baseRow] = Coordinate.indexesFromString(this.#paneTopLeftCell);
             this.freezePane(
-                Coordinate.stringFromCoordinate(
-                    baseCol + this.#xSplit - 1,
-                    baseRow + this.#ySplit - 1,
-                ),
+                Coordinate.stringFromCoordinate(baseCol + this.#xSplit - 1, baseRow + this.#ySplit - 1),
                 this.#topLeftCell,
                 this.#paneState === Worksheet.PANE_FROZENSPLIT,
             );
@@ -1049,9 +1029,7 @@ export class Worksheet {
         for (const rowData of data) {
             let currentColIndex = startColIndex;
             for (const cellValue of rowData) {
-                const matchesNull = strictNullComparison
-                    ? cellValue === nullValue
-                    : cellValue == nullValue;
+                const matchesNull = strictNullComparison ? cellValue === nullValue : cellValue == nullValue;
 
                 if (!matchesNull) {
                     const coord = `${Coordinate.stringFromColumnIndex(currentColIndex)}${currentStartRow}`;
@@ -1086,11 +1064,7 @@ export class Worksheet {
         const returnValue: any = returnCellRef ? {} : [];
 
         for (let row = minRow; row <= maxRow; row++) {
-            if (
-                ignoreHidden &&
-                this.rowDimensionExists(row) &&
-                !this.getRowDimension(row).getVisible()
-            ) {
+            if (ignoreHidden && this.rowDimensionExists(row) && !this.getRowDimension(row).getVisible()) {
                 continue;
             }
 
@@ -1131,12 +1105,7 @@ export class Worksheet {
     /**
      * Helper method for rangeToArray to process individual cell values.
      */
-    #cellToArray(
-        cell: Cell | undefined,
-        calculateFormulas: boolean,
-        _formatData: boolean,
-        nullValue: any,
-    ): any {
+    #cellToArray(cell: Cell | undefined, calculateFormulas: boolean, _formatData: boolean, nullValue: any): any {
         if (!cell || cell.getValue() === null) {
             return nullValue;
         }
@@ -1163,14 +1132,7 @@ export class Worksheet {
     ): any {
         const highest = this.getHighestRowAndColumn();
         const range = `A1:${highest.column}${highest.row}`;
-        return this.rangeToArray(
-            range,
-            nullValue,
-            calculateFormulas,
-            formatData,
-            returnCellRef,
-            ignoreHidden,
-        );
+        return this.rangeToArray(range, nullValue, calculateFormulas, formatData, returnCellRef, ignoreHidden);
     }
 
     /**
@@ -1507,8 +1469,7 @@ export class Worksheet {
         const endRow = startRow + numberOfRows - 1;
 
         for (const [range] of Object.entries(this.#mergeCells)) {
-            const [[startCol, rangeStartRow], [endCol, rangeEndRow]] =
-                Coordinate.rangeBoundaries(range);
+            const [[startCol, rangeStartRow], [endCol, rangeEndRow]] = Coordinate.rangeBoundaries(range);
 
             if (rangeEndRow < startRow) {
                 // Range entirely before deletion - unchanged
@@ -1558,8 +1519,7 @@ export class Worksheet {
         const newMergeCells: Record<string, string> = {};
 
         for (const [range] of Object.entries(this.#mergeCells)) {
-            const [[rangeStartCol, startRow], [rangeEndCol, endRow]] =
-                Coordinate.rangeBoundaries(range);
+            const [[rangeStartCol, startRow], [rangeEndCol, endRow]] = Coordinate.rangeBoundaries(range);
 
             if (rangeEndCol < startColIndex) {
                 // Range entirely before deletion - unchanged
@@ -1670,10 +1630,7 @@ export class Worksheet {
     /**
      * Save and remove column dimensions for a range.
      */
-    #saveAndRemoveColumnDimensions(
-        startCol: string,
-        numberOfCols: number,
-    ): Map<string, ColumnDimension> {
+    #saveAndRemoveColumnDimensions(startCol: string, numberOfCols: number): Map<string, ColumnDimension> {
         const saved = new Map<string, ColumnDimension>();
         const startColIndex = Coordinate.columnIndexFromString(startCol);
         const endColIndex = startColIndex + numberOfCols;
@@ -1699,11 +1656,7 @@ export class Worksheet {
     /**
      * Restore row dimensions with adjusted indices.
      */
-    #restoreRowDimensions(
-        saved: Map<number, RowDimension>,
-        startRow: number,
-        rowDelta: number,
-    ): void {
+    #restoreRowDimensions(saved: Map<number, RowDimension>, startRow: number, rowDelta: number): void {
         for (const [oldRow, dimension] of saved.entries()) {
             const newRow = oldRow + rowDelta;
             if (newRow >= startRow) {
@@ -1716,11 +1669,7 @@ export class Worksheet {
     /**
      * Restore column dimensions with adjusted indices.
      */
-    #restoreColumnDimensions(
-        saved: Map<string, ColumnDimension>,
-        startCol: string,
-        colDelta: number,
-    ): void {
+    #restoreColumnDimensions(saved: Map<string, ColumnDimension>, startCol: string, colDelta: number): void {
         const startColIndex = Coordinate.columnIndexFromString(startCol);
 
         for (const [oldCol, dimension] of saved.entries()) {

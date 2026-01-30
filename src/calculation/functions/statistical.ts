@@ -13,9 +13,7 @@ export class Statistical implements FunctionCategory {
             'AVERAGE',
             (args) => {
                 const flatArgs = Helpers.flattenNumeric(args);
-                return flatArgs.length > 0
-                    ? flatArgs.reduce((acc, val) => acc + val, 0) / flatArgs.length
-                    : 0;
+                return flatArgs.length > 0 ? flatArgs.reduce((acc, val) => acc + val, 0) / flatArgs.length : 0;
             },
             1,
             -1,

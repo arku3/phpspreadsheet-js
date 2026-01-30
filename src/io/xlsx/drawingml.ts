@@ -87,21 +87,16 @@ export class DrawingML extends WriterPart {
         _worksheetId: number,
         startImageDataIndex: number,
     ): DrawingPartResult | null {
-        const drawings = worksheet
-            .getDrawingCollection()
-            .filter((d): d is Drawing => d instanceof Drawing);
+        const drawings = worksheet.getDrawingCollection().filter((d): d is Drawing => d instanceof Drawing);
         if (drawings.length === 0) return null;
 
         let imageDataIndex = startImageDataIndex;
         const mediaFiles: DrawingMediaFile[] = [];
 
-        const drawingRoot = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'xdr:wsDr',
-            {
-                'xmlns:xdr': 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing',
-                'xmlns:a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
-            },
-        );
+        const drawingRoot = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('xdr:wsDr', {
+            'xmlns:xdr': 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing',
+            'xmlns:a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
+        });
 
         const rels: { id: string; type: string; target: string }[] = [];
 
@@ -126,10 +121,9 @@ export class DrawingML extends WriterPart {
             this.#writeDrawingAnchor(drawingRoot, drawing, relId);
         }
 
-        const relsRoot = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'Relationships',
-            { xmlns: 'http://schemas.openxmlformats.org/package/2006/relationships' },
-        );
+        const relsRoot = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('Relationships', {
+            xmlns: 'http://schemas.openxmlformats.org/package/2006/relationships',
+        });
         for (const rel of rels) {
             relsRoot.ele('Relationship', {
                 Id: rel.id,
@@ -213,7 +207,9 @@ export class DrawingML extends WriterPart {
             const descr =
                 drawing.getDescription() !== ''
                     ? drawing.getDescription()
-                    : (drawing.getName() !== '' ? drawing.getName() : `Image ${relId}`);
+                    : drawing.getName() !== ''
+                      ? drawing.getName()
+                      : `Image ${relId}`;
             nvPicPr.ele('xdr:cNvPr', {
                 id: String(relId),
                 name,

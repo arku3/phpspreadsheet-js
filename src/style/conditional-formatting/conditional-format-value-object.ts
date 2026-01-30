@@ -7,11 +7,7 @@ export class ConditionalFormatValueObject {
     #cellFormula: string | null;
     #greaterThanOrEqual: boolean | null = null;
 
-    constructor(
-        type: string,
-        value: string | number | boolean | null = null,
-        cellFormula: string | null = null,
-    ) {
+    constructor(type: string, value: string | number | boolean | null = null, cellFormula: string | null = null) {
         this.#type = type;
         this.#value = value;
         this.#cellFormula = cellFormula;

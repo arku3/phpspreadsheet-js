@@ -162,12 +162,7 @@ export class Alignment extends Supervisor {
             normalized = Alignment.TEXTROTATION_STACK_PHPSPREADSHEET;
         }
 
-        if (
-            !(
-                (normalized >= -90 && normalized <= 90) ||
-                normalized === Alignment.TEXTROTATION_STACK_PHPSPREADSHEET
-            )
-        ) {
+        if (!((normalized >= -90 && normalized <= 90) || normalized === Alignment.TEXTROTATION_STACK_PHPSPREADSHEET)) {
             throw new Error('Text rotation should be a value between -90 and 90.');
         }
 

@@ -22,9 +22,7 @@ export class Duplicates extends WizardAbstract implements WizardInterface {
 
     public getConditional(): Conditional {
         const conditional = new Conditional();
-        conditional.setConditionType(
-            this.inverse ? Conditional.CONDITION_UNIQUE : Conditional.CONDITION_DUPLICATES,
-        );
+        conditional.setConditionType(this.inverse ? Conditional.CONDITION_UNIQUE : Conditional.CONDITION_DUPLICATES);
         conditional.setStyle(this.getStyle());
         conditional.setStopIfTrue(this.getStopIfTrue());
 

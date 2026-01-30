@@ -11,17 +11,13 @@ export class LookupRef implements FunctionCategory {
                 const lookupValue = args[0];
                 const tableArray = args[1];
                 const colIndexNum = Math.floor(Number(Helpers.asScalar(args[2])) || 0);
-                const rangeLookup =
-                    args[3] !== undefined ? Boolean(Helpers.asScalar(args[3])) : true;
+                const rangeLookup = args[3] !== undefined ? Boolean(Helpers.asScalar(args[3])) : true;
 
                 if (!Array.isArray(tableArray) || tableArray.length === 0) {
                     return '#VALUE!';
                 }
 
-                if (
-                    colIndexNum < 1 ||
-                    colIndexNum > (Array.isArray(tableArray[0]) ? tableArray[0].length : 1)
-                ) {
+                if (colIndexNum < 1 || colIndexNum > (Array.isArray(tableArray[0]) ? tableArray[0].length : 1)) {
                     return '#REF!';
                 }
 
@@ -33,38 +29,18 @@ export class LookupRef implements FunctionCategory {
                     for (const row of tableArray) {
                         const firstColValue = Array.isArray(row) ? row[0] : row;
                         if (firstColValue === lookupValue) {
-                            result = Array.isArray(row)
-                                ? row[colIndex]
-                                : colIndex === 0
-                                  ? row
-                                  : '#REF!';
-                        } else if (
-                            typeof firstColValue === typeof lookupValue &&
-                            firstColValue < lookupValue
-                        ) {
-                            result = Array.isArray(row)
-                                ? row[colIndex]
-                                : colIndex === 0
-                                  ? row
-                                  : '#REF!';
-                        } else if (
-                            typeof firstColValue === typeof lookupValue &&
-                            firstColValue > lookupValue
-                        ) {
+                            result = Array.isArray(row) ? row[colIndex] : colIndex === 0 ? row : '#REF!';
+                        } else if (typeof firstColValue === typeof lookupValue && firstColValue < lookupValue) {
+                            result = Array.isArray(row) ? row[colIndex] : colIndex === 0 ? row : '#REF!';
+                        } else if (typeof firstColValue === typeof lookupValue && firstColValue > lookupValue) {
                             break;
                         }
                     }
                 } else {
                     // Exact match
-                    const match = tableArray.find(
-                        (row) => (Array.isArray(row) ? row[0] : row) == lookupValue,
-                    );
+                    const match = tableArray.find((row) => (Array.isArray(row) ? row[0] : row) == lookupValue);
                     if (match) {
-                        result = Array.isArray(match)
-                            ? match[colIndex]
-                            : colIndex === 0
-                              ? match
-                              : '#REF!';
+                        result = Array.isArray(match) ? match[colIndex] : colIndex === 0 ? match : '#REF!';
                     }
                 }
 
@@ -92,10 +68,7 @@ export class LookupRef implements FunctionCategory {
                             result = i + 1;
                         } else if (lookupArray[i] < lookupValue) {
                             result = i + 1;
-                        } else if (
-                            typeof lookupArray[i] === typeof lookupValue &&
-                            lookupArray[i] > lookupValue
-                        ) {
+                        } else if (typeof lookupArray[i] === typeof lookupValue && lookupArray[i] > lookupValue) {
                             break;
                         }
                     }
@@ -107,10 +80,7 @@ export class LookupRef implements FunctionCategory {
                             result = i + 1;
                         } else if (lookupArray[i] > lookupValue) {
                             result = i + 1;
-                        } else if (
-                            typeof lookupArray[i] === typeof lookupValue &&
-                            lookupArray[i] < lookupValue
-                        ) {
+                        } else if (typeof lookupArray[i] === typeof lookupValue && lookupArray[i] < lookupValue) {
                             break;
                         }
                     }
@@ -128,8 +98,7 @@ export class LookupRef implements FunctionCategory {
             (args) => {
                 const array = args[0];
                 const rowNum = Math.floor(Number(Helpers.asScalar(args[1])) || 0);
-                const colNum =
-                    args[2] !== undefined ? Math.floor(Number(Helpers.asScalar(args[2]))) : 1;
+                const colNum = args[2] !== undefined ? Math.floor(Number(Helpers.asScalar(args[2]))) : 1;
 
                 if (!Array.isArray(array)) {
                     return array; // Scalar INDEX

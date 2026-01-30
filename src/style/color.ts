@@ -190,9 +190,7 @@ export class Color extends Supervisor {
         }
 
         let themeColors: string[] = [];
-        const spreadsheet =
-            (this.parent as any)?.getActiveSheet()?.getParent() ||
-            (this.parent as any)?.getParent();
+        const spreadsheet = (this.parent as any)?.getActiveSheet()?.getParent() || (this.parent as any)?.getParent();
         if (spreadsheet) {
             themeColors = spreadsheet.getTheme().getThemeColors();
         }
@@ -292,12 +290,7 @@ export class Color extends Supervisor {
      *
      * @param styleArray Array containing style information
      */
-    public applyFromArray(styleArray: {
-        rgb?: string;
-        argb?: string;
-        theme?: number;
-        hasChanged?: boolean;
-    }): this {
+    public applyFromArray(styleArray: { rgb?: string; argb?: string; theme?: number; hasChanged?: boolean }): this {
         if (this.isSupervisor) {
             const styleArrayLocal = this.getStyleArray(styleArray);
             this.getActiveSheet().getStyle(this.getSelectedCells()).applyFromArray(styleArrayLocal);
@@ -339,11 +332,7 @@ export class Color extends Supervisor {
      *                                            should be returned if the indexed colour doesn't exist
      * @param palette
      */
-    public static indexedColor(
-        colorIndex: number,
-        background: boolean = false,
-        palette?: string[],
-    ): Color {
+    public static indexedColor(colorIndex: number, background: boolean = false, palette?: string[]): Color {
         if (!palette || palette.length === 0) {
             if (Color.INDEXED_COLORS[colorIndex]) {
                 return new Color(Color.INDEXED_COLORS[colorIndex]);

@@ -418,10 +418,7 @@ export class Database implements FunctionCategory {
         return database.slice(1).filter((row) => Array.isArray(row));
     }
 
-    private matchesCriteria(
-        row: any[],
-        criteria: Map<number, Array<{ op: string; value: any }>>,
-    ): boolean {
+    private matchesCriteria(row: any[], criteria: Map<number, Array<{ op: string; value: any }>>): boolean {
         for (const [colIdx, conditions] of criteria) {
             const cellValue = row[colIdx];
 

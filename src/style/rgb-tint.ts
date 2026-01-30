@@ -66,11 +66,7 @@ export class RgbTint {
      *
      * @return [red, green, blue]
      */
-    private static hlsToRgb(
-        hue: number,
-        luminance: number,
-        saturation: number,
-    ): [number, number, number] {
+    private static hlsToRgb(hue: number, luminance: number, saturation: number): [number, number, number] {
         if (saturation === 0.0) {
             return [luminance, luminance, luminance];
         }
@@ -133,16 +129,8 @@ export class RgbTint {
      *
      * @return [red, green, blue]
      */
-    private static msHlsToRgb(
-        hue: number,
-        lightness: number,
-        saturation: number,
-    ): [number, number, number] {
-        return RgbTint.hlsToRgb(
-            hue / RgbTint.HLSMAX,
-            lightness / RgbTint.HLSMAX,
-            saturation / RgbTint.HLSMAX,
-        );
+    private static msHlsToRgb(hue: number, lightness: number, saturation: number): [number, number, number] {
+        return RgbTint.hlsToRgb(hue / RgbTint.HLSMAX, lightness / RgbTint.HLSMAX, saturation / RgbTint.HLSMAX);
     }
 
     /**
@@ -155,9 +143,7 @@ export class RgbTint {
             return Math.round(luminance * (1.0 + tint));
         }
 
-        return Math.round(
-            luminance * (1.0 - tint) + (RgbTint.HLSMAX - RgbTint.HLSMAX * (1.0 - tint)),
-        );
+        return Math.round(luminance * (1.0 - tint) + (RgbTint.HLSMAX - RgbTint.HLSMAX * (1.0 - tint)));
     }
 
     /**
@@ -165,11 +151,7 @@ export class RgbTint {
      */
     public static rgbAndTintToRgb(red: number, green: number, blue: number, tint: number): string {
         const [hue, luminance, saturation] = RgbTint.rgbToMsHls(red, green, blue);
-        const [r, g, b] = RgbTint.msHlsToRgb(
-            hue,
-            RgbTint.tintLuminance(tint, luminance),
-            saturation,
-        );
+        const [r, g, b] = RgbTint.msHlsToRgb(hue, RgbTint.tintLuminance(tint, luminance), saturation);
 
         const toHex = (c: number) => {
             const hex = Math.round(c * RgbTint.RGBMAX)

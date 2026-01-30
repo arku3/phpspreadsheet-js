@@ -45,11 +45,7 @@ export class FormulaToken {
     #tokenType: TTokenType;
     #tokenSubType: TTokenSubType;
 
-    constructor(
-        value: string,
-        type: TTokenType = TokenType.UNKNOWN,
-        subType: TTokenSubType = TokenSubType.NOTHING,
-    ) {
+    constructor(value: string, type: TTokenType = TokenType.UNKNOWN, subType: TTokenSubType = TokenSubType.NOTHING) {
         this.#value = value;
         this.#tokenType = type;
         this.#tokenSubType = subType;

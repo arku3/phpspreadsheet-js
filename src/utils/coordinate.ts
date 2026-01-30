@@ -104,10 +104,7 @@ export class Coordinate {
      *
      * Port of PhpSpreadsheet's Coordinate::resolveUnionAndIntersection.
      */
-    public static resolveUnionAndIntersection(
-        cellBlock: string,
-        implodeCharacter: string = ',',
-    ): string {
+    public static resolveUnionAndIntersection(cellBlock: string, implodeCharacter: string = ','): string {
         let normalized = cellBlock.trim();
         normalized = normalized.replace(/\s{2,}/g, ' ');
         normalized = normalized.replace(/\s+,/g, ',');

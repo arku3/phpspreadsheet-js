@@ -17,10 +17,7 @@ export class Column {
     public static readonly AUTOFILTER_COLUMN_JOIN_AND = 'and';
     public static readonly AUTOFILTER_COLUMN_JOIN_OR = 'or';
 
-    static readonly #RULE_JOINS = [
-        Column.AUTOFILTER_COLUMN_JOIN_AND,
-        Column.AUTOFILTER_COLUMN_JOIN_OR,
-    ];
+    static readonly #RULE_JOINS = [Column.AUTOFILTER_COLUMN_JOIN_AND, Column.AUTOFILTER_COLUMN_JOIN_OR];
 
     #parent: AutoFilter | null;
     #columnIndex: string;
@@ -127,10 +124,7 @@ export class Column {
 
     public createRule(): Rule {
         this.setEvaluatedFalse();
-        if (
-            this.#filterType === Column.AUTOFILTER_FILTERTYPE_CUSTOMFILTER &&
-            this.#ruleset.length >= 2
-        ) {
+        if (this.#filterType === Column.AUTOFILTER_FILTERTYPE_CUSTOMFILTER && this.#ruleset.length >= 2) {
             throw new Error('No more than 2 rules are allowed in a Custom Filter');
         }
         const rule = new Rule(this);

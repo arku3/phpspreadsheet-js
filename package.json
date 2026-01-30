@@ -3,7 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "format": "prettier --write .",
+    "format": "prettier --write --log-level silent .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {

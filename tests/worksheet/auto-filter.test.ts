@@ -59,17 +59,9 @@ describe('AutoFilter', () => {
             .setFilterType(Column.AUTOFILTER_FILTERTYPE_CUSTOMFILTER)
             .setJoin(Column.AUTOFILTER_COLUMN_JOIN_OR);
 
-        autoFilter
-            .getColumn('A')
-            .createRule()
-            .setOperator(Rule.AUTOFILTER_COLUMN_RULE_EQUAL)
-            .setValue('C*');
+        autoFilter.getColumn('A').createRule().setOperator(Rule.AUTOFILTER_COLUMN_RULE_EQUAL).setValue('C*');
 
-        autoFilter
-            .getColumn('A')
-            .createRule()
-            .setOperator(Rule.AUTOFILTER_COLUMN_RULE_EQUAL)
-            .setValue('*o*');
+        autoFilter.getColumn('A').createRule().setOperator(Rule.AUTOFILTER_COLUMN_RULE_EQUAL).setValue('*o*');
 
         autoFilter.showHideRows();
 
@@ -129,11 +121,7 @@ describe('AutoFilter', () => {
         const autoFilter = sheet.getAutoFilter();
         autoFilter.setRange('A1:A1'); // Single row header
 
-        autoFilter
-            .getColumn('A')
-            .setFilterType(Column.AUTOFILTER_FILTERTYPE_FILTER)
-            .createRule()
-            .setValue('Apple');
+        autoFilter.getColumn('A').setFilterType(Column.AUTOFILTER_FILTERTYPE_FILTER).createRule().setValue('Apple');
 
         autoFilter.showHideRows();
 

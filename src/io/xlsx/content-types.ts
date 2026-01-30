@@ -31,21 +31,13 @@ export class ContentTypes extends WriterPart {
         );
 
         // Rels
-        this.writeDefaultContentType(
-            root,
-            'rels',
-            'application/vnd.openxmlformats-package.relationships+xml',
-        );
+        this.writeDefaultContentType(root, 'rels', 'application/vnd.openxmlformats-package.relationships+xml');
 
         // XML
         this.writeDefaultContentType(root, 'xml', 'application/xml');
 
         // VML drawings (classic comments "notes")
-        this.writeDefaultContentType(
-            root,
-            'vml',
-            'application/vnd.openxmlformats-officedocument.vmlDrawing',
-        );
+        this.writeDefaultContentType(root, 'vml', 'application/vnd.openxmlformats-officedocument.vmlDrawing');
 
         // Workbook
         this.writeOverrideContentType(

@@ -373,9 +373,7 @@ export class Font extends Supervisor {
             this.setStrikethrough(Boolean(styleArray.strikethrough));
         }
         if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
-            this.getColor().applyFromArray(
-                styleArray.color as { rgb?: string; argb?: string; theme?: number },
-            );
+            this.getColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
         }
         if (styleArray.size !== undefined) {
             this.setSize(Number(styleArray.size));

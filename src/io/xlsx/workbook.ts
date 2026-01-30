@@ -14,13 +14,10 @@ export class Workbook extends WriterPart {
         preCalculateFormulas: boolean = false,
         rIdMap: Map<string, string>,
     ): string {
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'workbook',
-            {
-                xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
-                'xmlns:r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
-            },
-        );
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('workbook', {
+            xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
+            'xmlns:r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+        });
 
         // fileVersion
         root.ele('fileVersion', {

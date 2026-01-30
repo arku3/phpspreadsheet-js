@@ -86,9 +86,7 @@ export class PasswordHasher {
         spinCount: number = 10000,
     ): string {
         if (password.length > PasswordHasher.MAX_PASSWORD_LENGTH) {
-            throw new Error(
-                'Password exceeds ' + PasswordHasher.MAX_PASSWORD_LENGTH + ' characters',
-            );
+            throw new Error('Password exceeds ' + PasswordHasher.MAX_PASSWORD_LENGTH + ' characters');
         }
 
         const nodeAlgorithm = PasswordHasher.getAlgorithm(algorithm);
@@ -99,10 +97,7 @@ export class PasswordHasher {
         const saltValue = Buffer.from(salt, 'base64');
         const encodedPassword = Buffer.from(password, 'utf16le');
 
-        let hashValue = createHash(nodeAlgorithm)
-            .update(saltValue)
-            .update(encodedPassword)
-            .digest();
+        let hashValue = createHash(nodeAlgorithm).update(saltValue).update(encodedPassword).digest();
 
         for (let i = 0; i < spinCount; ++i) {
             const buffer = Buffer.alloc(4);

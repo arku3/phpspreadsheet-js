@@ -29,9 +29,7 @@ export abstract class WizardAbstract {
         const firstRange = splitRange[0];
         if (firstRange && firstRange[0]) {
             this.referenceCell = firstRange[0];
-            [this.referenceColumn, this.referenceRow] = Coordinate.indexesFromString(
-                this.referenceCell,
-            );
+            [this.referenceColumn, this.referenceRow] = Coordinate.indexesFromString(this.referenceCell);
         }
     }
 
@@ -68,9 +66,7 @@ export abstract class WizardAbstract {
         return condition;
     }
 
-    protected adjustConditionsForCellReferences(
-        conditions: (string | number)[],
-    ): (string | number)[] {
+    protected adjustConditionsForCellReferences(conditions: (string | number)[]): (string | number)[] {
         return conditions.map((condition) => {
             if (typeof condition === 'string') {
                 return this.cellConditionCheck(condition);

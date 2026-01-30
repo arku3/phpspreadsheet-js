@@ -18,9 +18,7 @@ describe('DateValue Wizard', () => {
         wizard.lastSevenDays();
 
         const conditional = wizard.getConditional();
-        expect(conditional.getConditions()[0]).toBe(
-            'AND(TODAY()-FLOOR(B2,1)<=6,FLOOR(B2,1)<=TODAY())',
-        );
+        expect(conditional.getConditions()[0]).toBe('AND(TODAY()-FLOOR(B2,1)<=6,FLOOR(B2,1)<=TODAY())');
     });
 
     it('should create a next month condition', () => {

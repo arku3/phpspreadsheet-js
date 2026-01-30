@@ -20,10 +20,7 @@ export class Financial implements FunctionCategory {
                 const nper = Number(Helpers.asScalar(args[1])) || 0;
                 const pmt = Number(Helpers.asScalar(args[2])) || 0;
                 const pv = args[3] !== undefined ? Number(Helpers.asScalar(args[3])) : 0;
-                const type =
-                    args[4] !== undefined
-                        ? Number(Helpers.asScalar(args[4]))
-                        : Financial.PAYMENT_END;
+                const type = args[4] !== undefined ? Number(Helpers.asScalar(args[4])) : Financial.PAYMENT_END;
 
                 if (isNaN(rate) || isNaN(nper) || isNaN(pmt) || isNaN(pv) || isNaN(type)) {
                     return '#VALUE!';
@@ -43,10 +40,7 @@ export class Financial implements FunctionCategory {
                 const nper = Number(Helpers.asScalar(args[1])) || 0;
                 const pmt = Number(Helpers.asScalar(args[2])) || 0;
                 const fv = args[3] !== undefined ? Number(Helpers.asScalar(args[3])) : 0;
-                const type =
-                    args[4] !== undefined
-                        ? Number(Helpers.asScalar(args[4]))
-                        : Financial.PAYMENT_END;
+                const type = args[4] !== undefined ? Number(Helpers.asScalar(args[4])) : Financial.PAYMENT_END;
 
                 if (isNaN(rate) || isNaN(nper) || isNaN(pmt) || isNaN(fv) || isNaN(type)) {
                     return '#VALUE!';
@@ -68,10 +62,7 @@ export class Financial implements FunctionCategory {
                 const nper = Number(Helpers.asScalar(args[1])) || 0;
                 const pv = Number(Helpers.asScalar(args[2])) || 0;
                 const fv = args[3] !== undefined ? Number(Helpers.asScalar(args[3])) : 0;
-                const type =
-                    args[4] !== undefined
-                        ? Number(Helpers.asScalar(args[4]))
-                        : Financial.PAYMENT_END;
+                const type = args[4] !== undefined ? Number(Helpers.asScalar(args[4])) : Financial.PAYMENT_END;
 
                 if (isNaN(rate) || isNaN(nper) || isNaN(pv) || isNaN(fv) || isNaN(type)) {
                     return '#VALUE!';
@@ -91,10 +82,7 @@ export class Financial implements FunctionCategory {
                 const pmt = Number(Helpers.asScalar(args[1])) || 0;
                 const pv = Number(Helpers.asScalar(args[2])) || 0;
                 const fv = args[3] !== undefined ? Number(Helpers.asScalar(args[3])) : 0;
-                const type =
-                    args[4] !== undefined
-                        ? Number(Helpers.asScalar(args[4]))
-                        : Financial.PAYMENT_END;
+                const type = args[4] !== undefined ? Number(Helpers.asScalar(args[4])) : Financial.PAYMENT_END;
 
                 if (isNaN(rate) || isNaN(pmt) || isNaN(pv) || isNaN(fv) || isNaN(type)) {
                     return '#VALUE!';
@@ -116,20 +104,10 @@ export class Financial implements FunctionCategory {
                 const pmt = Number(Helpers.asScalar(args[1])) || 0;
                 const pv = Number(Helpers.asScalar(args[2])) || 0;
                 const fv = args[3] !== undefined ? Number(Helpers.asScalar(args[3])) : 0;
-                const type =
-                    args[4] !== undefined
-                        ? Number(Helpers.asScalar(args[4]))
-                        : Financial.PAYMENT_END;
+                const type = args[4] !== undefined ? Number(Helpers.asScalar(args[4])) : Financial.PAYMENT_END;
                 const guess = args[5] !== undefined ? Number(Helpers.asScalar(args[5])) : 0.1;
 
-                if (
-                    isNaN(nper) ||
-                    isNaN(pmt) ||
-                    isNaN(pv) ||
-                    isNaN(fv) ||
-                    isNaN(type) ||
-                    isNaN(guess)
-                ) {
+                if (isNaN(nper) || isNaN(pmt) || isNaN(pv) || isNaN(fv) || isNaN(type) || isNaN(guess)) {
                     return '#VALUE!';
                 }
 
@@ -181,26 +159,14 @@ export class Financial implements FunctionCategory {
 
     private futureValue(rate: number, nper: number, pmt: number, pv: number, type: number): number {
         if (rate !== 0) {
-            return (
-                -pv * Math.pow(1 + rate, nper) -
-                (pmt * (1 + rate * type) * (Math.pow(1 + rate, nper) - 1)) / rate
-            );
+            return -pv * Math.pow(1 + rate, nper) - (pmt * (1 + rate * type) * (Math.pow(1 + rate, nper) - 1)) / rate;
         }
         return -pv - pmt * nper;
     }
 
-    private presentValue(
-        rate: number,
-        nper: number,
-        pmt: number,
-        fv: number,
-        type: number,
-    ): number {
+    private presentValue(rate: number, nper: number, pmt: number, fv: number, type: number): number {
         if (rate !== 0) {
-            return (
-                (-pmt * (1 + rate * type) * ((Math.pow(1 + rate, nper) - 1) / rate) - fv) /
-                Math.pow(1 + rate, nper)
-            );
+            return (-pmt * (1 + rate * type) * ((Math.pow(1 + rate, nper) - 1) / rate) - fv) / Math.pow(1 + rate, nper);
         }
         return -fv - pmt * nper;
     }
@@ -215,13 +181,7 @@ export class Financial implements FunctionCategory {
         return (-pv - fv) / nper;
     }
 
-    private periods(
-        rate: number,
-        pmt: number,
-        pv: number,
-        fv: number,
-        type: number,
-    ): number | string {
+    private periods(rate: number, pmt: number, pv: number, fv: number, type: number): number | string {
         if (rate !== 0) {
             if (pv === 0) return '#NUM!';
 
@@ -235,14 +195,7 @@ export class Financial implements FunctionCategory {
         return (-pv - fv) / pmt;
     }
 
-    private rate(
-        nper: number,
-        pmt: number,
-        pv: number,
-        fv: number,
-        type: number,
-        guess: number,
-    ): number | string {
+    private rate(nper: number, pmt: number, pv: number, fv: number, type: number, guess: number): number | string {
         // Newton-Raphson method to find the interest rate
         const maxIterations = 100;
         const tolerance = 1e-10;

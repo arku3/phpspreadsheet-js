@@ -46,9 +46,7 @@ export class Blanks extends WizardAbstract implements WizardInterface {
 
         const conditional = new Conditional();
         conditional.setConditionType(
-            this.inverse
-                ? Conditional.CONDITION_CONTAINSBLANKS
-                : Conditional.CONDITION_NOTCONTAINSBLANKS,
+            this.inverse ? Conditional.CONDITION_CONTAINSBLANKS : Conditional.CONDITION_NOTCONTAINSBLANKS,
         );
         conditional.setConditions([expression]);
         conditional.setStyle(this.getStyle());

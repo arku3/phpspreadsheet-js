@@ -5,10 +5,7 @@ import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 import { Rels } from '../src/io/xlsx/rels.ts';
 import { RichText } from '../src/rich-text/rich-text.ts';
 import { Run } from '../src/rich-text/run.ts';
-import {
-    containsControlCharacters,
-    controlCharacterPHP2OOXML,
-} from '../src/utils/string-helper.ts';
+import { containsControlCharacters, controlCharacterPHP2OOXML } from '../src/utils/string-helper.ts';
 
 describe('I/O Module Writer Fixes', () => {
     describe('controlCharacterPHP2OOXML sanitization', () => {

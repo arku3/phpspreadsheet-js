@@ -12,13 +12,10 @@ export class DocProps extends WriterPart {
      */
     public writeDocPropsApp(spreadsheet: Spreadsheet): string {
         const properties = spreadsheet.getProperties();
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'Properties',
-            {
-                xmlns: 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties',
-                'xmlns:vt': 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes',
-            },
-        );
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('Properties', {
+            xmlns: 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties',
+            'xmlns:vt': 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes',
+        });
 
         root.ele('Application').txt('phpspreadsheet-js');
         root.ele('DocSecurity').txt('0');
@@ -54,27 +51,21 @@ export class DocProps extends WriterPart {
      */
     public writeDocPropsCore(spreadsheet: Spreadsheet): string {
         const properties = spreadsheet.getProperties();
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'cp:coreProperties',
-            {
-                'xmlns:cp':
-                    'http://schemas.openxmlformats.org/package/2006/metadata/core-properties',
-                'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
-                'xmlns:dcterms': 'http://purl.org/dc/terms/',
-                'xmlns:dcmitype': 'http://purl.org/dc/dcmitype/',
-                'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-            },
-        );
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('cp:coreProperties', {
+            'xmlns:cp': 'http://schemas.openxmlformats.org/package/2006/metadata/core-properties',
+            'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
+            'xmlns:dcterms': 'http://purl.org/dc/terms/',
+            'xmlns:dcmitype': 'http://purl.org/dc/dcmitype/',
+            'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
+        });
 
         root.ele('dc:creator').txt(properties.getCreator());
         root.ele('cp:lastModifiedBy').txt(properties.getLastModifiedBy());
 
-        const createdDate =
-            new Date(properties.getCreated() * 1000).toISOString().split('.')[0] + 'Z';
+        const createdDate = new Date(properties.getCreated() * 1000).toISOString().split('.')[0] + 'Z';
         root.ele('dcterms:created', { 'xsi:type': 'dcterms:W3CDTF' }).txt(createdDate);
 
-        const modifiedDate =
-            new Date(properties.getModified() * 1000).toISOString().split('.')[0] + 'Z';
+        const modifiedDate = new Date(properties.getModified() * 1000).toISOString().split('.')[0] + 'Z';
         root.ele('dcterms:modified', { 'xsi:type': 'dcterms:W3CDTF' }).txt(modifiedDate);
 
         root.ele('dc:title').txt(properties.getTitle());
@@ -96,13 +87,10 @@ export class DocProps extends WriterPart {
             return null;
         }
 
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'Properties',
-            {
-                xmlns: 'http://schemas.openxmlformats.org/officeDocument/2006/custom-properties',
-                'xmlns:vt': 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes',
-            },
-        );
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('Properties', {
+            xmlns: 'http://schemas.openxmlformats.org/officeDocument/2006/custom-properties',
+            'xmlns:vt': 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes',
+        });
 
         customPropertyList.forEach((propName, index) => {
             const value = properties.getCustomPropertyValue(propName);
@@ -125,8 +113,7 @@ export class DocProps extends WriterPart {
                     prop.ele('vt:bool').txt(value ? 'true' : 'false');
                     break;
                 case Properties.PROPERTY_TYPE_DATE:
-                    const dateVal =
-                        new Date((value as number) * 1000).toISOString().split('.')[0] + 'Z';
+                    const dateVal = new Date((value as number) * 1000).toISOString().split('.')[0] + 'Z';
                     prop.ele('vt:filetime').txt(dateVal);
                     break;
                 default:

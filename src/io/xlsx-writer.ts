@@ -91,9 +91,7 @@ export class XlsxWriter implements IWriter {
         this.#styleHashTable.addFromSource(this.#writerPartStyles.allStyles(this.#spreadsheet));
 
         this.#stylesConditionalHashTable = new HashTable();
-        this.#stylesConditionalHashTable.addFromSource(
-            this.#writerPartStyles.allConditionalStyles(this.#spreadsheet),
-        );
+        this.#stylesConditionalHashTable.addFromSource(this.#writerPartStyles.allConditionalStyles(this.#spreadsheet));
 
         this.#fillHashTable = new HashTable();
         this.#fillHashTable.addFromSource(this.#writerPartStyles.allFills(this.#spreadsheet));
@@ -105,9 +103,7 @@ export class XlsxWriter implements IWriter {
         this.#bordersHashTable.addFromSource(this.#writerPartStyles.allBorders(this.#spreadsheet));
 
         this.#numFmtHashTable = new HashTable();
-        this.#numFmtHashTable.addFromSource(
-            this.#writerPartStyles.allNumberFormats(this.#spreadsheet),
-        );
+        this.#numFmtHashTable.addFromSource(this.#writerPartStyles.allNumberFormats(this.#spreadsheet));
     }
 
     public getSpreadsheet(): Spreadsheet {
@@ -160,9 +156,7 @@ export class XlsxWriter implements IWriter {
             archive.append(this.#writerPartRels.writeRelationships(this.#spreadsheet), {
                 name: '_rels/.rels',
             });
-            const { xml: workbookRels, rIdMap } = this.#writerPartRels.writeWorkbookRelationships(
-                this.#spreadsheet,
-            );
+            const { xml: workbookRels, rIdMap } = this.#writerPartRels.writeWorkbookRelationships(this.#spreadsheet);
             archive.append(workbookRels, { name: 'xl/_rels/workbook.xml.rels' });
 
             // 4. Add string table
@@ -194,11 +188,7 @@ export class XlsxWriter implements IWriter {
 
             // 6. Add workbook
             archive.append(
-                this.#writerPartWorkbook.writeWorkbook(
-                    this.#spreadsheet,
-                    this.#preCalculateFormulas,
-                    rIdMap,
-                ),
+                this.#writerPartWorkbook.writeWorkbook(this.#spreadsheet, this.#preCalculateFormulas, rIdMap),
                 { name: 'xl/workbook.xml' },
             );
 

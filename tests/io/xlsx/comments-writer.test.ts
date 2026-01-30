@@ -11,10 +11,7 @@ describe('XlsxWriter Classic Comments', () => {
     const testDir = path.resolve(process.cwd(), 'test-output', 'xlsx-comments-writer');
 
     const createTestFile = async (): Promise<string> => {
-        const testFile = path.join(
-            testDir,
-            `test-comments-${process.pid}-${crypto.randomUUID()}.xlsx`,
-        );
+        const testFile = path.join(testDir, `test-comments-${process.pid}-${crypto.randomUUID()}.xlsx`);
 
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
@@ -56,9 +53,7 @@ describe('XlsxWriter Classic Comments', () => {
             expect(sheetXml).toContain('legacyDrawing');
             expect(sheetXml).toContain('r:id="rId_comments_vml1"');
 
-            const relsFile = zip.files.find(
-                (f) => f.path === 'xl/worksheets/_rels/sheet1.xml.rels',
-            );
+            const relsFile = zip.files.find((f) => f.path === 'xl/worksheets/_rels/sheet1.xml.rels');
             expect(relsFile).toBeDefined();
             const relsXml = (await relsFile!.buffer()).toString('utf-8');
             expect(relsXml).toContain('Id="rId_comments_vml1"');

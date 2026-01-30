@@ -44,12 +44,10 @@ export class XlsxReader implements IReader {
      */
     private stylesPath: string | null = null;
 
-    static readonly #COMMENTS_REL_TYPE =
-        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments';
+    static readonly #COMMENTS_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments';
     static readonly #VMLDRAWING_REL_TYPE =
         'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing';
-    static readonly #DRAWING_REL_TYPE =
-        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing';
+    static readonly #DRAWING_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing';
 
     static readonly #EMU_PER_PIXEL = 9525;
 
@@ -174,10 +172,7 @@ export class XlsxReader implements IReader {
         return relationships;
     }
 
-    async #readZipTextFile(
-        zip: unzipper.CentralDirectory,
-        zipPath: string,
-    ): Promise<string | null> {
+    async #readZipTextFile(zip: unzipper.CentralDirectory, zipPath: string): Promise<string | null> {
         const entry = zip.files.find((f) => f.path === zipPath);
         if (!entry) {
             return null;
@@ -186,10 +181,7 @@ export class XlsxReader implements IReader {
         return buf.toString('utf-8');
     }
 
-    async #readZipBinaryFile(
-        zip: unzipper.CentralDirectory,
-        zipPath: string,
-    ): Promise<Uint8Array | null> {
+    async #readZipBinaryFile(zip: unzipper.CentralDirectory, zipPath: string): Promise<Uint8Array | null> {
         const entry = zip.files.find((f) => f.path === zipPath);
         if (!entry) {
             return null;
@@ -249,9 +241,7 @@ export class XlsxReader implements IReader {
 
         for (const drawingTagMatch of drawingTagMatches) {
             const attrs = drawingTagMatch[1] ?? '';
-            const rId =
-                XlsxReader.#extractXmlAttribute(attrs, 'r:id') ??
-                XlsxReader.#extractXmlAttribute(attrs, 'id');
+            const rId = XlsxReader.#extractXmlAttribute(attrs, 'r:id') ?? XlsxReader.#extractXmlAttribute(attrs, 'id');
             if (!rId) {
                 continue;
             }
@@ -288,14 +278,8 @@ export class XlsxReader implements IReader {
                 const fromMatch = anchorInner.match(/<xdr:from\b[^>]*>([\s\S]*?)<\/xdr:from>/);
                 const fromInner = fromMatch?.[1] ?? '';
 
-                const col = Number.parseInt(
-                    (fromInner.match(/<xdr:col>(\d+)<\/xdr:col>/)?.[1] ?? '0').trim(),
-                    10,
-                );
-                const row = Number.parseInt(
-                    (fromInner.match(/<xdr:row>(\d+)<\/xdr:row>/)?.[1] ?? '0').trim(),
-                    10,
-                );
+                const col = Number.parseInt((fromInner.match(/<xdr:col>(\d+)<\/xdr:col>/)?.[1] ?? '0').trim(), 10);
+                const row = Number.parseInt((fromInner.match(/<xdr:row>(\d+)<\/xdr:row>/)?.[1] ?? '0').trim(), 10);
                 const colOffEmu = Number.parseInt(
                     (fromInner.match(/<xdr:colOff>(\d+)<\/xdr:colOff>/)?.[1] ?? '0').trim(),
                     10,
@@ -309,16 +293,12 @@ export class XlsxReader implements IReader {
 
                 let cxEmu = 0;
                 let cyEmu = 0;
-                const extMatch = anchorInner.match(
-                    /<xdr:ext\b[^>]*cx="(\d+)"[^>]*cy="(\d+)"[^>]*\/>/,
-                );
+                const extMatch = anchorInner.match(/<xdr:ext\b[^>]*cx="(\d+)"[^>]*cy="(\d+)"[^>]*\/>/);
                 if (extMatch) {
                     cxEmu = Number.parseInt(extMatch[1] ?? '0', 10);
                     cyEmu = Number.parseInt(extMatch[2] ?? '0', 10);
                 } else {
-                    const aExtMatch = anchorInner.match(
-                        /<a:ext\b[^>]*cx="(\d+)"[^>]*cy="(\d+)"[^>]*\/>/,
-                    );
+                    const aExtMatch = anchorInner.match(/<a:ext\b[^>]*cx="(\d+)"[^>]*cy="(\d+)"[^>]*\/>/);
                     if (aExtMatch) {
                         cxEmu = Number.parseInt(aExtMatch[1] ?? '0', 10);
                         cyEmu = Number.parseInt(aExtMatch[2] ?? '0', 10);
@@ -451,9 +431,7 @@ export class XlsxReader implements IReader {
             if (!workbookPath) {
                 throw new Error('Invalid XLSX file: cannot determine workbook path');
             }
-            const workbookRelPath = workbookPath
-                .replace('xl/', 'xl/_rels/')
-                .replace('.xml', '.xml.rels');
+            const workbookRelPath = workbookPath.replace('xl/', 'xl/_rels/').replace('.xml', '.xml.rels');
 
             const workbookFile = zip.files.find((f) => f.path === workbookPath);
             if (!workbookFile) {
@@ -479,10 +457,7 @@ export class XlsxReader implements IReader {
                     const target = match[2];
                     if (rId && target) {
                         const cleanTarget = target.replace(/^\//, '');
-                        worksheetPaths.set(
-                            rId,
-                            cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`,
-                        );
+                        worksheetPaths.set(rId, cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`);
                     }
                 }
             }
@@ -614,9 +589,7 @@ export class XlsxReader implements IReader {
                 throw new Error('Invalid XLSX file: cannot determine workbook path');
             }
 
-            const workbookRelPath = workbookPath
-                .replace('xl/', 'xl/_rels/')
-                .replace('.xml', '.xml.rels');
+            const workbookRelPath = workbookPath.replace('xl/', 'xl/_rels/').replace('.xml', '.xml.rels');
 
             // Parse workbook relationships to find worksheets and shared strings
             const workbookRelsFile = zip.files.find((f) => f.path === workbookRelPath);
@@ -636,10 +609,7 @@ export class XlsxReader implements IReader {
                     const target = match[2];
                     if (rId && target) {
                         const cleanTarget = target.replace(/^\//, '');
-                        worksheetPaths.set(
-                            rId,
-                            cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`,
-                        );
+                        worksheetPaths.set(rId, cleanTarget.startsWith('xl/') ? cleanTarget : `xl/${cleanTarget}`);
                     }
                 }
 
@@ -657,9 +627,7 @@ export class XlsxReader implements IReader {
                 }
 
                 // Find styles
-                const stylesMatch = relsXml.match(
-                    /<Relationship[^>]*Type="[^"]*styles"[^>]*Target="([^"]+)"/,
-                );
+                const stylesMatch = relsXml.match(/<Relationship[^>]*Type="[^"]*styles"[^>]*Target="([^"]+)"/);
                 if (stylesMatch && stylesMatch[1]) {
                     const stylesPath = stylesMatch[1].replace(/^\//, '');
                     if (!stylesPath.startsWith('xl/')) {
@@ -834,14 +802,10 @@ export class XlsxReader implements IReader {
                     // Parse worksheet drawings (images) before other relationship-based parts.
                     await this.#loadWorksheetDrawings(zip, worksheetPath, wsXml, worksheet);
 
-                    const mergeCellsMatch = wsXml.match(
-                        /<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/,
-                    );
+                    const mergeCellsMatch = wsXml.match(/<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/);
                     if (mergeCellsMatch && mergeCellsMatch[1]) {
                         const mergeCellsContent = mergeCellsMatch[1];
-                        const mergeCellMatches = mergeCellsContent.matchAll(
-                            /<mergeCell[^>]*ref="([^"]*)"[^>]*\/>/g,
-                        );
+                        const mergeCellMatches = mergeCellsContent.matchAll(/<mergeCell[^>]*ref="([^"]*)"[^>]*\/>/g);
                         for (const mergeMatch of mergeCellMatches) {
                             const range = mergeMatch[1];
                             if (range) {
@@ -851,9 +815,7 @@ export class XlsxReader implements IReader {
                     }
 
                     // Parse hyperlinks
-                    const hyperlinksMatch = wsXml.match(
-                        /<hyperlinks[^>]*>([\s\S]*?)<\/hyperlinks>/,
-                    );
+                    const hyperlinksMatch = wsXml.match(/<hyperlinks[^>]*>([\s\S]*?)<\/hyperlinks>/);
                     if (hyperlinksMatch && hyperlinksMatch[1]) {
                         const hyperlinksContent = hyperlinksMatch[1];
                         const hyperlinkMatches = hyperlinksContent.matchAll(
@@ -869,17 +831,13 @@ export class XlsxReader implements IReader {
                                 const hyperlinkRelPath = worksheetPath
                                     .replace('worksheets/', 'worksheets/_rels/')
                                     .replace('.xml', '.xml.rels');
-                                const hyperlinkRelsFile = zip.files.find(
-                                    (f) => f.path === hyperlinkRelPath,
-                                );
+                                const hyperlinkRelsFile = zip.files.find((f) => f.path === hyperlinkRelPath);
 
                                 if (hyperlinkRelsFile) {
                                     const relsContent = await hyperlinkRelsFile.buffer();
                                     const relsXml = relsContent.toString('utf-8');
                                     const urlMatch = relsXml.match(
-                                        new RegExp(
-                                            `<Relationship[^>]*Id="${rId}"[^>]*Target="([^"]*)"`,
-                                        ),
+                                        new RegExp(`<Relationship[^>]*Id="${rId}"[^>]*Target="([^"]*)"`),
                                     );
 
                                     if (urlMatch && urlMatch[1]) {
@@ -905,19 +863,12 @@ export class XlsxReader implements IReader {
                         const relsXml = await this.#readZipTextFile(zip, worksheetRelsPath);
                         if (relsXml) {
                             const rels = XlsxReader.#parseRelationshipsXml(relsXml);
-                            const commentsRel = rels.find(
-                                (r) => r.type === XlsxReader.#COMMENTS_REL_TYPE,
-                            );
-                            const vmlRel = rels.find(
-                                (r) => r.type === XlsxReader.#VMLDRAWING_REL_TYPE,
-                            );
+                            const commentsRel = rels.find((r) => r.type === XlsxReader.#COMMENTS_REL_TYPE);
+                            const vmlRel = rels.find((r) => r.type === XlsxReader.#VMLDRAWING_REL_TYPE);
 
                             // VML drawings may exist for classic comments; v1 skips geometry but must not crash.
                             if (vmlRel) {
-                                const _vmlPath = XlsxReader.#resolveRelationshipTarget(
-                                    worksheetPath,
-                                    vmlRel.target,
-                                );
+                                const _vmlPath = XlsxReader.#resolveRelationshipTarget(worksheetPath, vmlRel.target);
                                 // Intentionally ignored for now.
                                 void _vmlPath;
                             }
@@ -930,9 +881,7 @@ export class XlsxReader implements IReader {
                                 const commentsXml = await this.#readZipTextFile(zip, commentsPath);
                                 if (commentsXml) {
                                     const authors: string[] = [];
-                                    const authorsSection = commentsXml.match(
-                                        /<authors[^>]*>([\s\S]*?)<\/authors>/,
-                                    );
+                                    const authorsSection = commentsXml.match(/<authors[^>]*>([\s\S]*?)<\/authors>/);
                                     if (authorsSection && authorsSection[1]) {
                                         const authorMatches = authorsSection[1].matchAll(
                                             /<author[^>]*>([\s\S]*?)<\/author>/g,
@@ -955,27 +904,18 @@ export class XlsxReader implements IReader {
                                         const inner = c[2] ?? '';
 
                                         const ref = XlsxReader.#extractXmlAttribute(attrs, 'ref');
-                                        const authorIdStr = XlsxReader.#extractXmlAttribute(
-                                            attrs,
-                                            'authorId',
-                                        );
+                                        const authorIdStr = XlsxReader.#extractXmlAttribute(attrs, 'authorId');
                                         if (!ref) {
                                             continue;
                                         }
 
-                                        const authorId = authorIdStr
-                                            ? Number.parseInt(authorIdStr, 10)
-                                            : NaN;
+                                        const authorId = authorIdStr ? Number.parseInt(authorIdStr, 10) : NaN;
                                         const author =
-                                            Number.isFinite(authorId) &&
-                                            authorId >= 0 &&
-                                            authorId < authors.length
+                                            Number.isFinite(authorId) && authorId >= 0 && authorId < authors.length
                                                 ? (authors[authorId] ?? 'Author')
                                                 : 'Author';
 
-                                        const textMatch = inner.match(
-                                            /<text\b[^>]*>([\s\S]*?)<\/text>/,
-                                        );
+                                        const textMatch = inner.match(/<text\b[^>]*>([\s\S]*?)<\/text>/);
                                         const textXml = textMatch?.[1] ?? '';
                                         const richText = XlsxReader.#parseRichTextFromXml(textXml);
 
@@ -994,9 +934,7 @@ export class XlsxReader implements IReader {
 
                     // Parse data validations
                     if (!this.#readDataOnly) {
-                        const dataValidationsMatch = wsXml.match(
-                            /<dataValidations[^>]*>([\s\S]*?)<\/dataValidations>/,
-                        );
+                        const dataValidationsMatch = wsXml.match(/<dataValidations[^>]*>([\s\S]*?)<\/dataValidations>/);
                         if (dataValidationsMatch && dataValidationsMatch[1]) {
                             const dataValidationsContent = dataValidationsMatch[1];
                             const dataValidationMatches = dataValidationsContent.matchAll(
@@ -1015,12 +953,8 @@ export class XlsxReader implements IReader {
                                 const operatorMatch = dvAttrs.match(/operator="([^"]*)"/);
                                 const allowBlankMatch = dvAttrs.match(/allowBlank="([^"]*)"/);
                                 const showDropDownMatch = dvAttrs.match(/showDropDown="([^"]*)"/);
-                                const showInputMessageMatch = dvAttrs.match(
-                                    /showInputMessage="([^"]*)"/,
-                                );
-                                const showErrorMessageMatch = dvAttrs.match(
-                                    /showErrorMessage="([^"]*)"/,
-                                );
+                                const showInputMessageMatch = dvAttrs.match(/showInputMessage="([^"]*)"/);
+                                const showErrorMessageMatch = dvAttrs.match(/showErrorMessage="([^"]*)"/);
                                 const errorTitleMatch = dvAttrs.match(/errorTitle="([^"]*)"/);
                                 const errorMatch = dvAttrs.match(/error="([^"]*)"/);
                                 const promptTitleMatch = dvAttrs.match(/promptTitle="([^"]*)"/);
@@ -1028,54 +962,37 @@ export class XlsxReader implements IReader {
                                 const sqrefMatch = dvAttrs.match(/sqref="([^"]*)"/);
 
                                 // Parse formulas
-                                const formula1Match = dvContent.match(
-                                    /<formula1>([^<]*)<\/formula1>/,
-                                );
-                                const formula2Match = dvContent.match(
-                                    /<formula2>([^<]*)<\/formula2>/,
-                                );
+                                const formula1Match = dvContent.match(/<formula1>([^<]*)<\/formula1>/);
+                                const formula2Match = dvContent.match(/<formula2>([^<]*)<\/formula2>/);
 
                                 if (sqrefMatch && sqrefMatch[1]) {
                                     const sqref = sqrefMatch[1];
 
                                     // Create data validation
-                                    const { DataValidation } =
-                                        await import('../core/data-validation.ts');
+                                    const { DataValidation } = await import('../core/data-validation.ts');
                                     const dataValidation = new DataValidation();
 
-                                    if (typeMatch && typeMatch[1])
-                                        dataValidation.setType(typeMatch[1]);
+                                    if (typeMatch && typeMatch[1]) dataValidation.setType(typeMatch[1]);
                                     if (errorStyleMatch && errorStyleMatch[1])
                                         dataValidation.setErrorStyle(errorStyleMatch[1]);
-                                    if (operatorMatch && operatorMatch[1])
-                                        dataValidation.setOperator(operatorMatch[1]);
+                                    if (operatorMatch && operatorMatch[1]) dataValidation.setOperator(operatorMatch[1]);
                                     if (allowBlankMatch && allowBlankMatch[1])
                                         dataValidation.setAllowBlank(allowBlankMatch[1] === '1');
                                     if (showDropDownMatch && showDropDownMatch[1])
-                                        dataValidation.setShowDropDown(
-                                            showDropDownMatch[1] === '0',
-                                        ); // Note: inverted
+                                        dataValidation.setShowDropDown(showDropDownMatch[1] === '0'); // Note: inverted
                                     if (showInputMessageMatch && showInputMessageMatch[1])
-                                        dataValidation.setShowInputMessage(
-                                            showInputMessageMatch[1] === '1',
-                                        );
+                                        dataValidation.setShowInputMessage(showInputMessageMatch[1] === '1');
                                     if (showErrorMessageMatch && showErrorMessageMatch[1])
-                                        dataValidation.setShowErrorMessage(
-                                            showErrorMessageMatch[1] === '1',
-                                        );
+                                        dataValidation.setShowErrorMessage(showErrorMessageMatch[1] === '1');
                                     if (errorTitleMatch && errorTitleMatch[1])
                                         dataValidation.setErrorTitle(errorTitleMatch[1]);
-                                    if (errorMatch && errorMatch[1])
-                                        dataValidation.setError(errorMatch[1]);
+                                    if (errorMatch && errorMatch[1]) dataValidation.setError(errorMatch[1]);
                                     if (promptTitleMatch && promptTitleMatch[1])
                                         dataValidation.setPromptTitle(promptTitleMatch[1]);
-                                    if (promptMatch && promptMatch[1])
-                                        dataValidation.setPrompt(promptMatch[1]);
+                                    if (promptMatch && promptMatch[1]) dataValidation.setPrompt(promptMatch[1]);
                                     dataValidation.setSqref(sqref);
-                                    if (formula1Match && formula1Match[1])
-                                        dataValidation.setFormula1(formula1Match[1]);
-                                    if (formula2Match && formula2Match[1])
-                                        dataValidation.setFormula2(formula2Match[1]);
+                                    if (formula1Match && formula1Match[1]) dataValidation.setFormula1(formula1Match[1]);
+                                    if (formula2Match && formula2Match[1]) dataValidation.setFormula2(formula2Match[1]);
 
                                     worksheet.setDataValidation(sqref, dataValidation);
                                 }

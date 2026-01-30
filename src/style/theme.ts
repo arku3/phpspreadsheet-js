@@ -145,10 +145,7 @@ export class Theme {
         return this.themeColorName;
     }
 
-    public setThemeColorName(
-        name: string,
-        themeColors: Record<string, string> | null = null,
-    ): this {
+    public setThemeColorName(name: string, themeColors: Record<string, string> | null = null): this {
         if (name === 'Office 2013+') {
             name = Theme.COLOR_SCHEME_2013_2022_NAME;
         }

@@ -199,11 +199,7 @@ export class DateTime implements FunctionCategory {
                 const months = Number(Helpers.asScalar(args[1])) || 0;
                 const date = this.parseDate(startDate);
                 if (!date) return '#VALUE!';
-                const targetDate = new Date(
-                    date.getFullYear(),
-                    date.getMonth() + months,
-                    date.getDate(),
-                );
+                const targetDate = new Date(date.getFullYear(), date.getMonth() + months, date.getDate());
                 return this.dateToExcel(targetDate);
             },
             2,

@@ -156,11 +156,7 @@ export class Security {
     }
 
     public advancedPassword(): boolean {
-        return (
-            this.#workbookAlgorithmName !== '' &&
-            this.#workbookSaltValue !== '' &&
-            this.#workbookSpinCount > 0
-        );
+        return this.#workbookAlgorithmName !== '' && this.#workbookSaltValue !== '' && this.#workbookSpinCount > 0;
     }
 
     public getWorkbookAlgorithmName(): string {
@@ -197,11 +193,7 @@ export class Security {
     }
 
     public advancedRevisionsPassword(): boolean {
-        return (
-            this.#revisionsAlgorithmName !== '' &&
-            this.#revisionsSaltValue !== '' &&
-            this.#revisionsSpinCount > 0
-        );
+        return this.#revisionsAlgorithmName !== '' && this.#revisionsSaltValue !== '' && this.#revisionsSpinCount > 0;
     }
 
     public getRevisionsAlgorithmName(): string {

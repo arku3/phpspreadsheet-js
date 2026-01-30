@@ -198,17 +198,11 @@ export class Fill extends Supervisor {
             );
         }
         if (styleArray.endColor !== undefined && typeof styleArray.endColor === 'object') {
-            this.getEndColor().applyFromArray(
-                styleArray.endColor as { rgb?: string; argb?: string; theme?: number },
-            );
+            this.getEndColor().applyFromArray(styleArray.endColor as { rgb?: string; argb?: string; theme?: number });
         }
         if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
-            this.getStartColor().applyFromArray(
-                styleArray.color as { rgb?: string; argb?: string; theme?: number },
-            );
-            this.getEndColor().applyFromArray(
-                styleArray.color as { rgb?: string; argb?: string; theme?: number },
-            );
+            this.getStartColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
+            this.getEndColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
         }
         return this;
     }

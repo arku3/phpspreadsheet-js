@@ -34,10 +34,9 @@ export class Comments extends WriterPart {
             }
         }
 
-        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele(
-            'comments',
-            { xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main' },
-        );
+        const root = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('comments', {
+            xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
+        });
 
         const authorsEle = root.ele('authors');
         for (const author of authors) {
@@ -98,8 +97,7 @@ export class Comments extends WriterPart {
                     rPr.ele('b').att('val', font.getBold() ? 'true' : 'false');
                     rPr.ele('i').att('val', font.getItalic() ? 'true' : 'false');
                     if (font.getStrikethrough()) rPr.ele('strike').att('val', 'true');
-                    if (font.getColor().getARGB())
-                        rPr.ele('color').att('rgb', font.getColor().getARGB()!);
+                    if (font.getColor().getARGB()) rPr.ele('color').att('rgb', font.getColor().getARGB()!);
                     if (font.getSize()) rPr.ele('sz').att('val', String(font.getSize()));
                     if (font.getUnderline()) rPr.ele('u').att('val', font.getUnderline()!);
                     if (font.getSuperscript()) rPr.ele('vertAlign').att('val', 'superscript');
