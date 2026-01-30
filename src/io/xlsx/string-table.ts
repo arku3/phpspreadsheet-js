@@ -91,6 +91,8 @@ export class StringTable extends WriterPart {
                     if (font.getColor().getARGB()) rPr.ele('color').att('rgb', font.getColor().getARGB()!);
                     if (font.getSize()) rPr.ele('sz').att('val', String(font.getSize()));
                     if (font.getUnderline()) rPr.ele('u').att('val', font.getUnderline()!);
+                    if (font.getSuperscript()) rPr.ele('vertAlign').att('val', 'superscript');
+                    if (font.getSubscript()) rPr.ele('vertAlign').att('val', 'subscript');
                 }
             }
 
