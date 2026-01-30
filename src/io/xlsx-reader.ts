@@ -521,6 +521,21 @@ export class XlsxReader implements IReader {
                         }
                     }
                 }
+                
+                // Parse merge cells
+                if (!this.#readDataOnly) {
+                    const mergeCellsMatch = wsXml.match(/<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/);
+                    if (mergeCellsMatch && mergeCellsMatch[1]) {
+                        const mergeCellsContent = mergeCellsMatch[1];
+                        const mergeCellMatches = mergeCellsContent.matchAll(/<mergeCell[^>]*ref="([^"]*)"[^>]*\/>/g);
+                        for (const mergeMatch of mergeCellMatches) {
+                            const range = mergeMatch[1];
+                            if (range) {
+                                worksheet.mergeCells(range);
+                            }
+                        }
+                    }
+                }
             }
             
             return spreadsheet;

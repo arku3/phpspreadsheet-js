@@ -86,7 +86,7 @@ describe('XlsxReader listWorksheetInfo', () => {
         const emptyInfo = info.find(i => i.worksheetName === 'EmptySheet');
         expect(emptyInfo).toBeDefined();
         
-        // Empty sheet still has default dimensions in XLSX (at least A1)
+        // Empty sheet has default dimensions in XLSX
         expect(emptyInfo!.totalRows).toBe(1);
         expect(emptyInfo!.totalColumns).toBe(1);
         expect(emptyInfo!.lastColumnIndex).toBe(0);
