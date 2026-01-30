@@ -20,7 +20,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
             - [x] Implement `Spreadsheet.getSheetNames()`, `getSheetByCodeName()`.
             - [x] Implement `Cell.isInMergeRange()`, `getMergeRange()`, and `getFormattedValue()`.
             - [x] Implement `Cell.isFormula()`, `isLocked()`, `isHiddenOnFormulaBar()`.
-            - [ ] Implement `Cell.getHyperlink()` and `getDataValidation()` support.
+            - [x] Implement `Cell.getHyperlink()` and `getDataValidation()` support (with placeholders).
         
         - [ ] **Style Module Fixes**
             - [ ] Add missing Font properties: Latin, EastAsian, ComplexScript, StrikeType, Cap, BaseLine.

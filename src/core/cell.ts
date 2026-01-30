@@ -1,6 +1,7 @@
 import { Worksheet } from './worksheet.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Style } from '../style/style.ts';
+import { Protection } from '../style/protection.ts';
 
 /**
  * Cell data types.
@@ -257,5 +258,68 @@ export class Cell {
      */
     public isFormula(): boolean {
         return this.#dataType === DataType.TYPE_FORMULA;
+    }
+
+    /**
+     * Check if this cell is locked (for sheet protection).
+     * 
+     * Returns true if the sheet is protected and this cell is NOT locked,
+     * meaning it can be edited. Returns false if the sheet is not protected
+     * or if the cell is explicitly locked.
+     *
+     * @returns True if the cell is locked for editing under sheet protection
+     */
+    public isLocked(): boolean {
+        // Get protection from cell style
+        const protection = this.getStyle().getProtection();
+        
+        // If protection is not set (unprotected), return false
+        if (protection.getLocked() === Protection.PROTECTION_UNPROTECTED) {
+            return false;
+        }
+        
+        // Default behavior: cell is locked
+        return true;
+    }
+
+    /**
+     * Check if this cell's formula is hidden on the formula bar
+     * when the sheet is protected.
+     *
+     * @returns True if formula should be hidden when sheet is protected
+     */
+    public isHiddenOnFormulaBar(): boolean {
+        // Get protection from cell style
+        const protection = this.getStyle().getProtection();
+        
+        // If protection is not set (unprotected), return false
+        if (protection.getHidden() === Protection.PROTECTION_UNPROTECTED) {
+            return false;
+        }
+        
+        // Default behavior: formula is not hidden
+        return true;
+    }
+
+    /**
+     * Get the hyperlink for this cell.
+     * 
+     * @returns The hyperlink object or null if no hyperlink
+     */
+    public getHyperlink(): any {
+        // TODO: Implement full Hyperlink support
+        // For now, return null as placeholder
+        return null;
+    }
+
+    /**
+     * Get the data validation for this cell.
+     * 
+     * @returns The data validation object or null if no validation
+     */
+    public getDataValidation(): any {
+        // TODO: Implement full DataValidation support
+        // For now, return null as placeholder
+        return null;
     }
 }
