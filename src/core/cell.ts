@@ -3,6 +3,7 @@ import { Coordinate } from '../utils/coordinate.ts';
 import { Style } from '../style/style.ts';
 import { Protection } from '../style/protection.ts';
 import { Hyperlink } from './hyperlink.ts';
+import type { Comment } from './comment.ts';
 
 /**
  * Cell data types.
@@ -345,6 +346,37 @@ export class Cell {
      */
     public setDataValidation(dataValidation: any): this {
         this.#worksheet.setDataValidation(this.getCoordinate(), dataValidation);
+        return this;
+    }
+
+    /**
+     * Get classic comment for this cell.
+     *
+     * @param create If true, create and attach a comment when absent
+     */
+    public getComment(create: boolean = true): Comment {
+        return this.#worksheet.getComment(this.getCoordinate(), create);
+    }
+
+    /**
+     * Try get classic comment for this cell.
+     */
+    public tryGetComment(): Comment | null {
+        return this.#worksheet.tryGetComment(this.getCoordinate());
+    }
+
+    /**
+     * True if this cell has a classic comment.
+     */
+    public hasComment(): boolean {
+        return this.#worksheet.hasComment(this.getCoordinate());
+    }
+
+    /**
+     * Remove the classic comment from this cell.
+     */
+    public removeComment(): this {
+        this.#worksheet.removeComment(this.getCoordinate());
         return this;
     }
 }

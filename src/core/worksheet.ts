@@ -13,6 +13,7 @@ import { RowDimension } from '../worksheet/row-dimension.ts';
 import { SheetView } from '../worksheet/sheet-view.ts';
 import { Pane } from '../worksheet/pane.ts';
 import { AutoFilter } from '../worksheet/auto-filter.ts';
+import { Comment } from './comment.ts';
 
 /**
  * Worksheet in a Spreadsheet.
@@ -86,6 +87,11 @@ export class Worksheet {
     #dataValidationCollection: Map<string, DataValidation> = new Map();
 
     /**
+     * Sparse collection of classic cell comments, keyed by A1 coordinate (no $).
+     */
+    #comments: Map<string, Comment> = new Map();
+
+    /**
      * Default column dimension.
      */
     #defaultColumnDimension: ColumnDimension;
@@ -110,6 +116,101 @@ export class Worksheet {
         this.#autoFilter = new AutoFilter('', this);
         this.#defaultColumnDimension = new ColumnDimension(null);
         this.#defaultRowDimension = new RowDimension(null);
+    }
+
+    /**
+     * Normalize a cell coordinate for comment access.
+     *
+     * PhpSpreadsheet constraints:
+     * - must not be a range
+     * - must not be an absolute reference (no '$')
+     */
+    static #normalizeCommentCoordinate(cellCoordinate: string): string {
+        const coordinate = cellCoordinate.toUpperCase();
+        if (Coordinate.coordinateIsRange(coordinate)) {
+            throw new Error('Cell coordinate string can not be a range of cells.');
+        }
+        if (coordinate.includes('!')) {
+            throw new Error('Cell coordinate must not include a worksheet reference.');
+        }
+        if (coordinate.includes('$')) {
+            throw new Error('Cell coordinate string must not be absolute.');
+        }
+        if (coordinate.length === 0) {
+            throw new Error('Cell coordinate can not be zero-length string.');
+        }
+        if (!/^[A-Z]+\d+$/.test(coordinate)) {
+            throw new Error('Cell coordinate string is not a valid A1 reference.');
+        }
+        return coordinate;
+    }
+
+    /**
+     * Get comment for a cell.
+     *
+     * @param cellCoordinate Cell coordinate (e.g. 'A1')
+     * @param create If true, create and attach a comment when absent
+     */
+    public getComment(cellCoordinate: string, create: boolean = true): Comment {
+        const coord = Worksheet.#normalizeCommentCoordinate(cellCoordinate);
+        const existing = this.#comments.get(coord);
+        if (existing) {
+            return existing;
+        }
+
+        const comment = new Comment();
+        if (create) {
+            this.#comments.set(coord, comment);
+        }
+        return comment;
+    }
+
+    /**
+     * Try get comment for a cell.
+     *
+     * @param cellCoordinate Cell coordinate (e.g. 'A1')
+     */
+    public tryGetComment(cellCoordinate: string): Comment | null {
+        const coord = Worksheet.#normalizeCommentCoordinate(cellCoordinate);
+        return this.#comments.get(coord) ?? null;
+    }
+
+    /**
+     * True if a comment is present for the cell.
+     *
+     * @param cellCoordinate Cell coordinate (e.g. 'A1')
+     */
+    public hasComment(cellCoordinate: string): boolean {
+        const coord = Worksheet.#normalizeCommentCoordinate(cellCoordinate);
+        return this.#comments.has(coord);
+    }
+
+    /**
+     * Remove a comment from a cell.
+     *
+     * @param cellCoordinate Cell coordinate (e.g. 'A1')
+     */
+    public removeComment(cellCoordinate: string): this {
+        const coord = Worksheet.#normalizeCommentCoordinate(cellCoordinate);
+        this.#comments.delete(coord);
+        return this;
+    }
+
+    /**
+     * Get a readonly view of all comments, keyed by A1 coordinate.
+     */
+    public getComments(): ReadonlyMap<string, Comment> {
+        return this.#comments;
+    }
+
+    /**
+     * Replace the full comment map.
+     *
+     * Intended for reader implementations.
+     */
+    public setComments(comments: Map<string, Comment>): this {
+        this.#comments = comments;
+        return this;
     }
 
     /**
