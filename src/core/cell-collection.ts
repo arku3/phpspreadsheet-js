@@ -163,4 +163,21 @@ export class CellCollection {
             this.#cells.delete(coord);
         }
     }
+
+    /**
+     * Clear all cells from the collection.
+     * 
+     * This breaks the references between cells and the worksheet,
+     * allowing garbage collection to clean up the cells.
+     */
+    public clear(): void {
+        this.#cells.clear();
+    }
+
+    /**
+     * Get the number of cells in the collection.
+     */
+    public getCount(): number {
+        return this.#cells.size;
+    }
 }

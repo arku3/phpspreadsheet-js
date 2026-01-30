@@ -1519,4 +1519,22 @@ export class Worksheet {
             }
         }
     }
+
+    /**
+     * Disconnect cells from this worksheet.
+     * 
+     * This method breaks the circular references between cells and this worksheet
+     * to prevent memory leaks. The worksheet becomes unusable after calling this method.
+     * 
+     * @returns void
+     */
+    public disconnectCells(): void {
+        // Clear all cells from the collection
+        this.#cellCollection.clear();
+        
+        // Note: In TypeScript/JavaScript, we rely on garbage collection.
+        // The cell references to this worksheet will be cleaned up when
+        // cells are garbage collected. We just need to remove them from
+        // the collection so they can be collected.
+    }
 }

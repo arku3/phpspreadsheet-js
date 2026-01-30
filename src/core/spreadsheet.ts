@@ -679,33 +679,24 @@ export class Spreadsheet {
     }
 
     /**
-     * Set the active sheet index.
-     *
-     * @param index The index to set as active
-     * @returns This spreadsheet for chaining
+     * Disconnect all worksheets from this spreadsheet.
+     * 
+     * This method breaks the circular references between cells, worksheets, and the
+     * spreadsheet to prevent memory leaks when the spreadsheet is no longer needed.
+     * 
+     * After calling this method, the spreadsheet and its worksheets become unusable.
+     * 
+     * @returns void
      */
-    public setActiveSheetIndex(index: number): this {
-        if (index < 0 || index >= this.#workSheetCollection.length) {
-            throw new Error(`Sheet index ${index} is out of bounds.`);
-        }
-        this.#activeSheetIndex = index;
-        return this;
-    }
-
-    /**
-     * Set the active sheet index by name.
-     *
-     * @param sheetName The name of the sheet to activate
-     * @returns This spreadsheet for chaining
-     */
-    public setActiveSheetIndexByName(sheetName: string): this {
-        const sheet = this.getSheetByName(sheetName);
-        if (!sheet) {
-            throw new Error(`Sheet "${sheetName}" does not exist.`);
+    public disconnectWorksheets(): void {
+        // Call disconnectCells on each worksheet to break cell references
+        for (const worksheet of this.#workSheetCollection) {
+            worksheet.disconnectCells();
         }
         
-        const index = this.#workSheetCollection.indexOf(sheet);
-        this.#activeSheetIndex = index;
-        return this;
+        // Clear the worksheet collection
+        this.#workSheetCollection = [];
+        this.#activeSheetIndex = 0;
     }
+
 }
