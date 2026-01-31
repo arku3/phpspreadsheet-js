@@ -11,6 +11,9 @@
 - **Comments**: Classic comments/notes read/write is implemented. Threaded comments are not implemented.
 - **VML pass-through**: If a worksheet contains legacy VML shapes that are not notes, round-trip preservation is not fully implemented.
 
+## 5. I/O Abstractions
+- **In-memory IO**: Reader/Writer APIs currently primarily target filesystem paths; add Blob/ArrayBuffer/Uint8Array support for browser/edge runtimes.
+
 ## 3. Calculation Module
 - **Function coverage**: Major categories exist, but there are still many Excel functions missing vs PhpSpreadsheet.
 - **Edge-case parity**: Continue aligning function semantics and error propagation to PhpSpreadsheet.

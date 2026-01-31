@@ -1,6 +1,7 @@
 # Progress - Systematic Parity Review & Fixes
 
 ## Session Log
+- [2026-01-31] Planned IO refactor: add in-memory Reader/Writer support (Blob/ArrayBuffer/Uint8Array) alongside filesystem paths.
 - [2026-01-31] Implemented embedded chart writing (minimal): add `XlsxWriter.includeCharts`, emit chart DrawingML anchors + chart parts, and add zip-level writer test.
 - [2026-01-31] Added embedded chart support (reader, partial): chart fixture, chart collection API, chart discovery via drawing parts, and minimal chart XML parsing (title + series formulas).
 - [2026-01-30] Implemented worksheet drawings/images (DrawingML) read/write: parse `<drawing r:id>` -> `xl/drawings/drawing*.xml` + media rels, and write drawing parts + media with stable non-numeric sheet rel ids.
