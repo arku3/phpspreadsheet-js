@@ -15,6 +15,58 @@ const PHP_ROOT = path.join(REPO_ROOT, 'php-src', 'src', 'PhpSpreadsheet');
 const TS_ROOT = path.join(REPO_ROOT, 'src');
 const OUT_DIR = path.join(REPO_ROOT, 'review', 'php-ts-parity');
 
+type ScopeDecision = { inScope: true } | { inScope: false; reason: string };
+
+function scopeDecisionForPhpFile(phpRel: string): ScopeDecision {
+    // Project scope: XLSX only. We ignore non-XLSX *format implementations* under Reader/ and Writer/.
+    // We keep shared Reader/Writer infrastructure (interfaces, base classes, zip helpers, etc) in-scope.
+    const parts = phpRel.replace(/\.php$/, '').split('/');
+    const top = parts[0] ?? '';
+    const second = parts[1] ?? '';
+
+    // Under Reader/ or Writer/, treat the 3rd segment as "this is a subtree".
+    // Example: Reader/Xls/Color.php => subtree; Reader/Csv.php => root file.
+    const isInSubdir = parts.length >= 3;
+
+    if (top === 'Reader') {
+        // Keep Reader/Security in-scope since XML scanning/sanitization can be relevant to XLSX.
+        const allowedSubdirs = new Set(['Xlsx', 'Security']);
+        const excludedRootFiles = new Set(['Csv', 'Gnumeric', 'Html', 'Ods', 'Slk', 'Xls', 'XlsBase', 'Xml']);
+        const sharedRootFiles = new Set(['BaseReader', 'DefaultReadFilter', 'Exception', 'IReadFilter', 'IReader']);
+
+        if (isInSubdir) {
+            if (allowedSubdirs.has(second)) return { inScope: true };
+            return { inScope: false, reason: `Reader/${second} (non-Xlsx subtree)` };
+        }
+
+        // Root file under Reader/ (e.g. Reader/Csv.php, Reader/Xlsx.php).
+        if (second === 'Xlsx') return { inScope: true };
+        if (sharedRootFiles.has(second)) return { inScope: true };
+        if (excludedRootFiles.has(second)) return { inScope: false, reason: `Reader/${second}.php (non-Xlsx format)` };
+        return { inScope: true };
+    }
+
+    if (top === 'Writer') {
+        const allowedSubdirs = new Set(['Xlsx']);
+        const excludedRootFiles = new Set(['Csv', 'Html', 'Ods', 'Pdf', 'Xls']);
+        const sharedRootFiles = new Set(['BaseWriter', 'Exception', 'IWriter']);
+
+        if (isInSubdir) {
+            if (allowedSubdirs.has(second)) return { inScope: true };
+            return { inScope: false, reason: `Writer/${second} (non-Xlsx subtree)` };
+        }
+
+        // Root file under Writer/ (e.g. Writer/Csv.php, Writer/Xlsx.php, Writer/ZipStream2.php).
+        if (second === 'Xlsx') return { inScope: true };
+        if (sharedRootFiles.has(second)) return { inScope: true };
+        if (/^ZipStream\d+$/.test(second)) return { inScope: true };
+        if (excludedRootFiles.has(second)) return { inScope: false, reason: `Writer/${second}.php (non-Xlsx format)` };
+        return { inScope: true };
+    }
+
+    return { inScope: true };
+}
+
 function toPosix(p: string): string {
     return p.split(path.sep).join('/');
 }
@@ -204,11 +256,17 @@ function guessTsCandidates(phpRel: string): string[] {
     // Writer/Xlsx/Foo.php should map to io/xlsx/foo.ts if possible.
     if (top === 'Writer' && rest[0] === 'Xlsx') {
         const partPath = rest.slice(1).map(pascalToKebab).filter(Boolean).join('/');
-        return [`io/xlsx/${partPath || tsBase}.ts`, `io/xlsx/${tsBase}.ts`];
+        const preferred = `io/xlsx/${partPath || tsBase}.ts`;
+        // Keep a fallback only if it is different (some names may flatten to tsBase).
+        const fallback = `io/xlsx/${tsBase}.ts`;
+        return Array.from(new Set([preferred, fallback]));
     }
 
     if (top === 'Reader' && rest[0] === 'Xlsx') {
-        return [`io/xlsx-reader.ts`, `io/xlsx/${tsBase}.ts`];
+        // Prefer per-part reader implementations (src/io/xlsx/*.ts).
+        // The orchestrator is `src/io/xlsx-reader.ts` (handled as a special case for Reader/Xlsx.php).
+        const partPath = rest.slice(1).map(pascalToKebab).filter(Boolean).join('/');
+        return [`io/xlsx/${partPath || tsBase}.ts`];
     }
 
     const roots = dirRemap(top);
@@ -251,12 +309,22 @@ async function main(): Promise<void> {
     const phpAbsFiles = await walkFiles(PHP_ROOT, '.php');
     const tsAbsFiles = await walkFiles(TS_ROOT, '.ts');
 
+    const phpScope = phpAbsFiles
+        .map((phpAbs) => {
+            const phpRel = toPosix(path.relative(PHP_ROOT, phpAbs));
+            const scope = scopeDecisionForPhpFile(phpRel);
+            return { phpAbs, phpRel, scope };
+        })
+        .sort((a, b) => a.phpRel.localeCompare(b.phpRel));
+
+    const phpInScope = phpScope.filter((e) => e.scope.inScope);
+    const phpOutOfScope = phpScope.filter((e) => !e.scope.inScope);
+
     const tsRelSet = new Set<string>(tsAbsFiles.map((abs) => toPosix(path.relative(REPO_ROOT, abs))));
     const matchedTsRel = new Set<string>();
 
     const rows: ParityRow[] = [];
-    for (const phpAbs of phpAbsFiles) {
-        const phpRel = toPosix(path.relative(PHP_ROOT, phpAbs));
+    for (const { phpAbs, phpRel } of phpInScope) {
         const candidates = guessTsCandidates(phpRel);
         const matched = candidates.map((c) => toPosix(path.join('src', c))).filter((rel) => tsRelSet.has(rel));
         for (const rel of matched) matchedTsRel.add(rel);
@@ -318,6 +386,12 @@ async function main(): Promise<void> {
     indexLines.push('');
     indexLines.push(`Generated: ${now}`);
     indexLines.push('');
+    indexLines.push('## Scope');
+    indexLines.push('');
+    indexLines.push(
+        'This report is **XLSX-focused**. It excludes non-XLSX PHP readers/writers (e.g. CSV/ODS/XLS/Html/Pdf) from counts and lists.',
+    );
+    indexLines.push('');
     indexLines.push(
         'This is a file-by-file *mapping* report. It pairs PHP PhpSpreadsheet files under `php-src/src/PhpSpreadsheet/` with likely TypeScript counterparts under `src/` based on path/name heuristics and a small special-case table.',
     );
@@ -328,7 +402,8 @@ async function main(): Promise<void> {
     indexLines.push('');
     indexLines.push('## Totals');
     indexLines.push('');
-    indexLines.push(`- PHP files: ${phpAbsFiles.length}`);
+    indexLines.push(`- PHP files (in-scope): ${phpInScope.length}`);
+    indexLines.push(`- PHP files (out-of-scope, ignored): ${phpOutOfScope.length}`);
     indexLines.push(`- TS files: ${tsAbsFiles.length}`);
     indexLines.push(`- PHP files with no TS match (by heuristic): ${phpOnlyCount}`);
     indexLines.push(`- PHP files with multiple TS matches (ambiguous): ${ambiguousCount}`);
@@ -351,6 +426,7 @@ async function main(): Promise<void> {
     indexLines.push('## Lists');
     indexLines.push('');
     indexLines.push('- PHP-only: ./lists/php-only.md');
+    indexLines.push('- PHP out-of-scope (ignored): ./lists/php-out-of-scope.md');
     indexLines.push('- TS-only: ./lists/ts-only.md');
     indexLines.push('- Ambiguous: ./lists/ambiguous.md');
     indexLines.push('- TS -> PHP coverage: ./lists/ts-to-php.md');
@@ -380,6 +456,20 @@ async function main(): Promise<void> {
             ...phpOnly,
         ].join('\n') + '\n';
     await writeMarkdown(path.join(OUT_DIR, 'lists', 'php-only.md'), phpOnlyRendered);
+
+    const phpOutOfScopeRendered =
+        [
+            '# PHP out-of-scope Files (Ignored)',
+            '',
+            'These PHP files are intentionally excluded from this parity report because the project scope is XLSX-only.',
+            'The current filter excludes non-XLSX subtrees under `Reader/` and `Writer/`.',
+            '',
+            ...phpOutOfScope.map((e) => {
+                const reason = (e.scope as { inScope: false; reason: string }).reason;
+                return `- \`php-src/src/PhpSpreadsheet/${e.phpRel}\` (${mdEscapePipe(reason)})`;
+            }),
+        ].join('\n') + '\n';
+    await writeMarkdown(path.join(OUT_DIR, 'lists', 'php-out-of-scope.md'), phpOutOfScopeRendered);
 
     const ambiguous = rows
         .filter((r) => r.matchedTs.length > 1)

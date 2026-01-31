@@ -1,6 +1,10 @@
 # PHP vs TS Parity Report (File Map)
 
-Generated: 2026-01-31T10:49:33.130Z
+Generated: 2026-01-31T11:39:42.721Z
+
+## Scope
+
+This report is **XLSX-focused**. It excludes non-XLSX PHP readers/writers (e.g. CSV/ODS/XLS/Html/Pdf) from counts and lists.
 
 This is a file-by-file *mapping* report. It pairs PHP PhpSpreadsheet files under `php-src/src/PhpSpreadsheet/` with likely TypeScript counterparts under `src/` based on path/name heuristics and a small special-case table.
 
@@ -8,10 +12,11 @@ It does not prove behavioral parity; it is meant to be the starting point for de
 
 ## Totals
 
-- PHP files: 526
+- PHP files (in-scope): 444
+- PHP files (out-of-scope, ignored): 82
 - TS files: 108
-- PHP files with no TS match (by heuristic): 267
-- PHP files with multiple TS matches (ambiguous): 11
+- PHP files with no TS match (by heuristic): 200
+- PHP files with multiple TS matches (ambiguous): 0
 - TS files with no PHP match (by heuristic): 33
 
 ## Modules
@@ -23,16 +28,17 @@ It does not prove behavioral parity; it is meant to be the starting point for de
 - Collection: ./modules/collection-map.md (matched: 1, missing: 3, ambiguous: 0)
 - Document: ./modules/document-map.md (matched: 2, missing: 0, ambiguous: 0)
 - Helper: ./modules/helper-map.md (matched: 1, missing: 7, ambiguous: 0)
-- Reader: ./modules/reader-map.md (matched: 17, missing: 52, ambiguous: 2)
+- Reader: ./modules/reader-map.md (matched: 4, missing: 20, ambiguous: 0)
 - RichText: ./modules/richtext-map.md (matched: 4, missing: 0, ambiguous: 0)
 - Shared: ./modules/shared-map.md (matched: 2, missing: 30, ambiguous: 0)
 - Style: ./modules/style-map.md (matched: 13, missing: 41, ambiguous: 0)
 - Worksheet: ./modules/worksheet-map.md (matched: 11, missing: 23, ambiguous: 0)
-- Writer: ./modules/writer-map.md (matched: 2, missing: 52, ambiguous: 9)
+- Writer: ./modules/writer-map.md (matched: 11, missing: 17, ambiguous: 0)
 
 ## Lists
 
 - PHP-only: ./lists/php-only.md
+- PHP out-of-scope (ignored): ./lists/php-out-of-scope.md
 - TS-only: ./lists/ts-only.md
 - Ambiguous: ./lists/ambiguous.md
 - TS -> PHP coverage: ./lists/ts-to-php.md

@@ -69,6 +69,18 @@ Complete systematic parity fixes identified in the review and implement the XLSX
     - [x] Implement data validation writing in Xlsx Writer. <!-- id: 64 -->
     - [x] Implement data validation reading in Xlsx Reader. <!-- id: 65 -->
 
+- [ ] Phase 15c: XLSX-only Port Focus (Next)
+    - [ ] Scope: focus on XLSX-only port (defer non-XLSX formats).
+    - [ ] XLSX Writer: implement missing parts
+        - [ ] Implement DefinedNames writing (workbook.xml).
+        - [ ] Implement Table writing (table parts + worksheet tableParts).
+        - [ ] Implement AutoFilter writing (worksheet autoFilter).
+    - [ ] XLSX Reader: implement missing parts
+        - [ ] Implement TableReader (table parts + worksheet bindings).
+        - [ ] Implement WorkbookView reading (workbook.xml bookViews / view state).
+        - [ ] Implement remaining XLSX view/state readers (as discovered during parity review).
+    - [ ] Commit parity report generator updates (already made locally).
+
 - [ ] Phase 16: Performance & Scalability <!-- id: 55 -->
     - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 53 -->
 

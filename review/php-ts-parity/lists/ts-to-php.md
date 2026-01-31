@@ -296,23 +296,6 @@ For each TypeScript file, list PHP files that mapped to it under the heuristic. 
 ## `src/io/xlsx-reader.ts`
 
 - `php-src/src/PhpSpreadsheet/Reader/Xlsx.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/AutoFilter.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/BaseParserClass.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/Chart.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/ColumnAndRowAttributes.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/ConditionalStyles.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/DataValidations.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/Hyperlinks.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/Namespaces.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/PageSetup.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/Properties.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/SharedFormula.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/SheetViewOptions.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/SheetViews.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/Styles.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/TableReader.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/Theme.php`
-- `php-src/src/PhpSpreadsheet/Reader/Xlsx/WorkbookView.php`
 
 ## `src/io/xlsx-writer.ts`
 
@@ -321,26 +304,21 @@ For each TypeScript file, list PHP files that mapped to it under the heuristic. 
 ## `src/io/xlsx/comments.ts`
 
 - `php-src/src/PhpSpreadsheet/Writer/Xlsx/Comments.php`
-- `php-src/src/PhpSpreadsheet/Writer/Xlsx/Comments.php`
 
 ## `src/io/xlsx/content-types.ts`
 
-- `php-src/src/PhpSpreadsheet/Writer/Xlsx/ContentTypes.php`
 - `php-src/src/PhpSpreadsheet/Writer/Xlsx/ContentTypes.php`
 
 ## `src/io/xlsx/doc-props.ts`
 
 - `php-src/src/PhpSpreadsheet/Writer/Xlsx/DocProps.php`
-- `php-src/src/PhpSpreadsheet/Writer/Xlsx/DocProps.php`
 
 ## `src/io/xlsx/rels.ts`
 
 - `php-src/src/PhpSpreadsheet/Writer/Xlsx/Rels.php`
-- `php-src/src/PhpSpreadsheet/Writer/Xlsx/Rels.php`
 
 ## `src/io/xlsx/string-table.ts`
 
-- `php-src/src/PhpSpreadsheet/Writer/Xlsx/StringTable.php`
 - `php-src/src/PhpSpreadsheet/Writer/Xlsx/StringTable.php`
 
 ## `src/io/xlsx/styles.ts`
@@ -351,21 +329,17 @@ For each TypeScript file, list PHP files that mapped to it under the heuristic. 
 
 - `php-src/src/PhpSpreadsheet/Reader/Xlsx/Theme.php`
 - `php-src/src/PhpSpreadsheet/Writer/Xlsx/Theme.php`
-- `php-src/src/PhpSpreadsheet/Writer/Xlsx/Theme.php`
 
 ## `src/io/xlsx/workbook.ts`
 
-- `php-src/src/PhpSpreadsheet/Writer/Xlsx/Workbook.php`
 - `php-src/src/PhpSpreadsheet/Writer/Xlsx/Workbook.php`
 
 ## `src/io/xlsx/worksheet.ts`
 
 - `php-src/src/PhpSpreadsheet/Writer/Xlsx/Worksheet.php`
-- `php-src/src/PhpSpreadsheet/Writer/Xlsx/Worksheet.php`
 
 ## `src/io/xlsx/writer-part.ts`
 
-- `php-src/src/PhpSpreadsheet/Writer/Xlsx/WriterPart.php`
 - `php-src/src/PhpSpreadsheet/Writer/Xlsx/WriterPart.php`
 
 ## `src/rich-text/i-text-element.ts`
