@@ -9,6 +9,7 @@ import { Font } from '../style/font.ts';
 import { NumberFormat } from '../style/number-format.ts';
 import { Style } from '../style/style.ts';
 import type { Chart } from '../worksheet/chart/chart.ts';
+import type { Table as WorksheetTable } from '../worksheet/table.ts';
 import type { IWriter } from './i-writer.ts';
 import { writeChartXml } from './xlsx/charts.ts';
 import { Comments } from './xlsx/comments.ts';
@@ -18,6 +19,7 @@ import { DrawingML } from './xlsx/drawingml.ts';
 import { Rels } from './xlsx/rels.ts';
 import { StringTable } from './xlsx/string-table.ts';
 import { Styles } from './xlsx/styles.ts';
+import { TablePart } from './xlsx/table.ts';
 import { Theme } from './xlsx/theme.ts';
 import { Workbook } from './xlsx/workbook.ts';
 import { Worksheet } from './xlsx/worksheet.ts';
@@ -33,6 +35,9 @@ export class XlsxWriter implements IWriter {
 
     #chartIndexByChart: Map<Chart, number> = new Map();
     #nextChartIndex = 1;
+
+    #tableIndexByTable: Map<WorksheetTable, number> = new Map();
+    #nextTableIndex = 1;
 
     // Hash tables
     #fontHashTable: HashTable<Font> = new HashTable();
@@ -53,6 +58,7 @@ export class XlsxWriter implements IWriter {
     #writerPartTheme: Theme;
     #writerPartComments: Comments;
     #writerPartDrawingML: DrawingML;
+    #writerPartTable: TablePart;
 
     constructor(spreadsheet: Spreadsheet) {
         this.#spreadsheet = spreadsheet;
@@ -67,6 +73,7 @@ export class XlsxWriter implements IWriter {
         this.#writerPartTheme = new Theme(this);
         this.#writerPartComments = new Comments(this);
         this.#writerPartDrawingML = new DrawingML(this);
+        this.#writerPartTable = new TablePart(this);
     }
 
     public getFontHashTable(): HashTable<Font> {
@@ -158,6 +165,25 @@ export class XlsxWriter implements IWriter {
         return this.#chartIndexByChart.size;
     }
 
+    /**
+     * Allocate a global table index for this XLSX package.
+     *
+     * Tables are written as `xl/tables/table{n}.xml` and referenced from
+     * worksheets via relationships.
+     */
+    public allocateTableIndex(table: WorksheetTable): number {
+        const existing = this.#tableIndexByTable.get(table);
+        if (existing !== undefined) return existing;
+
+        const idx = this.#nextTableIndex++;
+        this.#tableIndexByTable.set(table, idx);
+        return idx;
+    }
+
+    public getTableCount(): number {
+        return this.#tableIndexByTable.size;
+    }
+
     public async writeBuffer(): Promise<Uint8Array> {
         return new Promise((resolve, reject) => {
             const output = new PassThrough();
@@ -179,15 +205,24 @@ export class XlsxWriter implements IWriter {
             archive.pipe(output);
 
             try {
-                // 0. Pre-allocate chart indexes so content types and rels are stable.
+                // 0. Pre-allocate chart/table indexes so content types, rels and part names are stable.
                 this.#chartIndexByChart = new Map();
                 this.#nextChartIndex = 1;
+                this.#tableIndexByTable = new Map();
+                this.#nextTableIndex = 1;
                 if (this.#includeCharts) {
                     for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
                         const sheet = this.#spreadsheet.getSheet(i);
                         for (const chart of sheet.getChartCollection()) {
                             this.allocateChartIndex(chart);
                         }
+                    }
+                }
+
+                for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
+                    const sheet = this.#spreadsheet.getSheet(i);
+                    for (const table of sheet.getTables()) {
+                        this.allocateTableIndex(table);
                     }
                 }
 
@@ -254,6 +289,7 @@ export class XlsxWriter implements IWriter {
                 let nextImageDataIndex = 1;
                 const mediaWritten = new Set<string>();
                 const chartsWritten = new Set<number>();
+                const tablesWritten = new Set<number>();
                 for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
                     const sheet = this.#spreadsheet.getSheet(i);
                     archive.append(this.#writerPartWorksheet.writeWorksheet(sheet, this.#stringTable), {
@@ -265,6 +301,16 @@ export class XlsxWriter implements IWriter {
                     if (sheetRels) {
                         archive.append(sheetRels, {
                             name: `xl/worksheets/_rels/sheet${i + 1}.xml.rels`,
+                        });
+                    }
+
+                    // Tables
+                    for (const table of sheet.getTables()) {
+                        const tableIndex = this.allocateTableIndex(table);
+                        if (tablesWritten.has(tableIndex)) continue;
+                        tablesWritten.add(tableIndex);
+                        archive.append(this.#writerPartTable.writeTable(table, tableIndex), {
+                            name: `xl/tables/table${tableIndex}.xml`,
                         });
                     }
 

@@ -89,7 +89,27 @@ export class Worksheet extends WriterPart {
         // legacyDrawing (classic comments)
         this.writeLegacyDrawing(root, worksheet);
 
+        // tableParts
+        this.writeTableParts(root, worksheet);
+
         return root.end({ prettyPrint: true });
+    }
+
+    /**
+     * Write tableParts.
+     */
+    private writeTableParts(root: any, worksheet: CoreWorksheet): void {
+        const tableCount = worksheet.getTables().length;
+        if (tableCount === 0) {
+            return;
+        }
+
+        const tableParts = root.ele('tableParts', { count: String(tableCount) });
+        for (let t = 1; t <= tableCount; t++) {
+            tableParts.ele('tablePart', {
+                'r:id': `rId_table_${t}`,
+            });
+        }
     }
 
     /**

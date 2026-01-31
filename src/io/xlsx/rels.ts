@@ -175,11 +175,14 @@ export class Rels extends WriterPart {
             });
         }
 
+        // Tables: PhpSpreadsheet uses stable relationship ids (rId_table_1..) per worksheet,
+        // and targets a globally-numbered table part (xl/tables/table{N}.xml).
         for (let i = 0; i < tables.length; i++) {
+            const globalTableIndex = this.getParentWriter().allocateTableIndex(tables[i]!);
             relationships.push({
-                id: this.getNextRId(),
+                id: `rId_table_${i + 1}`,
                 type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/table',
-                target: `../tables/table${i + 1}.xml`,
+                target: `../tables/table${globalTableIndex}.xml`,
             });
         }
 
