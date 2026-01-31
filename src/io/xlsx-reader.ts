@@ -5,7 +5,7 @@ import { Spreadsheet } from '../core/spreadsheet.ts';
 import type { Worksheet } from '../core/worksheet.ts';
 import { RichText } from '../rich-text/rich-text.ts';
 import { Coordinate } from '../utils/coordinate.ts';
-import { Chart } from '../worksheet/chart/chart.ts';
+import { Chart, type ChartSeriesModel } from '../worksheet/chart/chart.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
 import type { IReader, WorksheetInfo } from './i-reader.ts';
 import { StylesReader, type StyleData } from './xlsx/styles-reader.ts';
@@ -130,6 +130,112 @@ export class XlsxReader implements IReader {
             parts.push(XlsxReader.decodeXmlEntities(value));
         }
         return parts.join('');
+    }
+
+    static #extractTextFromATNodes(xml: string): string {
+        // Extract concatenated text from all <a:t> elements in document order.
+        // Handles xml:space="preserve" similarly to sharedStrings parsing.
+        const parts: string[] = [];
+        const tMatches = xml.matchAll(/<a:t([^>]*)>([\s\S]*?)<\/a:t>/g);
+        for (const match of tMatches) {
+            const attrs = match[1] ?? '';
+            const raw = match[2] ?? '';
+            const preserve = /xml:space\s*=\s*"preserve"/.test(attrs);
+            const value = preserve ? raw : raw.replace(/^[\r\n\t ]+|[\r\n\t ]+$/g, '');
+            parts.push(XlsxReader.decodeXmlEntities(value));
+        }
+        return parts.join('');
+    }
+
+    static #parseChartTitleText(chartXml: string): string | null {
+        const titleMatch = chartXml.match(/<c:title\b[^>]*>([\s\S]*?)<\/c:title>/);
+        if (!titleMatch || !titleMatch[1]) {
+            return null;
+        }
+
+        const titleInner = titleMatch[1];
+        const txMatch = titleInner.match(/<c:tx\b[^>]*>([\s\S]*?)<\/c:tx>/);
+        if (!txMatch || !txMatch[1]) {
+            return null;
+        }
+
+        const txInner = txMatch[1];
+
+        // c:tx/c:rich//a:t
+        const richMatch = txInner.match(/<c:rich\b[^>]*>([\s\S]*?)<\/c:rich>/);
+        if (richMatch && richMatch[1] !== undefined) {
+            const richText = XlsxReader.#extractTextFromATNodes(richMatch[1]);
+            if (richText !== '') {
+                return richText;
+            }
+        }
+
+        // c:tx/c:strRef/c:strCache//c:v
+        const strRefMatch = txInner.match(/<c:strRef\b[^>]*>([\s\S]*?)<\/c:strRef>/);
+        const strCacheMatch = strRefMatch?.[1]?.match(/<c:strCache\b[^>]*>([\s\S]*?)<\/c:strCache>/);
+        if (strCacheMatch && strCacheMatch[1] !== undefined) {
+            const parts: string[] = [];
+            const vMatches = strCacheMatch[1].matchAll(/<c:v\b[^>]*>([\s\S]*?)<\/c:v>/g);
+            for (const v of vMatches) {
+                parts.push(XlsxReader.decodeXmlEntities((v[1] ?? '').trim()));
+            }
+            const value = parts.join('');
+            if (value !== '') {
+                return value;
+            }
+        }
+
+        return null;
+    }
+
+    static #parseChartSeries(chartXml: string): ChartSeriesModel[] {
+        const series: ChartSeriesModel[] = [];
+        const serMatches = chartXml.matchAll(/<c:ser\b[^>]*>([\s\S]*?)<\/c:ser>/g);
+
+        const parseValTag = (serInner: string, tagName: 'cat' | 'val'): string | null => {
+            const tagMatch = serInner.match(new RegExp(`<c:${tagName}\\b[^>]*>([\\s\\S]*?)<\\/c:${tagName}>`));
+            const tagInner = tagMatch?.[1] ?? '';
+            if (tagInner === '') {
+                return null;
+            }
+
+            const refMatch = tagInner.match(
+                /<c:(strRef|numRef|multiLvlStrRef|multiLvlNumRef)\b[^>]*>([\s\S]*?)<\/c:\1>/,
+            );
+            const refInner = refMatch?.[2] ?? '';
+            if (refInner === '') {
+                return null;
+            }
+
+            const fMatch = refInner.match(/<c:f\b[^>]*>([\s\S]*?)<\/c:f>/);
+            const f = fMatch?.[1] ?? '';
+            return f !== '' ? XlsxReader.decodeXmlEntities(f.trim()) : null;
+        };
+
+        for (const match of serMatches) {
+            const serInner = match[1] ?? '';
+            const idxAttrs = serInner.match(/<c:idx\b([^>]*)\/>/)?.[1] ?? null;
+            const orderAttrs = serInner.match(/<c:order\b([^>]*)\/>/)?.[1] ?? null;
+            const idxStr = idxAttrs ? XlsxReader.#extractXmlAttribute(idxAttrs, 'val') : null;
+            const orderStr = orderAttrs ? XlsxReader.#extractXmlAttribute(orderAttrs, 'val') : null;
+
+            const idx = idxStr ? Number.parseInt(idxStr, 10) : NaN;
+            const order = orderStr ? Number.parseInt(orderStr, 10) : NaN;
+
+            const model: ChartSeriesModel = {
+                categoryFormula: parseValTag(serInner, 'cat'),
+                valuesFormula: parseValTag(serInner, 'val'),
+            };
+            if (Number.isFinite(idx)) {
+                model.idx = idx;
+            }
+            if (Number.isFinite(order)) {
+                model.order = order;
+            }
+            series.push(model);
+        }
+
+        return series;
     }
 
     static #parseRichTextFromXml(textXml: string): RichText {
@@ -469,8 +575,15 @@ export class XlsxReader implements IReader {
 
                     const chartXmlPath = XlsxReader.#resolveRelationshipTarget(drawingPath, chartRel.target);
 
+                    const chartXml = await this.#readZipTextFile(zip, chartXmlPath);
+
                     const chart = new Chart();
                     chart.setChartXmlPath(chartXmlPath);
+
+                    if (chartXml) {
+                        chart.setTitleText(XlsxReader.#parseChartTitleText(chartXml));
+                        chart.setSeries(XlsxReader.#parseChartSeries(chartXml));
+                    }
 
                     if (anchorType === 'twoCellAnchor') {
                         const from = parseCellAnchor(anchorInner, 'from');

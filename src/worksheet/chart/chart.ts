@@ -21,6 +21,18 @@ export interface ChartPosition {
     offsetY?: number;
 }
 
+export interface ChartSeriesModel {
+    idx?: number;
+    order?: number;
+    categoryFormula: string | null;
+    valuesFormula: string | null;
+}
+
+export interface ChartModel {
+    titleText: string | null;
+    series: ChartSeriesModel[];
+}
+
 /**
  * Minimal chart domain model.
  *
@@ -39,6 +51,9 @@ export class Chart {
     #bottomRightOffsetY: number = 0;
 
     #chartXmlPath: string | null = null;
+
+    #titleText: string | null = null;
+    #series: ChartSeriesModel[] = [];
 
     // Ownership tracking (set by Worksheet.addChart/removeChart).
     #worksheet: Worksheet | null = null;
@@ -127,6 +142,37 @@ export class Chart {
      */
     public setChartXmlPath(chartXmlPath: string | null): this {
         this.#chartXmlPath = chartXmlPath;
+        return this;
+    }
+
+    public getTitleText(): string | null {
+        return this.#titleText;
+    }
+
+    public setTitleText(titleText: string | null): this {
+        this.#titleText = titleText;
+        return this;
+    }
+
+    public getSeries(): ReadonlyArray<ChartSeriesModel> {
+        return this.#series;
+    }
+
+    public setSeries(series: ChartSeriesModel[]): this {
+        this.#series = [...series];
+        return this;
+    }
+
+    public getModel(): ChartModel {
+        return {
+            titleText: this.#titleText,
+            series: [...this.#series],
+        };
+    }
+
+    public setModel(model: ChartModel): this {
+        this.#titleText = model.titleText;
+        this.#series = [...model.series];
         return this;
     }
 

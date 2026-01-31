@@ -29,8 +29,16 @@ describe('XlsxReader embedded charts fixture', () => {
         const charts = sheet.getChartCollection();
         expect(charts.length).toBe(1);
 
-        const chartXmlPath = charts[0]?.getChartXmlPath();
+        const chart = charts[0];
+        const chartXmlPath = chart?.getChartXmlPath();
         expect(chartXmlPath).toBeTruthy();
         expect(chartXmlPath!).toMatch(/xl\/charts\/chart\d+\.xml$/);
+
+        // Fixture has no explicit <c:tx> title text; ensure we treat it consistently.
+        expect(chart?.getTitleText()).toBeNull();
+
+        const series = chart?.getSeries() ?? [];
+        expect(series.length).toBeGreaterThan(0);
+        expect(series.some((s) => /B\$?2/.test(s.valuesFormula ?? ''))).toBe(true);
     });
 });
