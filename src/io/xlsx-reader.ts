@@ -5,6 +5,7 @@ import { Spreadsheet } from '../core/spreadsheet.ts';
 import type { Worksheet } from '../core/worksheet.ts';
 import { RichText } from '../rich-text/rich-text.ts';
 import { Coordinate } from '../utils/coordinate.ts';
+import { Chart } from '../worksheet/chart/chart.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
 import type { IReader, WorksheetInfo } from './i-reader.ts';
 import { StylesReader, type StyleData } from './xlsx/styles-reader.ts';
@@ -40,6 +41,11 @@ export class XlsxReader implements IReader {
     #readFilter: ((worksheetName: string) => boolean) | null = null;
 
     /**
+     * Include charts in the loaded Spreadsheet?
+     */
+    #includeCharts = false;
+
+    /**
      * Path to styles.xml in the ZIP file.
      */
     private stylesPath: string | null = null;
@@ -48,6 +54,7 @@ export class XlsxReader implements IReader {
     static readonly #VMLDRAWING_REL_TYPE =
         'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing';
     static readonly #DRAWING_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing';
+    static readonly #CHART_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart';
 
     static readonly #EMU_PER_PIXEL = 9525;
 
@@ -337,6 +344,157 @@ export class XlsxReader implements IReader {
 
                 // Attach to worksheet.
                 worksheet.addDrawing(drawing);
+            }
+        }
+    }
+
+    async #loadWorksheetCharts(
+        zip: unzipper.CentralDirectory,
+        worksheetPath: string,
+        worksheetXml: string,
+        worksheet: Worksheet,
+    ): Promise<void> {
+        if (!this.#includeCharts) {
+            return;
+        }
+
+        const drawingTagMatches = [...worksheetXml.matchAll(/<drawing\b([^>]*)\/>/g)];
+        if (drawingTagMatches.length === 0) {
+            return;
+        }
+
+        const worksheetRelsPath = worksheetPath
+            .replace('xl/worksheets/', 'xl/worksheets/_rels/')
+            .replace('.xml', '.xml.rels');
+        const relsXml = await this.#readZipTextFile(zip, worksheetRelsPath);
+        if (!relsXml) {
+            return;
+        }
+
+        const rels = XlsxReader.#parseRelationshipsXml(relsXml);
+
+        const parseCellAnchor = (
+            anchorInner: string,
+            tag: 'from' | 'to',
+        ): { cell: string; offX: number; offY: number } | null => {
+            const m = anchorInner.match(new RegExp(`<xdr:${tag}\\b[^>]*>([\\s\\S]*?)<\\/xdr:${tag}>`));
+            if (!m || !m[1]) {
+                return null;
+            }
+            const inner = m[1];
+
+            const col = Number.parseInt((inner.match(/<xdr:col>(\d+)<\/xdr:col>/)?.[1] ?? '0').trim(), 10);
+            const row = Number.parseInt((inner.match(/<xdr:row>(\d+)<\/xdr:row>/)?.[1] ?? '0').trim(), 10);
+            const colOffEmu = Number.parseInt((inner.match(/<xdr:colOff>(\d+)<\/xdr:colOff>/)?.[1] ?? '0').trim(), 10);
+            const rowOffEmu = Number.parseInt((inner.match(/<xdr:rowOff>(\d+)<\/xdr:rowOff>/)?.[1] ?? '0').trim(), 10);
+
+            return {
+                cell: Coordinate.stringFromCoordinate(col + 1, row + 1),
+                offX: XlsxReader.#emuToPx(colOffEmu),
+                offY: XlsxReader.#emuToPx(rowOffEmu),
+            };
+        };
+
+        const parseAbsoluteAnchor = (anchorInner: string): { cell: string; offX: number; offY: number } | null => {
+            const posMatch = anchorInner.match(/<xdr:pos\b[^>]*x="(\d+)"[^>]*y="(\d+)"[^>]*\/>/);
+            if (!posMatch) {
+                return null;
+            }
+            const xEmu = Number.parseInt(posMatch[1] ?? '0', 10);
+            const yEmu = Number.parseInt(posMatch[2] ?? '0', 10);
+            return {
+                cell: 'A1',
+                offX: XlsxReader.#emuToPx(xEmu),
+                offY: XlsxReader.#emuToPx(yEmu),
+            };
+        };
+
+        for (const drawingTagMatch of drawingTagMatches) {
+            const attrs = drawingTagMatch[1] ?? '';
+            const rId = XlsxReader.#extractXmlAttribute(attrs, 'r:id') ?? XlsxReader.#extractXmlAttribute(attrs, 'id');
+            if (!rId) {
+                continue;
+            }
+
+            const drawingRel = rels.find((r) => r.id === rId && r.type === XlsxReader.#DRAWING_REL_TYPE);
+            const drawingTarget = drawingRel?.target;
+            if (!drawingTarget) {
+                continue;
+            }
+
+            const drawingPath = XlsxReader.#resolveRelationshipTarget(worksheetPath, drawingTarget);
+            const drawingXml = await this.#readZipTextFile(zip, drawingPath);
+            if (!drawingXml) {
+                continue;
+            }
+
+            const drawingRelsPath = path.posix.join(
+                path.posix.dirname(drawingPath),
+                '_rels',
+                `${path.posix.basename(drawingPath)}.rels`,
+            );
+            const drawingRelsXml = await this.#readZipTextFile(zip, drawingRelsPath);
+            const drawingRels = drawingRelsXml ? XlsxReader.#parseRelationshipsXml(drawingRelsXml) : [];
+
+            const anchorMatches = drawingXml.matchAll(
+                /<xdr:(oneCellAnchor|twoCellAnchor|absoluteAnchor)\b[^>]*>([\s\S]*?)<\/xdr:\1>/g,
+            );
+
+            for (const anchorMatch of anchorMatches) {
+                const anchorType = anchorMatch[1] ?? '';
+                const anchorInner = anchorMatch[2] ?? '';
+
+                const graphicFrames = anchorInner.matchAll(/<xdr:graphicFrame\b[^>]*>([\s\S]*?)<\/xdr:graphicFrame>/g);
+                for (const gf of graphicFrames) {
+                    const graphicFrameInner = gf[1] ?? '';
+                    const isChart =
+                        /<a:graphicData\b[^>]*\buri="http:\/\/schemas\.openxmlformats\.org\/drawingml\/2006\/chart"/.test(
+                            graphicFrameInner,
+                        );
+                    if (!isChart) {
+                        continue;
+                    }
+
+                    const chartRid = graphicFrameInner.match(/<c:chart\b[^>]*\br:id="([^"]+)"/)?.[1] ?? null;
+                    if (!chartRid) {
+                        continue;
+                    }
+
+                    const chartRel = drawingRels.find(
+                        (r) => r.id === chartRid && r.type === XlsxReader.#CHART_REL_TYPE,
+                    );
+                    if (!chartRel?.target) {
+                        continue;
+                    }
+
+                    const chartXmlPath = XlsxReader.#resolveRelationshipTarget(drawingPath, chartRel.target);
+
+                    const chart = new Chart();
+                    chart.setChartXmlPath(chartXmlPath);
+
+                    if (anchorType === 'twoCellAnchor') {
+                        const from = parseCellAnchor(anchorInner, 'from');
+                        const to = parseCellAnchor(anchorInner, 'to');
+                        if (from) {
+                            chart.setTopLeftPosition({ cell: from.cell, offsetX: from.offX, offsetY: from.offY });
+                        }
+                        if (to) {
+                            chart.setBottomRightPosition({ cell: to.cell, offsetX: to.offX, offsetY: to.offY });
+                        }
+                    } else if (anchorType === 'oneCellAnchor') {
+                        const from = parseCellAnchor(anchorInner, 'from');
+                        if (from) {
+                            chart.setTopLeftPosition({ cell: from.cell, offsetX: from.offX, offsetY: from.offY });
+                        }
+                    } else if (anchorType === 'absoluteAnchor') {
+                        const pos = parseAbsoluteAnchor(anchorInner);
+                        if (pos) {
+                            chart.setTopLeftPosition({ cell: pos.cell, offsetX: pos.offX, offsetY: pos.offY });
+                        }
+                    }
+
+                    worksheet.addChart(chart);
+                }
             }
         }
     }
@@ -802,6 +960,9 @@ export class XlsxReader implements IReader {
                     // Parse worksheet drawings (images) before other relationship-based parts.
                     await this.#loadWorksheetDrawings(zip, worksheetPath, wsXml, worksheet);
 
+                    // Parse worksheet charts (discovery only; no chart XML parsing yet).
+                    await this.#loadWorksheetCharts(zip, worksheetPath, wsXml, worksheet);
+
                     const mergeCellsMatch = wsXml.match(/<mergeCells[^>]*>([\s\S]*?)<\/mergeCells>/);
                     if (mergeCellsMatch && mergeCellsMatch[1]) {
                         const mergeCellsContent = mergeCellsMatch[1];
@@ -1065,5 +1226,19 @@ export class XlsxReader implements IReader {
      */
     getReadFilter(): ((worksheetName: string) => boolean) | null {
         return this.#readFilter;
+    }
+
+    /**
+     * Enable/disable reading embedded charts.
+     */
+    setIncludeCharts(value: boolean): void {
+        this.#includeCharts = value;
+    }
+
+    /**
+     * True if the reader will discover embedded charts.
+     */
+    getIncludeCharts(): boolean {
+        return this.#includeCharts;
     }
 }
