@@ -5,6 +5,13 @@ node_modules
 out
 dist
 *.tgz
+*.xlsx
+
+# workspace-local verify outputs
+demo.xlsx
+autofilter-test.xlsx
+full-parity-test.xlsx
+names-tables-demo.xlsx
 
 # code coverage
 coverage
