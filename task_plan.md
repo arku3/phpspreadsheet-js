@@ -60,7 +60,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [x] **Comments Reading** - Parse comments.xml (author/text) and note VML (visibility/geometry where available).
         - [x] **Charts Reading (Partial)** - Discover embedded charts via drawing parts and parse minimal chart metadata (title + series formulas).
     - [x] Implement Worksheet Drawings (Images). <!-- id: 46 -->
-    - [ ] Implement Charts (Embedded). <!-- id: 67 -->
+    - [x] Implement Charts (Embedded). <!-- id: 67 -->
 
 - [x] Phase 15b: Data Validation Infrastructure (COMPLETE) <!-- id: 60 -->
     - [x] Create `DataValidation` class in src/core/. <!-- id: 61 -->
