@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { PassThrough } from 'node:stream';
 import archiver from 'archiver';
 import { HashTable } from '../common/hash-table.ts';
 import { Spreadsheet } from '../core/spreadsheet.ts';
@@ -157,151 +158,172 @@ export class XlsxWriter implements IWriter {
         return this.#chartIndexByChart.size;
     }
 
-    async save(filename: string): Promise<void> {
+    public async writeBuffer(): Promise<Uint8Array> {
         return new Promise((resolve, reject) => {
-            const output = fs.createWriteStream(filename);
+            const output = new PassThrough();
+            const chunks: Buffer[] = [];
+
+            output.on('data', (chunk: Buffer) => {
+                chunks.push(chunk);
+            });
+            output.on('end', () => {
+                resolve(Buffer.concat(chunks));
+            });
+            output.on('error', (err) => reject(err));
+
             const archive = archiver('zip', {
                 zlib: { level: 9 },
             });
 
-            output.on('close', () => resolve());
             archive.on('error', (err) => reject(err));
-
             archive.pipe(output);
 
-            // 0. Pre-allocate chart indexes so content types and rels are stable.
-            this.#chartIndexByChart = new Map();
-            this.#nextChartIndex = 1;
-            if (this.#includeCharts) {
-                for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
-                    const sheet = this.#spreadsheet.getSheet(i);
-                    for (const chart of sheet.getChartCollection()) {
-                        this.allocateChartIndex(chart);
+            try {
+                // 0. Pre-allocate chart indexes so content types and rels are stable.
+                this.#chartIndexByChart = new Map();
+                this.#nextChartIndex = 1;
+                if (this.#includeCharts) {
+                    for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
+                        const sheet = this.#spreadsheet.getSheet(i);
+                        for (const chart of sheet.getChartCollection()) {
+                            this.allocateChartIndex(chart);
+                        }
                     }
                 }
-            }
 
-            // 1. Create string table
-            this.#stringTable = [];
-            for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
-                this.#stringTable = this.#writerPartStringTable.createStringTable(
-                    this.#spreadsheet.getSheet(i),
-                    this.#stringTable,
-                );
-            }
+                // 1. Create string table
+                this.#stringTable = [];
+                for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
+                    this.#stringTable = this.#writerPartStringTable.createStringTable(
+                        this.#spreadsheet.getSheet(i),
+                        this.#stringTable,
+                    );
+                }
 
-            // 1a. Create style dictionaries
-            this.createStyleDictionaries();
+                // 1a. Create style dictionaries
+                this.createStyleDictionaries();
 
-            // 2. Add [Content_Types].xml
-            archive.append(this.#writerPartContentTypes.writeContentTypes(this.#spreadsheet), {
-                name: '[Content_Types].xml',
-            });
-
-            // 3. Add relationships
-            archive.append(this.#writerPartRels.writeRelationships(this.#spreadsheet), {
-                name: '_rels/.rels',
-            });
-            const { xml: workbookRels, rIdMap } = this.#writerPartRels.writeWorkbookRelationships(this.#spreadsheet);
-            archive.append(workbookRels, { name: 'xl/_rels/workbook.xml.rels' });
-
-            // 4. Add string table
-            archive.append(this.#writerPartStringTable.writeStringTable(this.#stringTable), {
-                name: 'xl/sharedStrings.xml',
-            });
-
-            // 5. Add styles
-            archive.append(this.#writerPartStyles.writeStyles(this.#spreadsheet), {
-                name: 'xl/styles.xml',
-            });
-
-            // 5a. Add theme
-            archive.append(this.#writerPartTheme.writeTheme(this.#spreadsheet), {
-                name: 'xl/theme/theme1.xml',
-            });
-
-            // 5b. Add metadata
-            archive.append(this.#writerPartDocProps.writeDocPropsApp(this.#spreadsheet), {
-                name: 'docProps/app.xml',
-            });
-            archive.append(this.#writerPartDocProps.writeDocPropsCore(this.#spreadsheet), {
-                name: 'docProps/core.xml',
-            });
-            const customProps = this.#writerPartDocProps.writeDocPropsCustom(this.#spreadsheet);
-            if (customProps) {
-                archive.append(customProps, { name: 'docProps/custom.xml' });
-            }
-
-            // 6. Add workbook
-            archive.append(
-                this.#writerPartWorkbook.writeWorkbook(this.#spreadsheet, this.#preCalculateFormulas, rIdMap),
-                { name: 'xl/workbook.xml' },
-            );
-
-            // 7. Add worksheets
-            let nextImageDataIndex = 1;
-            const mediaWritten = new Set<string>();
-            const chartsWritten = new Set<number>();
-            for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
-                const sheet = this.#spreadsheet.getSheet(i);
-                archive.append(this.#writerPartWorksheet.writeWorksheet(sheet, this.#stringTable), {
-                    name: `xl/worksheets/sheet${i + 1}.xml`,
+                // 2. Add [Content_Types].xml
+                archive.append(this.#writerPartContentTypes.writeContentTypes(this.#spreadsheet), {
+                    name: '[Content_Types].xml',
                 });
 
-                // Worksheet rels (e.g. for drawings/comments, currently minimal)
-                const sheetRels = this.#writerPartRels.writeWorksheetRelationships(sheet, i + 1);
-                if (sheetRels) {
-                    archive.append(sheetRels, {
-                        name: `xl/worksheets/_rels/sheet${i + 1}.xml.rels`,
-                    });
-                }
-
-                // Classic comments (notes)
-                if (sheet.getComments().size > 0) {
-                    archive.append(this.#writerPartComments.writeComments(sheet), {
-                        name: `xl/comments${i + 1}.xml`,
-                    });
-                    archive.append(this.#writerPartComments.writeVmlDrawing(sheet), {
-                        name: `xl/drawings/vmlDrawing${i + 1}.vml`,
-                    });
-                }
-
-                // Worksheet drawings (DrawingML)
-                const drawingParts = this.#writerPartDrawingML.writeWorksheetDrawingParts(
-                    sheet,
-                    i + 1,
-                    nextImageDataIndex,
+                // 3. Add relationships
+                archive.append(this.#writerPartRels.writeRelationships(this.#spreadsheet), {
+                    name: '_rels/.rels',
+                });
+                const { xml: workbookRels, rIdMap } = this.#writerPartRels.writeWorkbookRelationships(
+                    this.#spreadsheet,
                 );
-                if (drawingParts) {
-                    nextImageDataIndex = drawingParts.nextImageDataIndex;
-                    archive.append(drawingParts.drawingXml, {
-                        name: `xl/drawings/drawing${i + 1}.xml`,
-                    });
-                    archive.append(drawingParts.drawingRelsXml, {
-                        name: `xl/drawings/_rels/drawing${i + 1}.xml.rels`,
-                    });
+                archive.append(workbookRels, { name: 'xl/_rels/workbook.xml.rels' });
 
-                    for (const media of drawingParts.mediaFiles) {
-                        const zipPath = `xl/media/${media.filename}`;
-                        if (mediaWritten.has(zipPath)) continue;
-                        mediaWritten.add(zipPath);
-                        archive.append(Buffer.from(media.data), { name: zipPath });
-                    }
+                // 4. Add string table
+                archive.append(this.#writerPartStringTable.writeStringTable(this.#stringTable), {
+                    name: 'xl/sharedStrings.xml',
+                });
+
+                // 5. Add styles
+                archive.append(this.#writerPartStyles.writeStyles(this.#spreadsheet), {
+                    name: 'xl/styles.xml',
+                });
+
+                // 5a. Add theme
+                archive.append(this.#writerPartTheme.writeTheme(this.#spreadsheet), {
+                    name: 'xl/theme/theme1.xml',
+                });
+
+                // 5b. Add metadata
+                archive.append(this.#writerPartDocProps.writeDocPropsApp(this.#spreadsheet), {
+                    name: 'docProps/app.xml',
+                });
+                archive.append(this.#writerPartDocProps.writeDocPropsCore(this.#spreadsheet), {
+                    name: 'docProps/core.xml',
+                });
+                const customProps = this.#writerPartDocProps.writeDocPropsCustom(this.#spreadsheet);
+                if (customProps) {
+                    archive.append(customProps, { name: 'docProps/custom.xml' });
                 }
 
-                if (this.#includeCharts) {
-                    for (const chart of sheet.getChartCollection()) {
-                        const chartIndex = this.allocateChartIndex(chart);
-                        if (chartsWritten.has(chartIndex)) continue;
-                        chartsWritten.add(chartIndex);
-                        archive.append(writeChartXml(chart), {
-                            name: `xl/charts/chart${chartIndex}.xml`,
+                // 6. Add workbook
+                archive.append(
+                    this.#writerPartWorkbook.writeWorkbook(this.#spreadsheet, this.#preCalculateFormulas, rIdMap),
+                    { name: 'xl/workbook.xml' },
+                );
+
+                // 7. Add worksheets
+                let nextImageDataIndex = 1;
+                const mediaWritten = new Set<string>();
+                const chartsWritten = new Set<number>();
+                for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
+                    const sheet = this.#spreadsheet.getSheet(i);
+                    archive.append(this.#writerPartWorksheet.writeWorksheet(sheet, this.#stringTable), {
+                        name: `xl/worksheets/sheet${i + 1}.xml`,
+                    });
+
+                    // Worksheet rels (e.g. for drawings/comments, currently minimal)
+                    const sheetRels = this.#writerPartRels.writeWorksheetRelationships(sheet, i + 1);
+                    if (sheetRels) {
+                        archive.append(sheetRels, {
+                            name: `xl/worksheets/_rels/sheet${i + 1}.xml.rels`,
                         });
                     }
-                }
-            }
 
-            archive.finalize();
+                    // Classic comments (notes)
+                    if (sheet.getComments().size > 0) {
+                        archive.append(this.#writerPartComments.writeComments(sheet), {
+                            name: `xl/comments${i + 1}.xml`,
+                        });
+                        archive.append(this.#writerPartComments.writeVmlDrawing(sheet), {
+                            name: `xl/drawings/vmlDrawing${i + 1}.vml`,
+                        });
+                    }
+
+                    // Worksheet drawings (DrawingML)
+                    const drawingParts = this.#writerPartDrawingML.writeWorksheetDrawingParts(
+                        sheet,
+                        i + 1,
+                        nextImageDataIndex,
+                    );
+                    if (drawingParts) {
+                        nextImageDataIndex = drawingParts.nextImageDataIndex;
+                        archive.append(drawingParts.drawingXml, {
+                            name: `xl/drawings/drawing${i + 1}.xml`,
+                        });
+                        archive.append(drawingParts.drawingRelsXml, {
+                            name: `xl/drawings/_rels/drawing${i + 1}.xml.rels`,
+                        });
+
+                        for (const media of drawingParts.mediaFiles) {
+                            const zipPath = `xl/media/${media.filename}`;
+                            if (mediaWritten.has(zipPath)) continue;
+                            mediaWritten.add(zipPath);
+                            archive.append(Buffer.from(media.data), { name: zipPath });
+                        }
+                    }
+
+                    if (this.#includeCharts) {
+                        for (const chart of sheet.getChartCollection()) {
+                            const chartIndex = this.allocateChartIndex(chart);
+                            if (chartsWritten.has(chartIndex)) continue;
+                            chartsWritten.add(chartIndex);
+                            archive.append(writeChartXml(chart), {
+                                name: `xl/charts/chart${chartIndex}.xml`,
+                            });
+                        }
+                    }
+                }
+
+                void archive.finalize();
+            } catch (err) {
+                reject(err);
+                archive.destroy?.();
+                output.destroy?.();
+            }
         });
+    }
+
+    public async save(filename: string): Promise<void> {
+        const bytes = await this.writeBuffer();
+        await fs.promises.writeFile(filename, bytes);
     }
 }

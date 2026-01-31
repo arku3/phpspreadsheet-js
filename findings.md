@@ -12,7 +12,7 @@
 - **VML pass-through**: If a worksheet contains legacy VML shapes that are not notes, round-trip preservation is not fully implemented.
 
 ## 5. I/O Abstractions
-- **In-memory IO**: Reader/Writer APIs currently primarily target filesystem paths; add Blob/ArrayBuffer/Uint8Array support for browser/edge runtimes.
+- **In-memory IO**: Implemented buffer-based APIs for XLSX Reader/Writer (ArrayBuffer/Uint8Array), with filesystem methods delegating to the buffer path. Browser-first bundling may still require separating Node-only helpers (`node:fs`, `node:path`) from core logic.
 
 ## 3. Calculation Module
 - **Function coverage**: Major categories exist, but there are still many Excel functions missing vs PhpSpreadsheet.

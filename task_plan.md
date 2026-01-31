@@ -73,8 +73,8 @@ Complete systematic parity fixes identified in the review and implement the XLSX
     - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 53 -->
 
 - [ ] Phase 17: I/O Abstractions <!-- id: 68 -->
-    - [ ] Support in-memory I/O for Reader/Writer (Blob/ArrayBuffer/Uint8Array) in addition to filesystem paths.
-    - [ ] Add round-trip tests for buffer-based XLSX read/write.
+    - [x] Support in-memory I/O for Reader/Writer (Blob/ArrayBuffer/Uint8Array) in addition to filesystem paths.
+    - [x] Add round-trip tests for buffer-based XLSX read/write.
 
 ## Decisions
 - Use native private members (`#`) for internal state.
