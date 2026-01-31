@@ -9,6 +9,7 @@ import { Chart, type ChartSeriesModel } from '../worksheet/chart/chart.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
 import type { IReader, WorksheetInfo } from './i-reader.ts';
 import { StylesReader, type StyleData } from './xlsx/styles-reader.ts';
+import { TableReader } from './xlsx/table-reader.ts';
 
 /**
  * XLSX file reader.
@@ -55,6 +56,7 @@ export class XlsxReader implements IReader {
         'http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing';
     static readonly #DRAWING_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing';
     static readonly #CHART_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart';
+    static readonly #TABLE_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/table';
 
     static readonly #EMU_PER_PIXEL = 9525;
 
@@ -115,6 +117,16 @@ export class XlsxReader implements IReader {
     static #extractXmlAttribute(tagAttrs: string, attrName: string): string | null {
         const m = tagAttrs.match(new RegExp(`${attrName}="([^"]*)"`));
         return m && m[1] !== undefined ? m[1] : null;
+    }
+
+    static #castXsdBoolean(value: string): boolean {
+        // Match PhpSpreadsheet WorkbookView::castXsdBooleanToBool.
+        // Valid xsd:boolean values are: true, false, 1, 0 (case-sensitive).
+        // We also treat empty string as false.
+        if (value === 'false' || value === '0' || value === '') {
+            return false;
+        }
+        return true;
     }
 
     static #extractTextFromTNodes(xml: string): string {
@@ -621,6 +633,58 @@ export class XlsxReader implements IReader {
         }
     }
 
+    async #loadWorksheetTables(
+        zip: unzipper.CentralDirectory,
+        worksheetPath: string,
+        worksheetXml: string,
+        worksheet: Worksheet,
+    ): Promise<void> {
+        const tablePartsMatch = worksheetXml.match(/<tableParts\b[^>]*>([\s\S]*?)<\/tableParts>/);
+        if (!tablePartsMatch || !tablePartsMatch[1]) {
+            return;
+        }
+
+        const inner = tablePartsMatch[1];
+        const partMatches = [...inner.matchAll(/<tablePart\b([^>]*)\/>/g)];
+        if (partMatches.length === 0) {
+            return;
+        }
+
+        const worksheetRelsPath = worksheetPath
+            .replace('xl/worksheets/', 'xl/worksheets/_rels/')
+            .replace('.xml', '.xml.rels');
+        const relsXml = await this.#readZipTextFile(zip, worksheetRelsPath);
+        if (!relsXml) {
+            return;
+        }
+        const rels = XlsxReader.#parseRelationshipsXml(relsXml);
+
+        for (const m of partMatches) {
+            const attrs = m[1] ?? '';
+            const rId = XlsxReader.#extractXmlAttribute(attrs, 'r:id') ?? XlsxReader.#extractXmlAttribute(attrs, 'id');
+            if (!rId) {
+                continue;
+            }
+
+            const tableRel = rels.find((r) => r.id === rId && r.type === XlsxReader.#TABLE_REL_TYPE);
+            if (!tableRel?.target) {
+                continue;
+            }
+
+            const tablePath = XlsxReader.#resolveRelationshipTarget(worksheetPath, tableRel.target);
+            const tableXml = await this.#readZipTextFile(zip, tablePath);
+            if (!tableXml) {
+                continue;
+            }
+
+            const table = new TableReader(this, worksheet, tableXml).load();
+            if (!table) {
+                continue;
+            }
+            worksheet.addTable(table);
+        }
+    }
+
     /**
      * Can the current reader read the file?
      */
@@ -1008,6 +1072,10 @@ export class XlsxReader implements IReader {
             const workbookContent = await workbookFile.buffer();
             const workbookXml = workbookContent.toString('utf-8');
 
+            const workbookViewAttrs = !this.#readDataOnly
+                ? (workbookXml.match(/<workbookView\b([^>]*)\/?>(?:[\s\S]*?<\/workbookView>)?/)?.[1] ?? null)
+                : null;
+
             // Create spreadsheet
             const spreadsheet = new Spreadsheet();
             let defaultSheetUsed = false;
@@ -1035,8 +1103,16 @@ export class XlsxReader implements IReader {
                 }
             }
 
+            // Default active sheet index to the first loaded worksheet from the file.
+            spreadsheet.setActiveSheetIndex(0);
+
+            // Track mapping from workbook sheet order to loaded sheet index.
+            // Needed when a read filter excludes sheets.
+            const mapSheetId: Array<number | null> = new Array(sheets.length).fill(null);
+            let loadedSheetCount = 0;
+
             // Load each worksheet
-            for (const sheetInfo of sheets) {
+            for (const [sheetOrderIndex, sheetInfo] of sheets.entries()) {
                 // Apply read filter if set
                 if (this.#readFilter && !this.#readFilter(sheetInfo.name)) {
                     continue;
@@ -1050,7 +1126,7 @@ export class XlsxReader implements IReader {
                 // Get or create worksheet - reuse default sheet for first sheet
                 let worksheet = spreadsheet.getSheetByName(sheetInfo.name);
                 if (!worksheet) {
-                    if (!defaultSheetUsed && spreadsheet.getSheetCount() === 1) {
+                    if (!defaultSheetUsed && spreadsheet.getSheetCount() === 1 && loadedSheetCount === 0) {
                         // Reuse the default sheet
                         worksheet = spreadsheet.getSheet(0);
                         if (worksheet) {
@@ -1061,6 +1137,10 @@ export class XlsxReader implements IReader {
                         worksheet = spreadsheet.createSheet();
                         worksheet.setTitle(sheetInfo.name);
                     }
+                } else if (!defaultSheetUsed && loadedSheetCount === 0 && spreadsheet.getSheetCount() === 1) {
+                    // If the first sheet happens to match the default sheet name, still treat
+                    // the default sheet as consumed so we don't reuse it for subsequent sheets.
+                    defaultSheetUsed = spreadsheet.getIndex(worksheet) === 0;
                 }
 
                 // Read worksheet XML
@@ -1068,6 +1148,9 @@ export class XlsxReader implements IReader {
                 if (!wsFile) {
                     continue;
                 }
+
+                mapSheetId[sheetOrderIndex] = spreadsheet.getIndex(worksheet);
+                loadedSheetCount++;
 
                 const wsContent = await wsFile.buffer();
                 const wsXml = wsContent.toString('utf-8');
@@ -1125,6 +1208,9 @@ export class XlsxReader implements IReader {
                         }
                     }
                 }
+
+                // Parse tables (tableParts + xl/tables/tableN.xml)
+                await this.#loadWorksheetTables(zip, worksheetPath, wsXml, worksheet);
 
                 // Parse merge cells
                 if (!this.#readDataOnly) {
@@ -1326,6 +1412,70 @@ export class XlsxReader implements IReader {
                                 worksheet.setDataValidation(sqref, dataValidation);
                             }
                         }
+                    }
+                }
+            }
+
+            // Apply workbook view settings (bookViews/workbookView) after loading sheets,
+            // so activeTab can be remapped when a read filter excludes sheets.
+            if (workbookViewAttrs) {
+                const activeTabStr = XlsxReader.#extractXmlAttribute(workbookViewAttrs, 'activeTab');
+                if (activeTabStr !== null) {
+                    const activeTab = Number.parseInt(activeTabStr, 10);
+                    const mapped = Number.isFinite(activeTab) ? mapSheetId[activeTab] : null;
+                    if (mapped !== null && mapped !== undefined) {
+                        spreadsheet.setActiveSheetIndex(mapped);
+                    }
+                }
+
+                const showHorizontalScroll = XlsxReader.#extractXmlAttribute(workbookViewAttrs, 'showHorizontalScroll');
+                if (showHorizontalScroll !== null) {
+                    spreadsheet.setShowHorizontalScroll(XlsxReader.#castXsdBoolean(showHorizontalScroll));
+                }
+
+                const showVerticalScroll = XlsxReader.#extractXmlAttribute(workbookViewAttrs, 'showVerticalScroll');
+                if (showVerticalScroll !== null) {
+                    spreadsheet.setShowVerticalScroll(XlsxReader.#castXsdBoolean(showVerticalScroll));
+                }
+
+                const showSheetTabs = XlsxReader.#extractXmlAttribute(workbookViewAttrs, 'showSheetTabs');
+                if (showSheetTabs !== null) {
+                    spreadsheet.setShowSheetTabs(XlsxReader.#castXsdBoolean(showSheetTabs));
+                }
+
+                const minimized = XlsxReader.#extractXmlAttribute(workbookViewAttrs, 'minimized');
+                if (minimized !== null) {
+                    spreadsheet.setMinimized(XlsxReader.#castXsdBoolean(minimized));
+                }
+
+                const autoFilterDateGrouping = XlsxReader.#extractXmlAttribute(
+                    workbookViewAttrs,
+                    'autoFilterDateGrouping',
+                );
+                if (autoFilterDateGrouping !== null) {
+                    spreadsheet.setAutoFilterDateGrouping(XlsxReader.#castXsdBoolean(autoFilterDateGrouping));
+                }
+
+                const firstSheetStr =
+                    XlsxReader.#extractXmlAttribute(workbookViewAttrs, 'firstSheet') ??
+                    XlsxReader.#extractXmlAttribute(workbookViewAttrs, 'firstSheetIndex');
+                if (firstSheetStr !== null) {
+                    const firstSheet = Number.parseInt(firstSheetStr, 10);
+                    if (Number.isFinite(firstSheet) && firstSheet >= 0) {
+                        spreadsheet.setFirstSheetIndex(firstSheet);
+                    }
+                }
+
+                const visibility = XlsxReader.#extractXmlAttribute(workbookViewAttrs, 'visibility');
+                if (visibility !== null) {
+                    spreadsheet.setVisibility(visibility);
+                }
+
+                const tabRatioStr = XlsxReader.#extractXmlAttribute(workbookViewAttrs, 'tabRatio');
+                if (tabRatioStr !== null) {
+                    const tabRatio = Number.parseInt(tabRatioStr, 10);
+                    if (Number.isFinite(tabRatio)) {
+                        spreadsheet.setTabRatio(tabRatio);
                     }
                 }
             }
