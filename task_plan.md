@@ -5,13 +5,13 @@ Complete systematic parity fixes identified in the review and implement the XLSX
 
 ## Phases
 
-- [ ] Phase 15: I/O Extension & Graphics <!-- id: 54 -->
+- [x] Phase 15: I/O Extension & Graphics <!-- id: 54 -->
     - [x] Systematic Writer Parity Review and Verification against PHP. <!-- id: 56 -->
     - [x] Align Style and Worksheet API with PhpSpreadsheet (API Parity). <!-- id: 57 -->
     - [x] Implement classic cell comments (notes) writing (xl/comments*.xml + vmlDrawing). <!-- id: 66 -->
     
-    - [ ] **Parity Fixes (Mandatory before Reader)** <!-- id: 58 -->
-        - [ ] **Core Module Fixes**
+    - [x] **Parity Fixes (Mandatory before Reader)** <!-- id: 58 -->
+        - [x] **Core Module Fixes**
             - [x] Implement `Worksheet.getHighestRow()` and `Worksheet.getHighestColumn()`.
             - [x] Implement `Worksheet.getHighestDataRow()` and `Worksheet.getHighestDataColumn()`.
             - [x] Implement `Worksheet.toArray()`, `fromArray()`, and `rangeToArray()`.
@@ -23,7 +23,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
             - [x] Implement `Cell.isFormula()`, `isLocked()`, `isHiddenOnFormulaBar()`.
             - [x] Implement `Cell.getHyperlink()` and `getDataValidation()` support (with placeholders).
         
-        - [ ] **Style Module Fixes**
+        - [x] **Style Module Fixes**
             - [x] Add `NumberFormat.toFormattedString()` rendering engine (Complex Task).
             - [x] Add missing Font properties: Latin, EastAsian, ComplexScript, StrikeType, Cap, BaseLine.
             - [x] Add `Alignment` rotation range validation (-90 to 90, 255).
@@ -38,7 +38,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
             - [x] Core calculation infrastructure (Tokenizer, Parser, Cache, Branch Pruning, Structured References, Spill Operator).
             - [x] 100+ total functions implemented across all categories.
         
-        - [ ] **I/O Module (Writer) Fixes**
+        - [x] **I/O Module (Writer) Fixes**
             - [x] Implement `SharedStrings.controlCharacterPHP2OOXML` sanitization.
             - [x] Refactor Relationship IDs (`rId`) in `Workbook.ts` to be dynamic.
             - [x] Support multiple `cellStyleXfs` instead of one hardcoded entry.
