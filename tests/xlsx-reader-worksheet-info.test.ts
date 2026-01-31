@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
@@ -6,13 +7,18 @@ import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 
 describe('XlsxReader listWorksheetInfo', () => {
-    const testDir = './test-output';
-    const testFile = path.join(testDir, 'test-worksheet-info.xlsx');
+    const HOOK_TIMEOUT_MS = 30_000;
+    const TEST_TIMEOUT_MS = 20_000;
+
+    const baseDir = path.join('test-output', 'xlsx-reader-worksheet-info');
+    const runDir = path.join(baseDir, `${process.pid}-${crypto.randomUUID()}`);
+    const testFile = path.join(runDir, 'worksheet-info.xlsx');
+
+    type WorksheetInfo = Awaited<ReturnType<XlsxReader['listWorksheetInfo']>>;
+    let worksheetInfo: WorksheetInfo;
 
     beforeAll(async () => {
-        if (!fs.existsSync(testDir)) {
-            fs.mkdirSync(testDir, { recursive: true });
-        }
+        await fs.promises.mkdir(runDir, { recursive: true });
 
         // Create XLSX file with known dimensions
         const spreadsheet = new Spreadsheet();
@@ -31,71 +37,91 @@ describe('XlsxReader listWorksheetInfo', () => {
 
         const writer = new XlsxWriter(spreadsheet);
         await writer.save(testFile);
-    });
+        const reader = new XlsxReader();
+        worksheetInfo = await reader.listWorksheetInfo(testFile);
+    }, HOOK_TIMEOUT_MS);
 
-    afterAll(() => {
-        if (fs.existsSync(testFile)) {
-            fs.unlinkSync(testFile);
+    afterAll(async () => {
+        try {
+            await fs.promises.rm(runDir, { recursive: true, force: true });
+        } catch {
+            // Best-effort cleanup; do not fail the suite.
         }
-    });
+    }, HOOK_TIMEOUT_MS);
 
-    it('should return worksheet info for each sheet', async () => {
-        const reader = new XlsxReader();
-        const info = await reader.listWorksheetInfo(testFile);
+    it(
+        'should return worksheet info for each sheet',
+        async () => {
+            const info = worksheetInfo;
 
-        expect(info).toHaveLength(3);
-        expect(info[0]?.worksheetName).toBe('Sheet1');
-        expect(info[1]?.worksheetName).toBe('LargeSheet');
-        expect(info[2]?.worksheetName).toBe('EmptySheet');
-    });
+            expect(info).toHaveLength(3);
+            expect(info[0]?.worksheetName).toBe('Sheet1');
+            expect(info[1]?.worksheetName).toBe('LargeSheet');
+            expect(info[2]?.worksheetName).toBe('EmptySheet');
+        },
+        TEST_TIMEOUT_MS,
+    );
 
-    it('should return correct dimensions for Sheet1', async () => {
-        const reader = new XlsxReader();
-        const info = await reader.listWorksheetInfo(testFile);
+    it(
+        'should return correct dimensions for Sheet1',
+        async () => {
+            const info = worksheetInfo;
 
-        const sheet1Info = info.find((i) => i.worksheetName === 'Sheet1');
-        expect(sheet1Info).toBeDefined();
+            const sheet1Info = info.find((i) => i.worksheetName === 'Sheet1');
+            expect(sheet1Info).toBeDefined();
 
-        // D5 = column D is index 3 (0-based), row 5
-        expect(sheet1Info!.lastColumnLetter).toBe('D');
-        expect(sheet1Info!.lastColumnIndex).toBe(3); // 0-based
-        expect(sheet1Info!.totalRows).toBe(5);
-        expect(sheet1Info!.totalColumns).toBe(4);
-        expect(sheet1Info!.sheetState).toBe('visible');
-    });
+            // D5 = column D is index 3 (0-based), row 5
+            expect(sheet1Info!.lastColumnLetter).toBe('D');
+            expect(sheet1Info!.lastColumnIndex).toBe(3); // 0-based
+            expect(sheet1Info!.totalRows).toBe(5);
+            expect(sheet1Info!.totalColumns).toBe(4);
+            expect(sheet1Info!.sheetState).toBe('visible');
+        },
+        TEST_TIMEOUT_MS,
+    );
 
-    it('should return correct dimensions for LargeSheet', async () => {
-        const reader = new XlsxReader();
-        const info = await reader.listWorksheetInfo(testFile);
+    it(
+        'should return correct dimensions for LargeSheet',
+        async () => {
+            const info = worksheetInfo;
 
-        const largeInfo = info.find((i) => i.worksheetName === 'LargeSheet');
-        expect(largeInfo).toBeDefined();
+            const largeInfo = info.find((i) => i.worksheetName === 'LargeSheet');
+            expect(largeInfo).toBeDefined();
 
-        // Z100 = column Z is index 25 (0-based), row 100
-        expect(largeInfo!.lastColumnLetter).toBe('Z');
-        expect(largeInfo!.lastColumnIndex).toBe(25); // 0-based
-        expect(largeInfo!.totalRows).toBe(100);
-        expect(largeInfo!.totalColumns).toBe(26);
-        expect(largeInfo!.sheetState).toBe('visible');
-    });
+            // Z100 = column Z is index 25 (0-based), row 100
+            expect(largeInfo!.lastColumnLetter).toBe('Z');
+            expect(largeInfo!.lastColumnIndex).toBe(25); // 0-based
+            expect(largeInfo!.totalRows).toBe(100);
+            expect(largeInfo!.totalColumns).toBe(26);
+            expect(largeInfo!.sheetState).toBe('visible');
+        },
+        TEST_TIMEOUT_MS,
+    );
 
-    it('should handle empty sheets', async () => {
-        const reader = new XlsxReader();
-        const info = await reader.listWorksheetInfo(testFile);
+    it(
+        'should handle empty sheets',
+        async () => {
+            const info = worksheetInfo;
 
-        const emptyInfo = info.find((i) => i.worksheetName === 'EmptySheet');
-        expect(emptyInfo).toBeDefined();
+            const emptyInfo = info.find((i) => i.worksheetName === 'EmptySheet');
+            expect(emptyInfo).toBeDefined();
 
-        // Empty sheet has default dimensions in XLSX
-        expect(emptyInfo!.totalRows).toBe(1);
-        expect(emptyInfo!.totalColumns).toBe(1);
-        expect(emptyInfo!.lastColumnIndex).toBe(0);
-        expect(emptyInfo!.lastColumnLetter).toBe('A');
-    });
+            // Empty sheet has default dimensions in XLSX
+            expect(emptyInfo!.totalRows).toBe(1);
+            expect(emptyInfo!.totalColumns).toBe(1);
+            expect(emptyInfo!.lastColumnIndex).toBe(0);
+            expect(emptyInfo!.lastColumnLetter).toBe('A');
+        },
+        TEST_TIMEOUT_MS,
+    );
 
-    it('should throw error for non-existent file', async () => {
-        const reader = new XlsxReader();
+    it(
+        'should throw error for non-existent file',
+        async () => {
+            const reader = new XlsxReader();
 
-        await expect(reader.listWorksheetInfo('./non-existent-file.xlsx')).rejects.toThrow();
-    });
+            await expect(reader.listWorksheetInfo('./non-existent-file.xlsx')).rejects.toThrow();
+        },
+        TEST_TIMEOUT_MS,
+    );
 });
