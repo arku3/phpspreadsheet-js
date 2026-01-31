@@ -2,6 +2,7 @@ import { Conditional } from '../style/conditional.ts';
 import { Style } from '../style/style.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { AutoFilter } from '../worksheet/auto-filter.ts';
+import { Chart } from '../worksheet/chart/chart.ts';
 import { ColumnDimension } from '../worksheet/column-dimension.ts';
 import type { BaseDrawing } from '../worksheet/drawing/base-drawing.ts';
 import { PageMargins } from '../worksheet/page-margins.ts';
@@ -51,6 +52,11 @@ export class Worksheet {
      * Sparse collection of worksheet drawings (images/shapes), stored in insertion order.
      */
     #drawingCollection: BaseDrawing[] = [];
+
+    /**
+     * Sparse collection of worksheet charts, stored in insertion order.
+     */
+    #chartCollection: Chart[] = [];
 
     #freezePane: string | null = null;
     #paneTopLeftCell: string = 'A1';
@@ -126,6 +132,43 @@ export class Worksheet {
      */
     public getDrawingCollection(): ReadonlyArray<BaseDrawing> {
         return this.#drawingCollection;
+    }
+
+    /**
+     * Get a readonly view of all charts on this worksheet.
+     */
+    public getChartCollection(): readonly Chart[] {
+        return this.#chartCollection;
+    }
+
+    /**
+     * Add a chart to this worksheet.
+     *
+     * If the chart is already attached to a different worksheet, this will throw.
+     */
+    public addChart(chart: Chart): void {
+        const existingWorksheet = chart.getWorksheet();
+        if (existingWorksheet !== null && existingWorksheet !== this) {
+            throw new Error('A Worksheet has already been assigned. Charts can only exist on one Worksheet.');
+        }
+
+        if (!this.#chartCollection.includes(chart)) {
+            this.#chartCollection.push(chart);
+        }
+        chart.setWorksheet(this);
+    }
+
+    /**
+     * Remove a chart from this worksheet.
+     */
+    public removeChart(chart: Chart): void {
+        const idx = this.#chartCollection.indexOf(chart);
+        if (idx >= 0) {
+            this.#chartCollection.splice(idx, 1);
+        }
+        if (chart.getWorksheet() === this) {
+            chart.detach();
+        }
     }
 
     /**
