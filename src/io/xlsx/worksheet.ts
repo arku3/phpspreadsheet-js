@@ -106,7 +106,11 @@ export class Worksheet extends WriterPart {
     }
 
     private writeDrawing(root: any, worksheet: CoreWorksheet): void {
-        if (worksheet.getDrawingCollection().length === 0) {
+        const hasDrawings = worksheet.getDrawingCollection().length > 0;
+        const hasCharts = worksheet.getChartCollection().length > 0;
+        const includeCharts = this.getParentWriter().getIncludeCharts();
+
+        if (!hasDrawings && !(includeCharts && hasCharts)) {
             return;
         }
 

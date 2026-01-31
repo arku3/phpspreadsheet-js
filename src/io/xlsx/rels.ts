@@ -185,7 +185,10 @@ export class Rels extends WriterPart {
 
         // Worksheet drawings (DrawingML)
         // Use a stable non-numeric relationship id so hyperlink rId1.. assumptions remain intact.
-        if (worksheet.getDrawingCollection().length > 0) {
+        const hasDrawings = worksheet.getDrawingCollection().length > 0;
+        const hasCharts = worksheet.getChartCollection().length > 0;
+        const includeCharts = this.getParentWriter().getIncludeCharts();
+        if (hasDrawings || (includeCharts && hasCharts)) {
             relationships.push({
                 id: 'rId_drawing1',
                 type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing',

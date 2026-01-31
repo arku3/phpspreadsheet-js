@@ -25,6 +25,7 @@ import { Worksheet } from './xlsx/worksheet.ts';
 export class XlsxWriter implements IWriter {
     #spreadsheet: Spreadsheet;
     #preCalculateFormulas = false;
+    #includeCharts = false;
     #stringTable: (string | any)[] = [];
 
     // Hash tables
@@ -121,6 +122,15 @@ export class XlsxWriter implements IWriter {
     public setPreCalculateFormulas(value: boolean): this {
         this.#preCalculateFormulas = value;
         return this;
+    }
+
+    public setIncludeCharts(value: boolean): this {
+        this.#includeCharts = value;
+        return this;
+    }
+
+    public getIncludeCharts(): boolean {
+        return this.#includeCharts;
     }
 
     async save(filename: string): Promise<void> {

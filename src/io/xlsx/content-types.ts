@@ -71,7 +71,10 @@ export class ContentTypes extends WriterPart {
         // Worksheet drawings (DrawingML)
         for (let i = 0; i < sheetCount; i++) {
             const sheet = spreadsheet.getSheet(i);
-            if (sheet.getDrawingCollection().length === 0) continue;
+            const hasDrawings = sheet.getDrawingCollection().length > 0;
+            const hasCharts = sheet.getChartCollection().length > 0;
+            const includeCharts = this.getParentWriter().getIncludeCharts();
+            if (!hasDrawings && !(includeCharts && hasCharts)) continue;
             this.writeOverrideContentType(
                 root,
                 `/xl/drawings/drawing${i + 1}.xml`,

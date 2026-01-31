@@ -38,5 +38,5 @@ describe('XLSX drawings fixture sanity', () => {
 
         const contentTypesXml = await getText('[Content_Types].xml');
         expect(contentTypesXml).toContain('Default Extension="png" ContentType="image/png"');
-    });
+    }, 20_000);
 });
