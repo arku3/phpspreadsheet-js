@@ -1,6 +1,7 @@
 # Progress - Systematic Parity Review & Fixes
 
 ## Session Log
+- [2026-02-01] Implemented XLSX worksheet sheetViews reading: parse view settings (gridlines/headers/rightToLeft/showZeros/view/zoomScale*), panes (xSplit/ySplit/state/topLeftCell/activePane), and selections (sqref + per-pane Pane objects) with PhpSpreadsheet parity; added round-trip tests and aligned freezePane/topLeftCell defaults and boolean parsing.
 - [2026-01-31] Implemented XLSX AutoFilter rule reading: parse worksheet `<autoFilter>` + `<filterColumn>` blocks (filters/customFilters/dynamicFilter/top10), load into AutoFilter model; added round-trip test coverage.
 - [2026-01-31] Planned IO refactor: add in-memory Reader/Writer support (Blob/ArrayBuffer/Uint8Array) alongside filesystem paths.
 - [2026-01-31] Implemented in-memory XLSX IO: add `XlsxWriter.writeBuffer()` and `XlsxReader.loadFromBuffer()`/`listWorksheet*FromBuffer()`, and add buffer round-trip tests.

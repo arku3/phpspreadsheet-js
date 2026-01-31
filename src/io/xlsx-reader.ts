@@ -3,13 +3,14 @@ import path from 'node:path';
 import unzipper from 'unzipper';
 import { NamedRange } from '../core/named-range.ts';
 import { Spreadsheet } from '../core/spreadsheet.ts';
-import type { Worksheet } from '../core/worksheet.ts';
+import { Worksheet } from '../core/worksheet.ts';
 import { RichText } from '../rich-text/rich-text.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Column as AutoFilterColumn } from '../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../worksheet/auto-filter/column/rule.ts';
 import { Chart, type ChartSeriesModel } from '../worksheet/chart/chart.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
+import { Pane } from '../worksheet/pane.ts';
 import type { IReader, WorksheetInfo } from './i-reader.ts';
 import { StylesReader, type StyleData } from './xlsx/styles-reader.ts';
 import { TableReader } from './xlsx/table-reader.ts';
@@ -123,13 +124,22 @@ export class XlsxReader implements IReader {
     }
 
     static #castXsdBoolean(value: string): boolean {
-        // Match PhpSpreadsheet WorkbookView::castXsdBooleanToBool.
-        // Valid xsd:boolean values are: true, false, 1, 0 (case-sensitive).
-        // We also treat empty string as false.
-        if (value === 'false' || value === '0' || value === '') {
+        // Match PhpSpreadsheet Reader\Xlsx\BaseParserClass::boolean.
+        // - numeric strings: cast to bool ("0" => false, "1" => true, "2" => true)
+        // - non-numeric strings: only "true" or "TRUE" are true
+        const v = value.trim();
+        if (v === '') {
             return false;
         }
-        return true;
+
+        // Approximation of PHP is_numeric for our XML attribute strings.
+        // Accept integers/decimals/scientific, but not hex.
+        if (/^[+-]?(?:\d+\.?\d*|\d*\.?\d+)(?:[eE][+-]?\d+)?$/.test(v)) {
+            const n = Number(v);
+            return Number.isFinite(n) && n !== 0;
+        }
+
+        return v === 'true' || v === 'TRUE';
     }
 
     static #extractTextFromTNodes(xml: string): string {
@@ -178,6 +188,213 @@ export class XlsxReader implements IReader {
             return null;
         }
         return { attrs: m[1] ?? '', inner: m[2] ?? '' };
+    }
+
+    static #parseXsdInt(value: string | null): number | null {
+        if (value === null) return null;
+        const n = Number.parseInt(value, 10);
+        return Number.isFinite(n) ? n : null;
+    }
+
+    static #parseXsdBoolean(value: string | null): boolean | null {
+        if (value === null) return null;
+        return XlsxReader.#castXsdBoolean(value);
+    }
+
+    static #loadWorksheetSheetViewsFromXml(wsXml: string, worksheet: Worksheet): void {
+        const sheetViewsMatch = wsXml.match(/<sheetViews\b[^>]*>([\s\S]*?)<\/sheetViews\s*>/);
+        const sheetViewsXml = sheetViewsMatch?.[1] ?? '';
+        if (sheetViewsXml === '') {
+            return;
+        }
+
+        const sheetView = XlsxReader.#matchFirstXmlElement(sheetViewsXml, 'sheetView');
+        if (!sheetView) {
+            return;
+        }
+
+        const attrs = sheetView.attrs;
+
+        const topLeftCellRaw = XlsxReader.#extractXmlAttribute(attrs, 'topLeftCell');
+        if (topLeftCellRaw !== null) {
+            const topLeftCell = XlsxReader.decodeXmlEntities(topLeftCellRaw).replace(/\$/g, '').toUpperCase();
+            try {
+                worksheet.setTopLeftCell(topLeftCell);
+            } catch {
+                // Ignore invalid topLeftCell.
+            }
+        }
+
+        const showGridLines = XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'showGridLines'));
+        if (showGridLines !== null) {
+            worksheet.setShowGridlines(showGridLines);
+        }
+
+        const showRowColHeaders = XlsxReader.#parseXsdBoolean(
+            XlsxReader.#extractXmlAttribute(attrs, 'showRowColHeaders'),
+        );
+        if (showRowColHeaders !== null) {
+            worksheet.setShowRowColHeaders(showRowColHeaders);
+        }
+
+        const rightToLeft = XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'rightToLeft'));
+        if (rightToLeft !== null) {
+            worksheet.setRightToLeft(rightToLeft);
+        }
+
+        const zoomScale = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'zoomScale'));
+        if (zoomScale !== null) {
+            const safe = zoomScale <= 0 ? 100 : zoomScale;
+            try {
+                worksheet.getSheetView().setZoomScale(safe);
+            } catch {
+                // Ignore invalid zoomScale.
+            }
+        }
+
+        const zoomScaleNormal = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'zoomScaleNormal'));
+        if (zoomScaleNormal !== null) {
+            const safe = zoomScaleNormal <= 0 ? 100 : zoomScaleNormal;
+            try {
+                worksheet.getSheetView().setZoomScaleNormal(safe);
+            } catch {
+                // Ignore invalid zoomScaleNormal.
+            }
+        }
+
+        const zoomScalePageLayoutView = XlsxReader.#parseXsdInt(
+            XlsxReader.#extractXmlAttribute(attrs, 'zoomScalePageLayoutView'),
+        );
+        if (zoomScalePageLayoutView !== null && zoomScalePageLayoutView > 0) {
+            try {
+                worksheet.getSheetView().setZoomScalePageLayoutView(zoomScalePageLayoutView);
+            } catch {
+                // Ignore invalid zoomScalePageLayoutView.
+            }
+        }
+
+        const zoomScaleSheetLayoutView = XlsxReader.#parseXsdInt(
+            XlsxReader.#extractXmlAttribute(attrs, 'zoomScaleSheetLayoutView'),
+        );
+        if (zoomScaleSheetLayoutView !== null && zoomScaleSheetLayoutView > 0) {
+            try {
+                worksheet.getSheetView().setZoomScaleSheetLayoutView(zoomScaleSheetLayoutView);
+            } catch {
+                // Ignore invalid zoomScaleSheetLayoutView.
+            }
+        }
+
+        const showZerosRaw = XlsxReader.#extractXmlAttribute(attrs, 'showZeros');
+        if (showZerosRaw !== null) {
+            worksheet.getSheetView().setShowZeros(XlsxReader.#castXsdBoolean(showZerosRaw));
+        }
+
+        const viewRaw = XlsxReader.#extractXmlAttribute(attrs, 'view');
+        if (viewRaw !== null) {
+            try {
+                worksheet.getSheetView().setView(XlsxReader.decodeXmlEntities(viewRaw));
+            } catch {
+                // Ignore invalid view.
+            }
+        }
+
+        // Parse panes.
+        const pane = XlsxReader.#matchFirstXmlElement(sheetView.inner, 'pane');
+        let usesPanes = false;
+        let activePaneInPane: string | null = null;
+        if (pane) {
+            usesPanes = true;
+            const paneAttrs = pane.attrs;
+
+            const xSplit = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(paneAttrs, 'xSplit')) ?? 0;
+            const ySplit = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(paneAttrs, 'ySplit')) ?? 0;
+            worksheet.setXSplit(xSplit);
+            worksheet.setYSplit(ySplit);
+
+            const state = XlsxReader.decodeXmlEntities(XlsxReader.#extractXmlAttribute(paneAttrs, 'state') ?? '');
+            worksheet.setPaneState(state);
+
+            const paneTopLeftAttr = XlsxReader.#extractXmlAttribute(paneAttrs, 'topLeftCell');
+            const paneTopLeftCell = paneTopLeftAttr
+                ? XlsxReader.decodeXmlEntities(paneTopLeftAttr).replace(/\$/g, '').toUpperCase()
+                : 'A1';
+            if (paneTopLeftAttr !== null) {
+                try {
+                    worksheet.setPaneTopLeftCell(paneTopLeftCell);
+                    if (state === Worksheet.PANE_FROZEN || state === Worksheet.PANE_FROZENSPLIT) {
+                        worksheet.setTopLeftCell(paneTopLeftCell);
+                    }
+                } catch {
+                    // Ignore invalid pane topLeftCell.
+                }
+            }
+
+            // Default to 'topLeft' if panes exist and activePane missing.
+            activePaneInPane = XlsxReader.#extractXmlAttribute(paneAttrs, 'activePane');
+            const activePane = activePaneInPane !== null ? XlsxReader.decodeXmlEntities(activePaneInPane) : 'topLeft';
+            worksheet.setActivePane(activePane);
+
+            if (state === Worksheet.PANE_FROZEN || state === Worksheet.PANE_FROZENSPLIT) {
+                // Match PhpSpreadsheet: freeze cell is based only on xSplit/ySplit (not paneTopLeftCell).
+                const freezeCell = `${Coordinate.stringFromColumnIndex(xSplit + 1)}${ySplit + 1}`;
+                worksheet.freezePane(
+                    freezeCell,
+                    paneTopLeftAttr ? paneTopLeftCell : null,
+                    state === Worksheet.PANE_FROZENSPLIT,
+                );
+            }
+
+            // Match PhpSpreadsheet: preserve the pane's activePane after freezePane recalculations.
+            worksheet.setActivePane(activePane);
+        }
+
+        // Parse selections (sheetViews/sheetView/selection).
+        const selectionMatches = sheetView.inner.matchAll(/<selection\b([^>]*)\/?>(?:[\s\S]*?<\/selection\s*>)?/g);
+        for (const sm of selectionMatches) {
+            const selAttrs = sm[1] ?? '';
+            let position = XlsxReader.decodeXmlEntities(XlsxReader.#extractXmlAttribute(selAttrs, 'pane') ?? '');
+            const activeCellRaw = XlsxReader.#extractXmlAttribute(selAttrs, 'activeCell');
+            const sqrefRaw = XlsxReader.#extractXmlAttribute(selAttrs, 'sqref');
+
+            const activeCell = activeCellRaw
+                ? XlsxReader.decodeXmlEntities(activeCellRaw).replace(/\$/g, '').toUpperCase()
+                : '';
+            let sqref = sqrefRaw ? XlsxReader.decodeXmlEntities(sqrefRaw) : '';
+            if (sqref.includes(' ')) {
+                sqref = sqref.split(' ')[0] ?? '';
+            }
+            sqref = sqref.replace(/\$/g, '').toUpperCase();
+
+            if (usesPanes && position === '') {
+                position = 'topLeft';
+            }
+
+            if (position === '') {
+                if (sqref !== '') {
+                    try {
+                        worksheet.setSelectedCells(sqref);
+                    } catch {
+                        // Ignore invalid sqref.
+                    }
+                }
+                continue;
+            }
+
+            // Ignore unknown panes.
+            const panes = worksheet.getPanes();
+            if (!(position in panes)) {
+                continue;
+            }
+
+            worksheet.setPane(position, new Pane(position, sqref, activeCell));
+            if (position === worksheet.getActivePane() && sqref !== '') {
+                try {
+                    worksheet.setSelectedCells(sqref);
+                } catch {
+                    // Ignore invalid sqref.
+                }
+            }
+        }
     }
 
     static #loadAutoFilterColumnsFromXml(autoFilterInnerXml: string, worksheet: Worksheet): void {
@@ -1741,6 +1958,15 @@ export class XlsxReader implements IReader {
 
                 const wsContent = await wsFile.buffer();
                 const wsXml = wsContent.toString('utf-8');
+
+                // Parse sheetViews (view settings, selections, panes).
+                if (!this.#readDataOnly) {
+                    try {
+                        XlsxReader.#loadWorksheetSheetViewsFromXml(wsXml, worksheet);
+                    } catch {
+                        // Ignore invalid sheetViews blocks.
+                    }
+                }
 
                 // Parse <autoFilter ref="..."> directly from worksheet XML.
                 // Match PhpSpreadsheet AutoFilter::load: strip '$' and ignore invalid ranges.

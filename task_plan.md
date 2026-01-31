@@ -80,6 +80,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [x] Implement WorkbookView reading (workbook.xml bookViews / view state).
         - [x] Implement DefinedNames reading (workbook.xml definedNames + built-ins).
         - [x] Implement AutoFilter rules reading (worksheet autoFilter filterColumn blocks).
+        - [x] Implement Worksheet sheetViews reading (pane/selection/zoom/ui flags).
         - [ ] Implement remaining XLSX view/state readers (as discovered during parity review).
     - [ ] Commit parity report generator updates (already made locally).
 

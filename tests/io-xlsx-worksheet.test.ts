@@ -22,7 +22,8 @@ describe('Xlsx Worksheet Writer', () => {
         expect(xml).toContain('workbookViewId="0"');
         expect(xml).toContain('zoomScale="75"');
         expect(xml).toContain('showZeros="0"');
-        expect(xml).toContain('<pane xSplit="1" ySplit="1" activePane="bottomRight" state="frozen" topLeftCell="A1"/>');
+        // Match PhpSpreadsheet: when topLeftCell isn't provided, it defaults to the freeze coordinate.
+        expect(xml).toContain('<pane xSplit="1" ySplit="1" activePane="bottomRight" state="frozen" topLeftCell="B2"/>');
         expect(xml).toContain('<selection pane="bottomRight" activeCell="A1" sqref="A1"/>');
         expect(xml).toContain('</sheetViews>');
 

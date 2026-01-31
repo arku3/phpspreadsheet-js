@@ -350,6 +350,7 @@ export class Worksheet {
      */
     public setSelectedCells(coordinate: string): this {
         this.#selectedCells = coordinate.toUpperCase();
+        this.#setSelectedCellsActivePane();
         return this;
     }
 
@@ -663,7 +664,8 @@ export class Worksheet {
         let topLeftAddr = topLeftCell ? topLeftCell.toUpperCase() : null;
 
         if (cellAddress !== null && topLeftAddr === null) {
-            topLeftAddr = 'A1';
+            // Match PhpSpreadsheet: default top-left cell to the freeze coordinate.
+            topLeftAddr = cellAddress;
         }
 
         this.#paneTopLeftCell = topLeftAddr ?? 'A1';
@@ -677,11 +679,10 @@ export class Worksheet {
             this.#activePane = '';
         } else {
             const [colIndex, rowIndex] = Coordinate.indexesFromString(cellAddress);
-            const [startColIndex, startRowIndex] = Coordinate.indexesFromString(this.#paneTopLeftCell);
-            this.#xSplit = Math.max(0, colIndex - startColIndex);
-            this.#ySplit = Math.max(0, rowIndex - startRowIndex);
+            this.#xSplit = colIndex - 1;
+            this.#ySplit = rowIndex - 1;
 
-            if (colIndex > startColIndex || rowIndex > startRowIndex) {
+            if (this.#xSplit > 0 || this.#ySplit > 0) {
                 this.#paneState = frozenSplit ? Worksheet.PANE_FROZENSPLIT : Worksheet.PANE_FROZEN;
                 this.#setSelectedCellsActivePane();
             } else {
@@ -771,9 +772,8 @@ export class Worksheet {
     public setXSplit(xSplit: number): this {
         this.#xSplit = xSplit;
         if (Worksheet.#VALID_FROZEN_STATE.includes(this.#paneState)) {
-            const [baseCol, baseRow] = Coordinate.indexesFromString(this.#paneTopLeftCell);
             this.freezePane(
-                Coordinate.stringFromCoordinate(baseCol + this.#xSplit - 1, baseRow + this.#ySplit - 1),
+                Coordinate.stringFromColumnIndexAndRow(this.#xSplit + 1, this.#ySplit + 1),
                 this.#topLeftCell,
                 this.#paneState === Worksheet.PANE_FROZENSPLIT,
             );
@@ -794,9 +794,8 @@ export class Worksheet {
     public setYSplit(ySplit: number): this {
         this.#ySplit = ySplit;
         if (Worksheet.#VALID_FROZEN_STATE.includes(this.#paneState)) {
-            const [baseCol, baseRow] = Coordinate.indexesFromString(this.#paneTopLeftCell);
             this.freezePane(
-                Coordinate.stringFromCoordinate(baseCol + this.#xSplit - 1, baseRow + this.#ySplit - 1),
+                Coordinate.stringFromColumnIndexAndRow(this.#xSplit + 1, this.#ySplit + 1),
                 this.#topLeftCell,
                 this.#paneState === Worksheet.PANE_FROZENSPLIT,
             );
@@ -812,10 +811,32 @@ export class Worksheet {
     }
 
     /**
+     * Set a pane object for a specific position.
+     *
+     * Intended for reader implementations.
+     */
+    public setPane(position: string, pane: Pane | null): this {
+        if (position in this.#panes) {
+            this.#panes[position] = pane;
+        }
+        return this;
+    }
+
+    /**
      * Get pane top left cell.
      */
     public getPaneTopLeftCell(): string {
         return this.#paneTopLeftCell;
+    }
+
+    /**
+     * Set pane top left cell.
+     *
+     * Intended for reader implementations.
+     */
+    public setPaneTopLeftCell(paneTopLeftCell: string): this {
+        this.#paneTopLeftCell = paneTopLeftCell.toUpperCase();
+        return this;
     }
 
     /**
@@ -826,10 +847,20 @@ export class Worksheet {
     }
 
     /**
+     * Set top left cell.
+     *
+     * Intended for reader implementations.
+     */
+    public setTopLeftCell(topLeftCell: string): this {
+        this.#topLeftCell = topLeftCell.toUpperCase();
+        return this;
+    }
+
+    /**
      * Use panes.
      */
     public usesPanes(): boolean {
-        return this.#freezePane !== null || this.#xSplit > 0 || this.#ySplit > 0;
+        return this.#xSplit > 0 || this.#ySplit > 0;
     }
 
     /**

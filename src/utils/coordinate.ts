@@ -36,6 +36,14 @@ export class Coordinate {
     }
 
     /**
+     * Convert 1-based column/row indexes to A1 coordinate.
+     * Alias for parity with PhpSpreadsheet naming.
+     */
+    public static stringFromColumnIndexAndRow(columnIndex: number, rowIndex: number): string {
+        return this.stringFromColumnIndex(columnIndex) + rowIndex;
+    }
+
+    /**
      * Convert coordinate string to column and row.
      * Returns [columnIndex (1-based), row (1-based)]
      */
