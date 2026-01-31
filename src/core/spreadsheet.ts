@@ -89,13 +89,16 @@ export class Spreadsheet {
      * Get a defined name by name.
      */
     public getDefinedName(name: string, worksheet: Worksheet | null = null): DefinedName | undefined {
-        return this.#definedNames.find((dn) => {
-            if (dn.getName() !== name) return false;
-            if (dn.getLocalOnly()) {
+        if (worksheet) {
+            const local = this.#definedNames.find((dn) => {
+                if (dn.getName() !== name) return false;
+                if (!dn.getLocalOnly()) return false;
                 return dn.getScope() === worksheet;
-            }
-            return true;
-        });
+            });
+            if (local) return local;
+        }
+
+        return this.#definedNames.find((dn) => dn.getName() === name && !dn.getLocalOnly());
     }
 
     /**

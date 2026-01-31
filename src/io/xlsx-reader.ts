@@ -1,6 +1,7 @@
 import { open, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import unzipper from 'unzipper';
+import { NamedRange } from '../core/named-range.ts';
 import { Spreadsheet } from '../core/spreadsheet.ts';
 import type { Worksheet } from '../core/worksheet.ts';
 import { RichText } from '../rich-text/rich-text.ts';
@@ -157,6 +158,365 @@ export class XlsxReader implements IReader {
             parts.push(XlsxReader.decodeXmlEntities(value));
         }
         return parts.join('');
+    }
+
+    static #testIfDefinedNameFormula(value: string): boolean {
+        // Port of PhpSpreadsheet DefinedName::testIfFormula.
+        let v = value.trim();
+        if (v.startsWith('=')) {
+            v = v.slice(1);
+        }
+
+        // Numeric constants are treated as named formulas in PhpSpreadsheet.
+        if (/^[+-]?(?:\d+\.?\d*|\d*\.?\d+)(?:[eE][+-]?\d+)?$/.test(v)) {
+            return true;
+        }
+
+        const identifyFormula = /[^_\p{N}\p{L}:, \$'!]/u;
+        let check = true;
+        for (const segment of v.split("'")) {
+            if (check && identifyFormula.test(segment)) {
+                return true;
+            }
+            check = !check;
+        }
+
+        return false;
+    }
+
+    static #inferSheetNameFromDefinedNameValue(value: string): string | null {
+        // Try to extract the first worksheet reference in a defined name value.
+        // Match PhpSpreadsheet behavior: split on comma/space outside quotes and only
+        // use the first token for sheet inference.
+        let v = value.trim();
+        if (v.startsWith('=')) {
+            v = v.slice(1).trim();
+        }
+
+        v = XlsxReader.#firstTokenSplitOnCommaOrSpaceOutsideQuotes(v);
+
+        if (!v.includes('!')) {
+            return null;
+        }
+
+        if (v.startsWith("'")) {
+            for (let i = 1; i < v.length - 1; i++) {
+                if (v[i] !== "'") {
+                    continue;
+                }
+                if (v[i + 1] === "'") {
+                    i++;
+                    continue;
+                }
+                if (v[i + 1] === '!') {
+                    return v.slice(1, i).replace(/''/g, "'");
+                }
+                break;
+            }
+        }
+
+        const bangIndex = v.indexOf('!');
+        if (bangIndex <= 0) {
+            return null;
+        }
+        return v
+            .slice(0, bangIndex)
+            .replace(/^'+|'+$/g, '')
+            .replace(/''/g, "'");
+    }
+
+    static #splitOnCommasOutsideQuotes(value: string): string[] {
+        // Split on commas, but ignore commas inside single-quoted sheet names.
+        // Supports doubled apostrophes inside quoted sheet names.
+        const parts: string[] = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < value.length; i++) {
+            const ch = value[i] ?? '';
+            if (ch === "'") {
+                if (inQuotes && value[i + 1] === "'") {
+                    current += "''";
+                    i++;
+                    continue;
+                }
+                inQuotes = !inQuotes;
+                current += ch;
+                continue;
+            }
+
+            if (ch === ',' && !inQuotes) {
+                parts.push(current);
+                current = '';
+                continue;
+            }
+
+            current += ch;
+        }
+
+        parts.push(current);
+        return parts;
+    }
+
+    static #firstTokenSplitOnCommaOrSpaceOutsideQuotes(value: string): string {
+        // Extract the first token split on comma/space outside quotes.
+        // This matches the PhpSpreadsheet reader logic used for resolving a worksheet.
+        let inQuotes = false;
+        for (let i = 0; i < value.length; i++) {
+            const ch = value[i] ?? '';
+            if (ch === "'") {
+                if (inQuotes && value[i + 1] === "'") {
+                    i++;
+                    continue;
+                }
+                inQuotes = !inQuotes;
+                continue;
+            }
+            if (!inQuotes && (ch === ',' || /\s/.test(ch))) {
+                return value.slice(0, i).trim();
+            }
+        }
+        return value.trim();
+    }
+
+    static #extractPrintAreaChunks(value: string): string[] {
+        // Extract print area references similarly to PhpSpreadsheet: find all occurrences
+        // of (optional sheet!)A1(:B2) chunks.
+        // We do not split on commas directly because commas may appear in quoted sheet names.
+        const text = value.trim();
+
+        const chunks: string[] = [];
+        const pattern =
+            /(?:(?:'(?:(?:[^']|'')+)')|[^'!,\s]+)!\$?[A-Z]{1,3}\$?\d+(?::\$?[A-Z]{1,3}\$?\d+)?|\$?[A-Z]{1,3}\$?\d+(?::\$?[A-Z]{1,3}\$?\d+)?/g;
+        const matches = text.matchAll(pattern);
+        for (const m of matches) {
+            const chunk = (m[0] ?? '').trim();
+            if (chunk !== '') {
+                chunks.push(chunk);
+            }
+        }
+        return chunks;
+    }
+
+    static #stripWorksheetRef(ref: string): string {
+        const bangIndex = ref.lastIndexOf('!');
+        return bangIndex >= 0 ? ref.slice(bangIndex + 1) : ref;
+    }
+
+    static #stripDollarAfterBang(value: string): string {
+        // Match PhpSpreadsheet behavior: if there is a worksheet prefix, only strip '$'
+        // after the first '!'. Otherwise strip all '$'.
+        const bangIndex = value.indexOf('!');
+        if (bangIndex >= 0) {
+            return value.slice(0, bangIndex + 1) + value.slice(bangIndex + 1).replace(/\$/g, '');
+        }
+        return value.replace(/\$/g, '');
+    }
+
+    #loadDefinedNamesFromWorkbookXml(
+        workbookXml: string,
+        spreadsheet: Spreadsheet,
+        mapSheetId: Array<number | null>,
+    ): void {
+        const definedNamesMatch = workbookXml.match(/<definedNames\b[^>]*>([\s\S]*?)<\/definedNames>/);
+        if (!definedNamesMatch || !definedNamesMatch[1]) {
+            return;
+        }
+
+        const inner = definedNamesMatch[1];
+
+        // Single pass to preserve document order (self-closing tags included).
+        const definedNameMatches = [
+            ...inner.matchAll(/<definedName\b([^>]*?)(?:>([\s\S]*?)<\/definedName\s*>|\/\s*>)/g),
+        ].map((m) => ({ attrs: m[1] ?? '', rawInnerText: m[2] ?? '' }));
+
+        const resolveLocalSheet = (localSheetIdStr: string | null): Worksheet | null => {
+            if (localSheetIdStr === null) return null;
+            const localSheetId = Number.parseInt(localSheetIdStr, 10);
+            const mapped = Number.isFinite(localSheetId) ? mapSheetId[localSheetId] : null;
+            if (mapped === null || mapped === undefined) {
+                return null;
+            }
+            try {
+                return spreadsheet.getSheet(mapped);
+            } catch {
+                return null;
+            }
+        };
+
+        // 1) Apply built-in defined names to worksheet state.
+        for (const { attrs, rawInnerText } of definedNameMatches) {
+            const rawName = XlsxReader.#extractXmlAttribute(attrs, 'name');
+            if (!rawName) continue;
+            const name = XlsxReader.decodeXmlEntities(rawName);
+            if (!name.startsWith('_xlnm.')) continue;
+
+            const localSheetIdStr = XlsxReader.#extractXmlAttribute(attrs, 'localSheetId');
+            if (localSheetIdStr === null) {
+                // Built-ins are worksheet scoped in PhpSpreadsheet.
+                continue;
+            }
+            const worksheet = resolveLocalSheet(localSheetIdStr);
+            if (!worksheet) continue;
+
+            const extractedRange = XlsxReader.#stripDollarAfterBang(XlsxReader.decodeXmlEntities(rawInnerText).trim());
+            if (extractedRange === '') continue;
+
+            if (name === '_xlnm._FilterDatabase') {
+                // Match PhpSpreadsheet: ignore hidden="1" _FilterDatabase.
+                const hidden = XlsxReader.#extractXmlAttribute(attrs, 'hidden');
+                if (hidden === '1') {
+                    continue;
+                }
+                for (const rawPart of XlsxReader.#splitOnCommasOutsideQuotes(extractedRange)) {
+                    const part = rawPart.trim();
+                    if (!part.includes(':')) continue;
+                    const range = XlsxReader.#stripWorksheetRef(part);
+                    try {
+                        worksheet.getAutoFilter().setRange(range);
+                    } catch {
+                        // Ignore invalid ranges.
+                    }
+                }
+                continue;
+            }
+
+            if (name === '_xlnm.Print_Titles') {
+                const pageSetup = worksheet.getPageSetup();
+                for (const rawPart of XlsxReader.#splitOnCommasOutsideQuotes(extractedRange)) {
+                    const part = XlsxReader.#stripWorksheetRef(rawPart.trim());
+                    if (part === '') continue;
+
+                    const colMatch = part.match(/^([A-Z]{1,3}):([A-Z]{1,3})$/);
+                    if (colMatch?.[1] && colMatch[2]) {
+                        pageSetup.setColumnsToRepeatAtLeftByStartAndEnd(colMatch[1], colMatch[2]);
+                        continue;
+                    }
+                    const rowMatch = part.match(/^(\d+):(\d+)$/);
+                    if (rowMatch?.[1] && rowMatch[2]) {
+                        pageSetup.setRowsToRepeatAtTopByStartAndEnd(
+                            Number.parseInt(rowMatch[1], 10),
+                            Number.parseInt(rowMatch[2], 10),
+                        );
+                    }
+                }
+                continue;
+            }
+
+            if (name === '_xlnm.Print_Area') {
+                const pageSetup = worksheet.getPageSetup();
+                let firstSet = false;
+
+                for (const rawPart of XlsxReader.#extractPrintAreaChunks(extractedRange)) {
+                    const part = XlsxReader.#stripWorksheetRef(rawPart.trim());
+                    if (part === '') continue;
+
+                    let range = part;
+                    if (!range.includes(':')) {
+                        // PhpSpreadsheet converts single-cell print areas to a 2D range.
+                        range = `${range}:${range}`;
+                    }
+
+                    // PageSetup rejects absolute refs and worksheet refs.
+                    range = range.replace(/\$/g, '');
+                    if (!range.includes(':') || range.includes('!')) continue;
+                    try {
+                        if (!firstSet) {
+                            pageSetup.setPrintArea(range);
+                            firstSet = true;
+                        } else {
+                            pageSetup.addPrintArea(range);
+                        }
+                    } catch {
+                        // Ignore invalid ranges.
+                    }
+                }
+            }
+        }
+
+        // 2) Add user-defined names (named ranges / named formulas).
+        for (const { attrs, rawInnerText } of definedNameMatches) {
+            const rawName = XlsxReader.#extractXmlAttribute(attrs, 'name');
+            if (!rawName) continue;
+            const name = XlsxReader.decodeXmlEntities(rawName);
+
+            if (name.startsWith('_xlnm.')) {
+                // Built-ins are applied above; do not model as user-defined names.
+                continue;
+            }
+
+            const extractedRange = XlsxReader.decodeXmlEntities(rawInnerText).trim();
+            if (extractedRange === '') continue;
+
+            const localSheetIdStr = XlsxReader.#extractXmlAttribute(attrs, 'localSheetId');
+
+            let localOnly = false;
+            let scope: Worksheet | null = null;
+            let worksheetForResolution: Worksheet | null = null;
+
+            if (localSheetIdStr !== null) {
+                scope = resolveLocalSheet(localSheetIdStr);
+                if (!scope) {
+                    // Sheet not loaded (read filter), skip local-only names.
+                    continue;
+                }
+                localOnly = true;
+
+                // If the value references another sheet and it's loaded, associate the name with that sheet.
+                const inferredSheetName = extractedRange.includes('!')
+                    ? XlsxReader.#inferSheetNameFromDefinedNameValue(extractedRange)
+                    : null;
+                const inferred = inferredSheetName ? spreadsheet.getSheetByName(inferredSheetName) : undefined;
+                worksheetForResolution = inferred ?? scope;
+            } else {
+                const inferredSheetName = extractedRange.includes('!')
+                    ? XlsxReader.#inferSheetNameFromDefinedNameValue(extractedRange)
+                    : null;
+                worksheetForResolution = inferredSheetName
+                    ? (spreadsheet.getSheetByName(inferredSheetName) ?? null)
+                    : null;
+            }
+
+            const isFormula = XlsxReader.#testIfDefinedNameFormula(extractedRange);
+            let storedValue = extractedRange;
+
+            if (!localOnly) {
+                // PhpSpreadsheet behavior: only force #REF! for global names that reference a sheet
+                // (contain '!') but cannot be resolved.
+                if (extractedRange.includes('!') && !worksheetForResolution && !isFormula) {
+                    storedValue = '#REF!';
+                }
+            }
+
+            if (isFormula) {
+                if (!storedValue.startsWith('=')) {
+                    storedValue = `=${storedValue}`;
+                }
+            } else if (storedValue.startsWith('=')) {
+                storedValue = storedValue.slice(1);
+            }
+
+            // Our NamedRange implementation requires a worksheet/scope; keep a stable default.
+            if (!worksheetForResolution) {
+                try {
+                    worksheetForResolution = spreadsheet.getSheet(0);
+                } catch {
+                    continue;
+                }
+            }
+
+            const existing = spreadsheet.getDefinedNames().find((dn) => {
+                if (dn.getName() !== name) return false;
+                if (localOnly) {
+                    return dn.getLocalOnly() && dn.getScope() === scope;
+                }
+                return !dn.getLocalOnly();
+            });
+            if (existing) continue;
+
+            const definedName = new NamedRange(name, worksheetForResolution, storedValue, localOnly, scope);
+            spreadsheet.addDefinedName(definedName);
+        }
     }
 
     static #parseChartTitleText(chartXml: string): string | null {
@@ -1155,6 +1515,25 @@ export class XlsxReader implements IReader {
                 const wsContent = await wsFile.buffer();
                 const wsXml = wsContent.toString('utf-8');
 
+                // Parse <autoFilter ref="..."> directly from worksheet XML.
+                // Match PhpSpreadsheet AutoFilter::load: strip '$' and ignore invalid ranges.
+                for (const match of wsXml.matchAll(/<autoFilter\b([^>]*)>/g)) {
+                    const attrs = match[1] ?? '';
+                    const refAttr = XlsxReader.#extractXmlAttribute(attrs, 'ref');
+                    if (!refAttr) {
+                        continue;
+                    }
+                    const ref = XlsxReader.decodeXmlEntities(refAttr).replace(/\$/g, '');
+                    if (ref === '') {
+                        continue;
+                    }
+                    try {
+                        worksheet.getAutoFilter().setRange(ref);
+                    } catch {
+                        // Ignore invalid ranges.
+                    }
+                }
+
                 // Parse cells from worksheet - parse cell elements directly
                 const cellMatches = wsXml.matchAll(/<c[^>]*r="([A-Z]+\d+)"[^>]*>([\s\S]*?)<\/c>/g);
                 for (const cellMatch of cellMatches) {
@@ -1415,6 +1794,10 @@ export class XlsxReader implements IReader {
                     }
                 }
             }
+
+            // Parse workbook defined names after sheets are loaded so localSheetId
+            // can be mapped through the read filter.
+            this.#loadDefinedNamesFromWorkbookXml(workbookXml, spreadsheet, mapSheetId);
 
             // Apply workbook view settings (bookViews/workbookView) after loading sheets,
             // so activeTab can be remapped when a read filter excludes sheets.
