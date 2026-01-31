@@ -1,6 +1,7 @@
 # Progress - Systematic Parity Review & Fixes
 
 ## Session Log
+- [2026-01-31] Added embedded chart support (reader, partial): chart fixture, chart collection API, chart discovery via drawing parts, and minimal chart XML parsing (title + series formulas).
 - [2026-01-30] Implemented worksheet drawings/images (DrawingML) read/write: parse `<drawing r:id>` -> `xl/drawings/drawing*.xml` + media rels, and write drawing parts + media with stable non-numeric sheet rel ids.
 - [2026-01-30] Implemented memory disposal cycle breaking: `Worksheet.disconnectCells()` detaches retained `Cell` instances; added `Cell.detach()` and iteration helpers; extended memory management tests.
 - [2026-01-30] Stabilized XLSX comments writer tests by isolating temp files and avoiding cross-test deletion races.
