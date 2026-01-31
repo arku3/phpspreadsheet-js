@@ -82,6 +82,19 @@ export class ContentTypes extends WriterPart {
             );
         }
 
+        // Charts
+        const includeCharts = this.getParentWriter().getIncludeCharts();
+        if (includeCharts) {
+            const chartCount = this.getParentWriter().getChartCount();
+            for (let i = 1; i <= chartCount; i++) {
+                this.writeOverrideContentType(
+                    root,
+                    `/xl/charts/chart${i}.xml`,
+                    'application/vnd.openxmlformats-officedocument.drawingml.chart+xml',
+                );
+            }
+        }
+
         // Shared strings
         this.writeOverrideContentType(
             root,

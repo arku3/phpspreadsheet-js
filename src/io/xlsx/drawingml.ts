@@ -4,6 +4,7 @@ import path from 'node:path';
 import { create } from 'xmlbuilder2';
 import type { Worksheet } from '../../core/worksheet.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
+import type { Chart } from '../../worksheet/chart/chart.ts';
 import { Drawing } from '../../worksheet/drawing/drawing.ts';
 import { WriterPart } from './writer-part.ts';
 
@@ -18,6 +19,7 @@ export interface DrawingPartResult {
     drawingRelsXml: string;
     mediaFiles: DrawingMediaFile[];
     nextImageDataIndex: number;
+    chartIndexes: number[];
 }
 
 const EMU_PER_PIXEL = 9525;
@@ -88,7 +90,10 @@ export class DrawingML extends WriterPart {
         startImageDataIndex: number,
     ): DrawingPartResult | null {
         const drawings = worksheet.getDrawingCollection().filter((d): d is Drawing => d instanceof Drawing);
-        if (drawings.length === 0) return null;
+        const includeCharts = this.getParentWriter().getIncludeCharts();
+        const charts = includeCharts ? [...worksheet.getChartCollection()] : [];
+
+        if (drawings.length === 0 && charts.length === 0) return null;
 
         let imageDataIndex = startImageDataIndex;
         const mediaFiles: DrawingMediaFile[] = [];
@@ -99,10 +104,14 @@ export class DrawingML extends WriterPart {
         });
 
         const rels: { id: string; type: string; target: string }[] = [];
+        const chartIndexes: number[] = [];
+
+        // rId numbering is per drawing relationship file; keep it contiguous across images + charts.
+        let nextDrawingRelId = 1;
 
         for (let i = 0; i < drawings.length; i += 1) {
             const drawing = drawings[i]!;
-            const relId = i + 1;
+            const relId = nextDrawingRelId++;
 
             const ext = inferExtension(drawing);
             const data = drawing.getImageData() ?? this.#readImageBytesFromPath(drawing.getPath());
@@ -121,6 +130,21 @@ export class DrawingML extends WriterPart {
             this.#writeDrawingAnchor(drawingRoot, drawing, relId);
         }
 
+        for (let i = 0; i < charts.length; i += 1) {
+            const chart = charts[i]!;
+            const relId = nextDrawingRelId++;
+            chartIndexes.push(this.getParentWriter().allocateChartIndex(chart));
+            const chartIndex = chartIndexes[chartIndexes.length - 1]!;
+
+            rels.push({
+                id: `rId${relId}`,
+                type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart',
+                target: `../charts/chart${chartIndex}.xml`,
+            });
+
+            this.#writeChartAnchor(drawingRoot, chart, relId);
+        }
+
         const relsRoot = create({ version: '1.0', encoding: 'UTF-8', standalone: true }).ele('Relationships', {
             xmlns: 'http://schemas.openxmlformats.org/package/2006/relationships',
         });
@@ -137,6 +161,7 @@ export class DrawingML extends WriterPart {
             drawingRelsXml: relsRoot.end({ prettyPrint: true }),
             mediaFiles,
             nextImageDataIndex: imageDataIndex,
+            chartIndexes,
         };
     }
 
@@ -237,6 +262,63 @@ export class DrawingML extends WriterPart {
         }
         const prstGeom = spPr.ele('a:prstGeom', { prst: 'rect' });
         prstGeom.ele('a:avLst');
+
+        anchor.ele('xdr:clientData');
+    }
+
+    #writeChartAnchor(root: any, chart: Chart, relId: number): void {
+        const topLeft = chart.getTopLeftPosition();
+        const bottomRight = chart.getBottomRightPosition();
+
+        const [col1, row1] = Coordinate.indexesFromString(topLeft.cell);
+        const col0 = Math.max(0, col1 - 1);
+        const row0 = Math.max(0, row1 - 1);
+
+        const isTwoCell = bottomRight !== null;
+        const anchor = root.ele(isTwoCell ? 'xdr:twoCellAnchor' : 'xdr:oneCellAnchor');
+
+        const from = anchor.ele('xdr:from');
+        from.ele('xdr:col').txt(String(col0));
+        from.ele('xdr:colOff').txt(pixelsToEmuString(topLeft.offsetX));
+        from.ele('xdr:row').txt(String(row0));
+        from.ele('xdr:rowOff').txt(pixelsToEmuString(topLeft.offsetY));
+
+        if (isTwoCell) {
+            const br = bottomRight!;
+            const [col2, row2] = Coordinate.indexesFromString(br.cell);
+            const to = anchor.ele('xdr:to');
+            to.ele('xdr:col').txt(String(Math.max(0, col2 - 1)));
+            to.ele('xdr:colOff').txt(pixelsToEmuString(br.offsetX));
+            to.ele('xdr:row').txt(String(Math.max(0, row2 - 1)));
+            to.ele('xdr:rowOff').txt(pixelsToEmuString(br.offsetY));
+        } else {
+            // Default chart size if only anchored by top-left.
+            anchor.ele('xdr:ext', {
+                cx: pixelsToEmuString(480),
+                cy: pixelsToEmuString(288),
+            });
+        }
+
+        const graphicFrame = anchor.ele('xdr:graphicFrame');
+        const name = chart.getName() !== '' ? chart.getName() : `Chart ${relId}`;
+
+        const nv = graphicFrame.ele('xdr:nvGraphicFramePr');
+        nv.ele('xdr:cNvPr', { id: String(relId), name });
+        nv.ele('xdr:cNvGraphicFramePr');
+
+        const xfrm = graphicFrame.ele('xdr:xfrm');
+        xfrm.ele('a:off', { x: '0', y: '0' });
+        xfrm.ele('a:ext', { cx: '0', cy: '0' });
+
+        const graphic = graphicFrame.ele('a:graphic');
+        const graphicData = graphic.ele('a:graphicData', {
+            uri: 'http://schemas.openxmlformats.org/drawingml/2006/chart',
+        });
+        graphicData.ele('c:chart', {
+            'xmlns:c': 'http://schemas.openxmlformats.org/drawingml/2006/chart',
+            'xmlns:r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+            'r:id': `rId${relId}`,
+        });
 
         anchor.ele('xdr:clientData');
     }

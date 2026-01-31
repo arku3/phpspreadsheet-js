@@ -7,7 +7,9 @@ import { Fill } from '../style/fill.ts';
 import { Font } from '../style/font.ts';
 import { NumberFormat } from '../style/number-format.ts';
 import { Style } from '../style/style.ts';
+import type { Chart } from '../worksheet/chart/chart.ts';
 import type { IWriter } from './i-writer.ts';
+import { writeChartXml } from './xlsx/charts.ts';
 import { Comments } from './xlsx/comments.ts';
 import { ContentTypes } from './xlsx/content-types.ts';
 import { DocProps } from './xlsx/doc-props.ts';
@@ -27,6 +29,9 @@ export class XlsxWriter implements IWriter {
     #preCalculateFormulas = false;
     #includeCharts = false;
     #stringTable: (string | any)[] = [];
+
+    #chartIndexByChart: Map<Chart, number> = new Map();
+    #nextChartIndex = 1;
 
     // Hash tables
     #fontHashTable: HashTable<Font> = new HashTable();
@@ -133,6 +138,25 @@ export class XlsxWriter implements IWriter {
         return this.#includeCharts;
     }
 
+    /**
+     * Allocate a global chart index for this XLSX package.
+     *
+     * Charts are written as `xl/charts/chart{n}.xml` and referenced from
+     * the worksheet drawing part.
+     */
+    public allocateChartIndex(chart: Chart): number {
+        const existing = this.#chartIndexByChart.get(chart);
+        if (existing !== undefined) return existing;
+
+        const idx = this.#nextChartIndex++;
+        this.#chartIndexByChart.set(chart, idx);
+        return idx;
+    }
+
+    public getChartCount(): number {
+        return this.#chartIndexByChart.size;
+    }
+
     async save(filename: string): Promise<void> {
         return new Promise((resolve, reject) => {
             const output = fs.createWriteStream(filename);
@@ -144,6 +168,18 @@ export class XlsxWriter implements IWriter {
             archive.on('error', (err) => reject(err));
 
             archive.pipe(output);
+
+            // 0. Pre-allocate chart indexes so content types and rels are stable.
+            this.#chartIndexByChart = new Map();
+            this.#nextChartIndex = 1;
+            if (this.#includeCharts) {
+                for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
+                    const sheet = this.#spreadsheet.getSheet(i);
+                    for (const chart of sheet.getChartCollection()) {
+                        this.allocateChartIndex(chart);
+                    }
+                }
+            }
 
             // 1. Create string table
             this.#stringTable = [];
@@ -205,6 +241,7 @@ export class XlsxWriter implements IWriter {
             // 7. Add worksheets
             let nextImageDataIndex = 1;
             const mediaWritten = new Set<string>();
+            const chartsWritten = new Set<number>();
             for (let i = 0; i < this.#spreadsheet.getSheetCount(); i++) {
                 const sheet = this.#spreadsheet.getSheet(i);
                 archive.append(this.#writerPartWorksheet.writeWorksheet(sheet, this.#stringTable), {
@@ -249,6 +286,17 @@ export class XlsxWriter implements IWriter {
                         if (mediaWritten.has(zipPath)) continue;
                         mediaWritten.add(zipPath);
                         archive.append(Buffer.from(media.data), { name: zipPath });
+                    }
+                }
+
+                if (this.#includeCharts) {
+                    for (const chart of sheet.getChartCollection()) {
+                        const chartIndex = this.allocateChartIndex(chart);
+                        if (chartsWritten.has(chartIndex)) continue;
+                        chartsWritten.add(chartIndex);
+                        archive.append(writeChartXml(chart), {
+                            name: `xl/charts/chart${chartIndex}.xml`,
+                        });
                     }
                 }
             }
