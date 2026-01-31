@@ -69,12 +69,13 @@ Complete systematic parity fixes identified in the review and implement the XLSX
     - [x] Implement data validation writing in Xlsx Writer. <!-- id: 64 -->
     - [x] Implement data validation reading in Xlsx Reader. <!-- id: 65 -->
 
-    - [ ] Phase 15c: XLSX-only Port Focus (Next)
+- [ ] Phase 15c: XLSX-only Port Focus (Next)
     - [ ] Scope: focus on XLSX-only port (defer non-XLSX formats).
     - [ ] XLSX Writer: implement missing parts
         - [x] Implement DefinedNames writing (workbook.xml).
         - [x] Implement Table writing (table parts + worksheet tableParts).
         - [x] Implement AutoFilter writing (worksheet autoFilter).
+        - [x] Align sheetViews writer output with PhpSpreadsheet rules (topLeftCell emission rules; activePane fallback only for frozen).
     - [ ] XLSX Reader: implement missing parts
         - [x] Implement TableReader (table parts + worksheet bindings).
         - [x] Implement WorkbookView reading (workbook.xml bookViews / view state).

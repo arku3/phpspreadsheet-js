@@ -213,4 +213,78 @@ describe('XLSX Worksheet sheetViews/pane/selection reading', () => {
         expect(loadedSheet.getSelectedCells()).toBe('A1:B2');
         expect(loadedSheet.getActiveCell()).toBe('A1');
     });
+
+    test('Invalid sheetView@topLeftCell is ignored', async () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        // Sanity: default scroll position.
+        expect(sheet.getTopLeftCell()).toBe('A1');
+
+        const bytes = await new XlsxWriter(spreadsheet).writeBuffer();
+        const patched = await patchSheet1Xml(bytes, (xml) => {
+            const match = xml.match(/<sheetView\b[^>]*>/);
+            if (!match) {
+                throw new Error('Expected <sheetView> element to exist');
+            }
+
+            const sheetViewTag = match[0];
+            const patchedSheetViewTag = sheetViewTag.includes('topLeftCell=')
+                ? sheetViewTag.replace(/topLeftCell="[^"]*"/, 'topLeftCell="A0"')
+                : sheetViewTag.replace(/<sheetView\b/, '<sheetView topLeftCell="A0"');
+
+            const nextXml = xml.replace(sheetViewTag, patchedSheetViewTag);
+            if (nextXml === xml) {
+                throw new Error('Expected sheet1.xml patch to modify <sheetView>');
+            }
+            return nextXml;
+        });
+        const loaded = await new XlsxReader().loadFromBuffer(patched);
+        const loadedSheet = loaded.getActiveSheet();
+
+        // Reader should not poison worksheet state with invalid coords.
+        expect(loadedSheet.getTopLeftCell()).toBe('A1');
+    });
+
+    test('Invalid pane@topLeftCell is ignored', async () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        // Ensure pane exists in XML.
+        sheet.setXSplit(1);
+        sheet.setYSplit(1);
+        sheet.setPaneState('split');
+        sheet.setActivePane('topLeft');
+        sheet.setPane('topLeft', new Pane('topLeft', 'A1', 'A1'));
+        sheet.setSelectedCells('A1');
+
+        // Sanity: default pane scroll position.
+        expect(sheet.getPaneTopLeftCell()).toBe('A1');
+
+        const bytes = await new XlsxWriter(spreadsheet).writeBuffer();
+        const patched = await patchSheet1Xml(bytes, (xml) => {
+            const match = xml.match(/<pane\b[^>]*\/>/);
+            if (!match) {
+                throw new Error('Expected <pane/> element to exist');
+            }
+
+            const paneTag = match[0];
+            const patchedPaneTag = paneTag.includes('topLeftCell=')
+                ? paneTag.replace(/topLeftCell="[^"]*"/, 'topLeftCell="A0"')
+                : paneTag.replace(/<pane\b/, '<pane topLeftCell="A0"');
+
+            const nextXml = xml.replace(paneTag, patchedPaneTag);
+            if (nextXml === xml) {
+                throw new Error('Expected sheet1.xml patch to modify <pane/>');
+            }
+            return nextXml;
+        });
+        const loaded = await new XlsxReader().loadFromBuffer(patched);
+        const loadedSheet = loaded.getActiveSheet();
+
+        // Reader should not poison worksheet state with invalid coords.
+        expect(loadedSheet.getPaneTopLeftCell()).toBe('A1');
+        // In split panes, pane@topLeftCell does not override the worksheet scroll position.
+        expect(loadedSheet.getTopLeftCell()).toBe('A1');
+    });
 });

@@ -127,6 +127,34 @@ export class Worksheet {
         this.#defaultRowDimension = new RowDimension(null);
     }
 
+    static readonly #MAX_COLUMN_INDEX = 16384;
+    static readonly #MAX_ROW_INDEX = 1048576;
+
+    /**
+     * Normalize a top-left style coordinate (A1) or return null if invalid.
+     *
+     * Intended for reader implementations: do not poison worksheet state
+     * with invalid coordinates.
+     */
+    static #tryNormalizeTopLeftA1Coordinate(cellCoordinate: string): string | null {
+        const cleaned = cellCoordinate.trim().replace(/\$/g, '').toUpperCase();
+        if (cleaned === '') return null;
+        if (cleaned.includes('!')) return null;
+        if (cleaned.includes(':') || cleaned.includes(',') || /\s/.test(cleaned)) return null;
+
+        const match = cleaned.match(/^([A-Z]{1,3})(\d{1,7})$/);
+        if (!match) return null;
+
+        const col = match[1]!;
+        const row = Number.parseInt(match[2]!, 10);
+        if (!Number.isFinite(row) || row < 1 || row > Worksheet.#MAX_ROW_INDEX) return null;
+
+        const colIdx = Coordinate.columnIndexFromString(col);
+        if (colIdx < 1 || colIdx > Worksheet.#MAX_COLUMN_INDEX) return null;
+
+        return `${col}${row}`;
+    }
+
     /**
      * Get a readonly view of all drawings on this worksheet.
      */
@@ -661,7 +689,7 @@ export class Worksheet {
             throw new Error('Freeze pane can not be set on a range of cells.');
         }
 
-        let topLeftAddr = topLeftCell ? topLeftCell.toUpperCase() : null;
+        let topLeftAddr = topLeftCell ? Worksheet.#tryNormalizeTopLeftA1Coordinate(topLeftCell) : null;
 
         if (cellAddress !== null && topLeftAddr === null) {
             // Match PhpSpreadsheet: default top-left cell to the freeze coordinate.
@@ -835,7 +863,11 @@ export class Worksheet {
      * Intended for reader implementations.
      */
     public setPaneTopLeftCell(paneTopLeftCell: string): this {
-        this.#paneTopLeftCell = paneTopLeftCell.toUpperCase();
+        const normalized = Worksheet.#tryNormalizeTopLeftA1Coordinate(paneTopLeftCell);
+        if (normalized === null) {
+            return this;
+        }
+        this.#paneTopLeftCell = normalized;
         return this;
     }
 
@@ -852,7 +884,11 @@ export class Worksheet {
      * Intended for reader implementations.
      */
     public setTopLeftCell(topLeftCell: string): this {
-        this.#topLeftCell = topLeftCell.toUpperCase();
+        const normalized = Worksheet.#tryNormalizeTopLeftA1Coordinate(topLeftCell);
+        if (normalized === null) {
+            return this;
+        }
+        this.#topLeftCell = normalized;
         return this;
     }
 
