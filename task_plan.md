@@ -72,12 +72,14 @@ Complete systematic parity fixes identified in the review and implement the XLSX
 - [ ] Phase 15c: XLSX-only Port Focus (Next)
     - [ ] Scope: focus on XLSX-only port (defer non-XLSX formats).
     - [ ] XLSX Writer: implement missing parts
-        - [ ] Implement DefinedNames writing (workbook.xml).
-        - [ ] Implement Table writing (table parts + worksheet tableParts).
-        - [ ] Implement AutoFilter writing (worksheet autoFilter).
+        - [x] Implement DefinedNames writing (workbook.xml).
+        - [x] Implement Table writing (table parts + worksheet tableParts).
+        - [x] Implement AutoFilter writing (worksheet autoFilter).
     - [ ] XLSX Reader: implement missing parts
-        - [ ] Implement TableReader (table parts + worksheet bindings).
-        - [ ] Implement WorkbookView reading (workbook.xml bookViews / view state).
+        - [x] Implement TableReader (table parts + worksheet bindings).
+        - [x] Implement WorkbookView reading (workbook.xml bookViews / view state).
+        - [x] Implement DefinedNames reading (workbook.xml definedNames + built-ins).
+        - [x] Implement AutoFilter rules reading (worksheet autoFilter filterColumn blocks).
         - [ ] Implement remaining XLSX view/state readers (as discovered during parity review).
     - [ ] Commit parity report generator updates (already made locally).
 

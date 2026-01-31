@@ -6,6 +6,8 @@ import { Spreadsheet } from '../core/spreadsheet.ts';
 import type { Worksheet } from '../core/worksheet.ts';
 import { RichText } from '../rich-text/rich-text.ts';
 import { Coordinate } from '../utils/coordinate.ts';
+import { Column as AutoFilterColumn } from '../worksheet/auto-filter/column.ts';
+import { Rule as AutoFilterRule } from '../worksheet/auto-filter/column/rule.ts';
 import { Chart, type ChartSeriesModel } from '../worksheet/chart/chart.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
 import type { IReader, WorksheetInfo } from './i-reader.ts';
@@ -158,6 +160,231 @@ export class XlsxReader implements IReader {
             parts.push(XlsxReader.decodeXmlEntities(value));
         }
         return parts.join('');
+    }
+
+    static #parseNumberOrString(value: string): string | number {
+        const trimmed = value.trim();
+        if (trimmed === '') {
+            return '';
+        }
+        const n = Number(trimmed);
+        return Number.isFinite(n) ? n : trimmed;
+    }
+
+    static #matchFirstXmlElement(xml: string, tagName: string): { attrs: string; inner: string } | null {
+        const re = new RegExp(`<${tagName}\\b([^>]*?)(?:\\/\\s*>|>([\\s\\S]*?)<\\/${tagName}\\s*>)`);
+        const m = xml.match(re);
+        if (!m) {
+            return null;
+        }
+        return { attrs: m[1] ?? '', inner: m[2] ?? '' };
+    }
+
+    static #loadAutoFilterColumnsFromXml(autoFilterInnerXml: string, worksheet: Worksheet): void {
+        const autoFilter = worksheet.getAutoFilter();
+
+        const filterColumnMatches = autoFilterInnerXml.matchAll(
+            /<filterColumn\b([^>]*?)(?:\/\s*>|>([\s\S]*?)<\/filterColumn\s*>)/g,
+        );
+        for (const filterColumnMatch of filterColumnMatches) {
+            try {
+                const filterColumnAttrs = filterColumnMatch[1] ?? '';
+                const filterColumnInner = filterColumnMatch[2] ?? '';
+
+                const colIdStr = XlsxReader.#extractXmlAttribute(filterColumnAttrs, 'colId');
+                if (!colIdStr) {
+                    continue;
+                }
+                const colId = Number.parseInt(colIdStr, 10);
+                if (!Number.isFinite(colId) || colId < 0) {
+                    continue;
+                }
+
+                let column: AutoFilterColumn;
+                try {
+                    column = autoFilter.getColumnByOffset(colId);
+                } catch {
+                    continue;
+                }
+
+                // Clear any prior state; worksheet XML should be authoritative.
+                column.clearRules();
+                column.setAttributes({});
+
+                // 1) filters
+                const filters = XlsxReader.#matchFirstXmlElement(filterColumnInner, 'filters');
+                if (filters) {
+                    column.setFilterType(AutoFilterColumn.AUTOFILTER_FILTERTYPE_FILTER);
+                    const blank = XlsxReader.#extractXmlAttribute(filters.attrs, 'blank');
+                    if (blank === '1') {
+                        column.setAttribute('blank', 1);
+                    }
+
+                    for (const m of filters.inner.matchAll(/<filter\b([^>]*?)\/?\s*>/g)) {
+                        const attrs = m[1] ?? '';
+                        const valAttr = XlsxReader.#extractXmlAttribute(attrs, 'val');
+                        if (valAttr === null) {
+                            continue;
+                        }
+                        const value = XlsxReader.decodeXmlEntities(valAttr);
+                        try {
+                            column.createRule().setRuleType(AutoFilterRule.AUTOFILTER_RULETYPE_FILTER).setValue(value);
+                        } catch {
+                            // Ignore invalid rule.
+                        }
+                    }
+
+                    const dateGroupMatches = filters.inner.matchAll(/<dateGroupItem\b([^>]*?)(?:\/\s*>|>)/g);
+                    for (const m of dateGroupMatches) {
+                        const attrs = m[1] ?? '';
+                        const dateTimeGrouping = XlsxReader.#extractXmlAttribute(attrs, 'dateTimeGrouping');
+                        if (!dateTimeGrouping) {
+                            continue;
+                        }
+
+                        const value: Record<string, number> = {};
+                        for (const key of ['year', 'month', 'day', 'hour', 'minute', 'second'] as const) {
+                            const raw = XlsxReader.#extractXmlAttribute(attrs, key);
+                            if (raw === null) {
+                                continue;
+                            }
+                            const n = Number.parseInt(raw, 10);
+                            if (Number.isFinite(n)) {
+                                value[key] = n;
+                            }
+                        }
+                        if (Object.keys(value).length === 0) {
+                            continue;
+                        }
+
+                        try {
+                            const rule = column.createRule().setRuleType(AutoFilterRule.AUTOFILTER_RULETYPE_DATEGROUP);
+                            rule.setValue(value);
+                            try {
+                                rule.setGrouping(dateTimeGrouping);
+                            } catch {
+                                // Ignore invalid grouping.
+                            }
+                        } catch {
+                            // Ignore invalid rule.
+                        }
+                    }
+
+                    continue;
+                }
+
+                // 2) customFilters
+                const customFilters = XlsxReader.#matchFirstXmlElement(filterColumnInner, 'customFilters');
+                if (customFilters) {
+                    column.setFilterType(AutoFilterColumn.AUTOFILTER_FILTERTYPE_CUSTOMFILTER);
+                    const and = XlsxReader.#extractXmlAttribute(customFilters.attrs, 'and');
+                    column.setJoin(
+                        and === '1'
+                            ? AutoFilterColumn.AUTOFILTER_COLUMN_JOIN_AND
+                            : AutoFilterColumn.AUTOFILTER_COLUMN_JOIN_OR,
+                    );
+
+                    const customFilterMatches = customFilters.inner.matchAll(/<customFilter\b([^>]*?)(?:\/\s*>|>)/g);
+                    for (const m of customFilterMatches) {
+                        const attrs = m[1] ?? '';
+                        const operator =
+                            XlsxReader.#extractXmlAttribute(attrs, 'operator') ??
+                            AutoFilterRule.AUTOFILTER_COLUMN_RULE_EQUAL;
+                        const valAttr = XlsxReader.#extractXmlAttribute(attrs, 'val');
+                        if (valAttr === null) {
+                            continue;
+                        }
+                        const value = XlsxReader.decodeXmlEntities(valAttr);
+                        try {
+                            const rule = column
+                                .createRule()
+                                .setRuleType(AutoFilterRule.AUTOFILTER_RULETYPE_CUSTOMFILTER);
+                            rule.setOperator(operator);
+                            rule.setValue(value);
+                        } catch {
+                            // Ignore invalid rule.
+                        }
+                    }
+                    continue;
+                }
+
+                // 3) dynamicFilter
+                const dynamicFilter = XlsxReader.#matchFirstXmlElement(filterColumnInner, 'dynamicFilter');
+                if (dynamicFilter) {
+                    column.setFilterType(AutoFilterColumn.AUTOFILTER_FILTERTYPE_DYNAMICFILTER);
+                    const type = XlsxReader.#extractXmlAttribute(dynamicFilter.attrs, 'type');
+                    const valAttr = XlsxReader.#extractXmlAttribute(dynamicFilter.attrs, 'val');
+                    const maxValAttr = XlsxReader.#extractXmlAttribute(dynamicFilter.attrs, 'maxVal');
+                    if (valAttr !== null) {
+                        column.setAttribute(
+                            'val',
+                            XlsxReader.#parseNumberOrString(XlsxReader.decodeXmlEntities(valAttr)),
+                        );
+                    }
+                    if (maxValAttr !== null) {
+                        column.setAttribute(
+                            'maxVal',
+                            XlsxReader.#parseNumberOrString(XlsxReader.decodeXmlEntities(maxValAttr)),
+                        );
+                    }
+
+                    try {
+                        const rule = column.createRule().setRuleType(AutoFilterRule.AUTOFILTER_RULETYPE_DYNAMICFILTER);
+                        if (type) {
+                            try {
+                                rule.setGrouping(type);
+                            } catch {
+                                // Ignore invalid grouping.
+                            }
+                        }
+                    } catch {
+                        // Ignore invalid rule.
+                    }
+                    continue;
+                }
+
+                // 4) top10
+                const top10 = XlsxReader.#matchFirstXmlElement(filterColumnInner, 'top10');
+                if (top10) {
+                    column.setFilterType(AutoFilterColumn.AUTOFILTER_FILTERTYPE_TOPTENFILTER);
+
+                    const topAttr = XlsxReader.#extractXmlAttribute(top10.attrs, 'top');
+                    const percentAttr = XlsxReader.#extractXmlAttribute(top10.attrs, 'percent');
+                    const valAttr = XlsxReader.#extractXmlAttribute(top10.attrs, 'val');
+                    const filterValAttr = XlsxReader.#extractXmlAttribute(top10.attrs, 'filterVal');
+
+                    if (filterValAttr !== null) {
+                        // Match writer: store filterVal in maxVal.
+                        column.setAttribute(
+                            'maxVal',
+                            XlsxReader.#parseNumberOrString(XlsxReader.decodeXmlEntities(filterValAttr)),
+                        );
+                    }
+
+                    try {
+                        const grouping =
+                            topAttr === '0'
+                                ? AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_BOTTOM
+                                : AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_TOP;
+                        const operator =
+                            percentAttr === '1'
+                                ? AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_PERCENT
+                                : AutoFilterRule.AUTOFILTER_COLUMN_RULE_TOPTEN_BY_VALUE;
+
+                        const rule = column.createRule().setRuleType(AutoFilterRule.AUTOFILTER_RULETYPE_TOPTENFILTER);
+                        rule.setGrouping(grouping);
+                        rule.setOperator(operator);
+                        if (valAttr !== null) {
+                            rule.setValue(XlsxReader.#parseNumberOrString(XlsxReader.decodeXmlEntities(valAttr)));
+                        }
+                    } catch {
+                        // Ignore invalid rule.
+                    }
+                }
+            } catch {
+                // Ignore invalid filterColumn blocks.
+            }
+        }
     }
 
     static #testIfDefinedNameFormula(value: string): boolean {
@@ -1517,20 +1744,39 @@ export class XlsxReader implements IReader {
 
                 // Parse <autoFilter ref="..."> directly from worksheet XML.
                 // Match PhpSpreadsheet AutoFilter::load: strip '$' and ignore invalid ranges.
-                for (const match of wsXml.matchAll(/<autoFilter\b([^>]*)>/g)) {
-                    const attrs = match[1] ?? '';
-                    const refAttr = XlsxReader.#extractXmlAttribute(attrs, 'ref');
-                    if (!refAttr) {
-                        continue;
-                    }
-                    const ref = XlsxReader.decodeXmlEntities(refAttr).replace(/\$/g, '');
-                    if (ref === '') {
-                        continue;
-                    }
+                const autoFilterMatches = wsXml.matchAll(
+                    /<autoFilter\b([^>]*?)(?:\/\s*>|>([\s\S]*?)<\/autoFilter\s*>)/g,
+                );
+                for (const match of autoFilterMatches) {
                     try {
-                        worksheet.getAutoFilter().setRange(ref);
+                        const attrs = match[1] ?? '';
+                        const inner = match[2] ?? '';
+                        const refAttr = XlsxReader.#extractXmlAttribute(attrs, 'ref');
+                        if (!refAttr) {
+                            continue;
+                        }
+                        const ref = XlsxReader.decodeXmlEntities(refAttr).replace(/\$/g, '');
+                        if (ref === '') {
+                            continue;
+                        }
+
+                        try {
+                            worksheet.getAutoFilter().setRange(ref);
+                        } catch {
+                            // Ignore invalid ranges.
+                            continue;
+                        }
+
+                        // Parse filter rules inside <autoFilter>.
+                        if (inner !== '') {
+                            try {
+                                XlsxReader.#loadAutoFilterColumnsFromXml(inner, worksheet);
+                            } catch {
+                                // Ignore invalid AutoFilter blocks.
+                            }
+                        }
                     } catch {
-                        // Ignore invalid ranges.
+                        // Ignore invalid AutoFilter blocks.
                     }
                 }
 
