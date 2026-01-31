@@ -95,7 +95,7 @@ export class RowDimension extends Dimension {
     /**
      * Set CustomFormat.
      */
-    public setCustomFormat(customFormat: boolean, height: number = -1): this {
+    public setCustomFormat(customFormat: boolean, height: number | null = -1): this {
         this.#customFormat = customFormat;
         if (height !== null) {
             this.#height = height;

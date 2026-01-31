@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
+import { Worksheet } from '../src/core/worksheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 
@@ -33,6 +34,7 @@ describe('XlsxReader listWorksheetInfo', () => {
 
         const sheet3 = spreadsheet.createSheet();
         sheet3.setTitle('EmptySheet');
+        sheet3.setSheetState(Worksheet.SHEETSTATE_HIDDEN);
         // Leave empty
 
         const writer = new XlsxWriter(spreadsheet);
@@ -111,6 +113,7 @@ describe('XlsxReader listWorksheetInfo', () => {
             expect(emptyInfo!.totalColumns).toBe(1);
             expect(emptyInfo!.lastColumnIndex).toBe(0);
             expect(emptyInfo!.lastColumnLetter).toBe('A');
+            expect(emptyInfo!.sheetState).toBe('hidden');
         },
         TEST_TIMEOUT_MS,
     );

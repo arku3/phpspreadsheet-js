@@ -1,3 +1,4 @@
+import { Color } from '../style/color.ts';
 import { Conditional } from '../style/conditional.ts';
 import { Style } from '../style/style.ts';
 import { Coordinate } from '../utils/coordinate.ts';
@@ -5,6 +6,7 @@ import { AutoFilter } from '../worksheet/auto-filter.ts';
 import { Chart } from '../worksheet/chart/chart.ts';
 import { ColumnDimension } from '../worksheet/column-dimension.ts';
 import type { BaseDrawing } from '../worksheet/drawing/base-drawing.ts';
+import { HeaderFooter } from '../worksheet/header-footer.ts';
 import { PageMargins } from '../worksheet/page-margins.ts';
 import { PageSetup } from '../worksheet/page-setup.ts';
 import { Pane } from '../worksheet/pane.ts';
@@ -35,6 +37,10 @@ export class Worksheet {
     public static readonly PANE_FROZEN = 'frozen';
     public static readonly PANE_FROZENSPLIT = 'frozenSplit';
 
+    // Page breaks
+    public static readonly BREAK_ROW = 'row';
+    public static readonly BREAK_COLUMN = 'column';
+
     static readonly #VALID_FROZEN_STATE = [Worksheet.PANE_FROZEN, Worksheet.PANE_FROZENSPLIT];
 
     #parent: Spreadsheet;
@@ -45,6 +51,8 @@ export class Worksheet {
     #tables: Table[] = [];
     #pageSetup: PageSetup;
     #pageMargins: PageMargins;
+    #headerFooter: HeaderFooter;
+    #breaks: Map<string, string> = new Map();
     #sheetView: SheetView;
     #autoFilter: AutoFilter;
 
@@ -74,6 +82,37 @@ export class Worksheet {
     #showGridlines: boolean = true;
     #showRowColHeaders: boolean = true;
     #rightToLeft: boolean = false;
+
+    /**
+     * Worksheet code name (VBA / internal code name).
+     *
+     * Reader note: this is distinct from the sheet title.
+     */
+    #codeName: string | null = null;
+
+    /**
+     * Worksheet tab color.
+     *
+     * This models the OOXML `sheetPr/tabColor` element.
+     *
+     * When `null`, the tab color is considered unset.
+     */
+    #tabColor: Color | null = null;
+
+    /**
+     * Outline summaries placement.
+     *
+     * These model the OOXML `sheetPr/outlinePr` attributes.
+     */
+    #showSummaryRight: boolean = true;
+    #showSummaryBelow: boolean = true;
+
+    /**
+     * Print gridlines.
+     *
+     * This models the OOXML `printOptions` gridlines behavior.
+     */
+    #printGridlines: boolean = false;
 
     /**
      * Merge cells array.
@@ -118,13 +157,110 @@ export class Worksheet {
     constructor(parent: Spreadsheet, title: string = 'Worksheet') {
         this.#parent = parent;
         this.#title = title;
+        // Match PhpSpreadsheet: default codeName is derived from the title.
+        this.setCodeName(this.#title);
         this.#cellCollection = new CellCollection();
         this.#pageSetup = new PageSetup();
         this.#pageMargins = new PageMargins();
+        this.#headerFooter = new HeaderFooter();
         this.#sheetView = new SheetView();
         this.#autoFilter = new AutoFilter('', this);
         this.#defaultColumnDimension = new ColumnDimension(null);
         this.#defaultRowDimension = new RowDimension(null);
+    }
+
+    /**
+     * Get worksheet code name.
+     */
+    public getCodeName(): string | null {
+        return this.#codeName;
+    }
+
+    /**
+     * Set worksheet code name.
+     */
+    public setCodeName(codeName: string | null): this {
+        const trimmed = (codeName ?? '').trim();
+        if (trimmed === '') {
+            this.#codeName = null;
+            return this;
+        }
+
+        // Match Excel/PhpSpreadsheet behavior: silently replace spaces with underscores.
+        this.#codeName = trimmed.replace(/ /g, '_');
+        return this;
+    }
+
+    /**
+     * Get worksheet tab color.
+     */
+    public getTabColor(): Color {
+        if (this.#tabColor === null) {
+            this.#tabColor = new Color();
+        }
+        return this.#tabColor;
+    }
+
+    /**
+     * Reset worksheet tab color.
+     *
+     * After calling this, the tab color is considered unset until `getTabColor()` is accessed.
+     */
+    public resetTabColor(): this {
+        this.#tabColor = null;
+        return this;
+    }
+
+    /**
+     * True if a worksheet tab color has been set.
+     */
+    public isTabColorSet(): boolean {
+        return this.#tabColor !== null;
+    }
+
+    /**
+     * Get show summary right.
+     */
+    public getShowSummaryRight(): boolean {
+        return this.#showSummaryRight;
+    }
+
+    /**
+     * Set show summary right.
+     */
+    public setShowSummaryRight(value: boolean): this {
+        this.#showSummaryRight = value;
+        return this;
+    }
+
+    /**
+     * Get show summary below.
+     */
+    public getShowSummaryBelow(): boolean {
+        return this.#showSummaryBelow;
+    }
+
+    /**
+     * Set show summary below.
+     */
+    public setShowSummaryBelow(value: boolean): this {
+        this.#showSummaryBelow = value;
+        return this;
+    }
+
+    /**
+     * Get print gridlines.
+     */
+    public getPrintGridlines(): boolean {
+        return this.#printGridlines;
+    }
+
+    /**
+     * Set print gridlines.
+     */
+    public setPrintGridlines(value: boolean): this {
+        this.#printGridlines = value;
+        return this;
     }
 
     static readonly #MAX_COLUMN_INDEX = 16384;
@@ -474,6 +610,45 @@ export class Worksheet {
     public setPageMargins(pageMargins: PageMargins): this {
         this.#pageMargins = pageMargins;
         return this;
+    }
+
+    /**
+     * Get Header/Footer settings.
+     */
+    public getHeaderFooter(): HeaderFooter {
+        return this.#headerFooter;
+    }
+
+    /**
+     * Set Header/Footer settings.
+     */
+    public setHeaderFooter(headerFooter: HeaderFooter): this {
+        this.#headerFooter = headerFooter;
+        return this;
+    }
+
+    /**
+     * Set a manual page break.
+     */
+    public setBreak(cellCoordinate: string, breakType: string): this {
+        if (breakType !== Worksheet.BREAK_ROW && breakType !== Worksheet.BREAK_COLUMN) {
+            return this;
+        }
+
+        const normalized = Worksheet.#tryNormalizeTopLeftA1Coordinate(cellCoordinate);
+        if (!normalized) {
+            return this;
+        }
+
+        this.#breaks.set(normalized, breakType);
+        return this;
+    }
+
+    /**
+     * Get all manual page breaks as a coordinate -> type map.
+     */
+    public getBreaks(): ReadonlyMap<string, string> {
+        return this.#breaks;
     }
 
     /**

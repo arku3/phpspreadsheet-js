@@ -31,7 +31,7 @@ describe('XLSX Worksheet sheetViews/pane/selection reading', () => {
         files.set(sheetPath, Buffer.from(patch(sheet.toString('utf-8')), 'utf-8'));
 
         const out = new PassThrough();
-        const zipOut = archiver('zip', { zlib: { level: 9 } });
+        const zipOut = archiver('zip', { zlib: { level: 0 } });
         zipOut.pipe(out);
 
         const fixedDate = new Date(0);

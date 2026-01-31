@@ -118,9 +118,26 @@ export class XlsxReader implements IReader {
         return path.posix.normalize(path.posix.join(baseDir, cleanedTarget));
     }
 
+    static readonly #XML_ATTR_REGEX_CACHE = new Map<string, RegExp>();
+
+    static #escapeRegExpLiteral(value: string): string {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
     static #extractXmlAttribute(tagAttrs: string, attrName: string): string | null {
-        const m = tagAttrs.match(new RegExp(`${attrName}="([^"]*)"`));
-        return m && m[1] !== undefined ? m[1] : null;
+        // Safe attribute extraction:
+        // - does not match substrings (e.g. id vs sheetId)
+        // - supports both single and double quotes
+        // - escapes attribute name for regex
+        let re = XlsxReader.#XML_ATTR_REGEX_CACHE.get(attrName);
+        if (!re) {
+            const escapedAttrName = XlsxReader.#escapeRegExpLiteral(attrName);
+            re = new RegExp(`(?:^|\\s)${escapedAttrName}\\s*=\\s*(?:'([^']*)'|\"([^\"]*)\")`);
+            XlsxReader.#XML_ATTR_REGEX_CACHE.set(attrName, re);
+        }
+        const m = tagAttrs.match(re);
+        const value = m?.[1] ?? m?.[2];
+        return value !== undefined ? value : null;
     }
 
     static #castXsdBoolean(value: string): boolean {
@@ -199,6 +216,174 @@ export class XlsxReader implements IReader {
     static #parseXsdBoolean(value: string | null): boolean | null {
         if (value === null) return null;
         return XlsxReader.#castXsdBoolean(value);
+    }
+
+    static #parseXsdFloat(value: string | null): number | null {
+        if (value === null) return null;
+        const n = Number.parseFloat(value);
+        return Number.isFinite(n) ? n : null;
+    }
+
+    static #extractXmlTextContentSafe(xml: string, tagName: string): string {
+        // Use explicit escaping for RegExp boundary tokens.
+        const m = xml.match(new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}\\s*>`));
+        if (!m || m[1] === undefined) return '';
+        return XlsxReader.decodeXmlEntities(m[1]);
+    }
+
+    static #loadWorksheetPageSetupFromXml(wsXml: string, worksheet: Worksheet): void {
+        // Match PhpSpreadsheet Reader/Xlsx/PageSetup.php
+
+        // 1) pageMargins
+        const pageMargins = XlsxReader.#matchFirstXmlElement(wsXml, 'pageMargins');
+        if (pageMargins) {
+            const margins = worksheet.getPageMargins();
+            const left = XlsxReader.#parseXsdFloat(XlsxReader.#extractXmlAttribute(pageMargins.attrs, 'left'));
+            const right = XlsxReader.#parseXsdFloat(XlsxReader.#extractXmlAttribute(pageMargins.attrs, 'right'));
+            const top = XlsxReader.#parseXsdFloat(XlsxReader.#extractXmlAttribute(pageMargins.attrs, 'top'));
+            const bottom = XlsxReader.#parseXsdFloat(XlsxReader.#extractXmlAttribute(pageMargins.attrs, 'bottom'));
+            const header = XlsxReader.#parseXsdFloat(XlsxReader.#extractXmlAttribute(pageMargins.attrs, 'header'));
+            const footer = XlsxReader.#parseXsdFloat(XlsxReader.#extractXmlAttribute(pageMargins.attrs, 'footer'));
+
+            if (left !== null) margins.setLeft(left);
+            if (right !== null) margins.setRight(right);
+            if (top !== null) margins.setTop(top);
+            if (bottom !== null) margins.setBottom(bottom);
+            if (header !== null) margins.setHeader(header);
+            if (footer !== null) margins.setFooter(footer);
+        }
+
+        // 2) pageSetup
+        const pageSetupEl = XlsxReader.#matchFirstXmlElement(wsXml, 'pageSetup');
+        if (pageSetupEl) {
+            const ps = worksheet.getPageSetup();
+            const orientation = XlsxReader.#extractXmlAttribute(pageSetupEl.attrs, 'orientation');
+            if (orientation !== null) {
+                try {
+                    ps.setOrientation(XlsxReader.decodeXmlEntities(orientation));
+                } catch {
+                    // Ignore invalid orientation.
+                }
+            }
+
+            const paperSize = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(pageSetupEl.attrs, 'paperSize'));
+            if (paperSize !== null) {
+                ps.setPaperSize(paperSize);
+            }
+
+            const scale = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(pageSetupEl.attrs, 'scale'));
+            if (scale !== null) {
+                try {
+                    ps.setScale(scale, false);
+                } catch {
+                    // Ignore invalid scale.
+                }
+            }
+
+            const fitToHeight = XlsxReader.#parseXsdInt(
+                XlsxReader.#extractXmlAttribute(pageSetupEl.attrs, 'fitToHeight'),
+            );
+            if (fitToHeight !== null && fitToHeight >= 0) {
+                ps.setFitToHeight(fitToHeight, false);
+            }
+
+            const fitToWidth = XlsxReader.#parseXsdInt(
+                XlsxReader.#extractXmlAttribute(pageSetupEl.attrs, 'fitToWidth'),
+            );
+            if (fitToWidth !== null && fitToWidth >= 0) {
+                ps.setFitToWidth(fitToWidth, false);
+            }
+
+            const firstPageNumber = XlsxReader.#parseXsdInt(
+                XlsxReader.#extractXmlAttribute(pageSetupEl.attrs, 'firstPageNumber'),
+            );
+            const useFirstPageNumber = XlsxReader.#parseXsdBoolean(
+                XlsxReader.#extractXmlAttribute(pageSetupEl.attrs, 'useFirstPageNumber'),
+            );
+            if (firstPageNumber !== null && useFirstPageNumber === true) {
+                ps.setFirstPageNumber(firstPageNumber);
+            }
+
+            const pageOrder = XlsxReader.#extractXmlAttribute(pageSetupEl.attrs, 'pageOrder');
+            if (pageOrder !== null) {
+                const decoded = XlsxReader.decodeXmlEntities(pageOrder);
+                ps.setPageOrder(decoded);
+            }
+        }
+
+        // 3) headerFooter
+        const headerFooterEl = XlsxReader.#matchFirstXmlElement(wsXml, 'headerFooter');
+        if (headerFooterEl) {
+            const hf = worksheet.getHeaderFooter();
+
+            const differentOddEven = XlsxReader.#parseXsdBoolean(
+                XlsxReader.#extractXmlAttribute(headerFooterEl.attrs, 'differentOddEven'),
+            );
+            hf.setDifferentOddEven(differentOddEven === true);
+
+            const differentFirst = XlsxReader.#parseXsdBoolean(
+                XlsxReader.#extractXmlAttribute(headerFooterEl.attrs, 'differentFirst'),
+            );
+            hf.setDifferentFirst(differentFirst === true);
+
+            const scaleWithDoc = XlsxReader.#parseXsdBoolean(
+                XlsxReader.#extractXmlAttribute(headerFooterEl.attrs, 'scaleWithDoc'),
+            );
+            // PhpSpreadsheet default true; only false when explicitly false.
+            hf.setScaleWithDocument(!(scaleWithDoc === false));
+
+            const alignWithMargins = XlsxReader.#parseXsdBoolean(
+                XlsxReader.#extractXmlAttribute(headerFooterEl.attrs, 'alignWithMargins'),
+            );
+            // PhpSpreadsheet default true; only false when explicitly false.
+            hf.setAlignWithMargins(!(alignWithMargins === false));
+
+            const inner = headerFooterEl.inner;
+            hf.setOddHeader(XlsxReader.#extractXmlTextContentSafe(inner, 'oddHeader'));
+            hf.setOddFooter(XlsxReader.#extractXmlTextContentSafe(inner, 'oddFooter'));
+            hf.setEvenHeader(XlsxReader.#extractXmlTextContentSafe(inner, 'evenHeader'));
+            hf.setEvenFooter(XlsxReader.#extractXmlTextContentSafe(inner, 'evenFooter'));
+            hf.setFirstHeader(XlsxReader.#extractXmlTextContentSafe(inner, 'firstHeader'));
+            hf.setFirstFooter(XlsxReader.#extractXmlTextContentSafe(inner, 'firstFooter'));
+        }
+
+        // 4) pageBreaks
+        // rowBreaks: brk@id is 1-based row, coordinate is A{id}
+        const rowBreaksMatch = wsXml.match(/<rowBreaks\b[^>]*>([\s\S]*?)<\/rowBreaks\s*>/);
+        const rowBreaksInner = rowBreaksMatch?.[1] ?? '';
+        if (rowBreaksInner !== '') {
+            const brks = rowBreaksInner.matchAll(/<brk\b([^>]*)\/?\s*>/g);
+            for (const m of brks) {
+                const attrs = m[1] ?? '';
+                const id = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'id'));
+                if (id === null || id < 1) {
+                    continue;
+                }
+                const man = XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'man'));
+                if (man === true) {
+                    worksheet.setBreak(`A${id}`, Worksheet.BREAK_ROW);
+                }
+            }
+        }
+
+        // colBreaks: brk@id is 0-based column; coordinate is stringFromColumnIndex(id+1) + '1'
+        const colBreaksMatch = wsXml.match(/<colBreaks\b[^>]*>([\s\S]*?)<\/colBreaks\s*>/);
+        const colBreaksInner = colBreaksMatch?.[1] ?? '';
+        if (colBreaksInner !== '') {
+            const brks = colBreaksInner.matchAll(/<brk\b([^>]*)\/?\s*>/g);
+            for (const m of brks) {
+                const attrs = m[1] ?? '';
+                const id = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'id'));
+                if (id === null || id < 0) {
+                    continue;
+                }
+                const man = XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'man'));
+                if (man === true) {
+                    const col = Coordinate.stringFromColumnIndex(id + 1);
+                    worksheet.setBreak(`${col}1`, Worksheet.BREAK_COLUMN);
+                }
+            }
+        }
     }
 
     static #loadWorksheetSheetViewsFromXml(wsXml: string, worksheet: Worksheet): void {
@@ -392,6 +577,240 @@ export class XlsxReader implements IReader {
                     worksheet.setSelectedCells(sqref);
                 } catch {
                     // Ignore invalid sqref.
+                }
+            }
+        }
+    }
+
+    static #loadWorksheetSheetViewOptionsFromXml(wsXml: string, worksheet: Worksheet, readDataOnly: boolean): void {
+        // Match PhpSpreadsheet Reader/Xlsx/SheetViewOptions.php
+
+        // 1) sheetPr: tabColor, codeName, outlinePr, pageSetUpPr
+        const sheetPr = XlsxReader.#matchFirstXmlElement(wsXml, 'sheetPr');
+        if (sheetPr) {
+            // codeName attribute
+            const codeNameRaw = XlsxReader.#extractXmlAttribute(sheetPr.attrs, 'codeName');
+            if (codeNameRaw !== null) {
+                worksheet.setCodeName(XlsxReader.decodeXmlEntities(codeNameRaw));
+            }
+
+            // outlinePr summary flags (defaults true)
+            const outlinePr = XlsxReader.#matchFirstXmlElement(sheetPr.inner, 'outlinePr');
+            if (outlinePr) {
+                const summaryRightRaw = XlsxReader.#extractXmlAttribute(outlinePr.attrs, 'summaryRight');
+                if (summaryRightRaw !== null && !XlsxReader.#castXsdBoolean(summaryRightRaw)) {
+                    worksheet.setShowSummaryRight(false);
+                } else {
+                    worksheet.setShowSummaryRight(true);
+                }
+
+                const summaryBelowRaw = XlsxReader.#extractXmlAttribute(outlinePr.attrs, 'summaryBelow');
+                if (summaryBelowRaw !== null && !XlsxReader.#castXsdBoolean(summaryBelowRaw)) {
+                    worksheet.setShowSummaryBelow(false);
+                } else {
+                    worksheet.setShowSummaryBelow(true);
+                }
+            }
+
+            // pageSetUpPr fitToPage (defaults true when element exists)
+            const pageSetUpPr = XlsxReader.#matchFirstXmlElement(sheetPr.inner, 'pageSetUpPr');
+            if (pageSetUpPr) {
+                const fitToPageRaw = XlsxReader.#extractXmlAttribute(pageSetUpPr.attrs, 'fitToPage');
+                if (fitToPageRaw !== null && !XlsxReader.#castXsdBoolean(fitToPageRaw)) {
+                    worksheet.getPageSetup().setFitToPage(false);
+                } else {
+                    worksheet.getPageSetup().setFitToPage(true);
+                }
+            }
+
+            // tabColor
+            const tabColor = XlsxReader.#matchFirstXmlElement(sheetPr.inner, 'tabColor');
+            if (tabColor) {
+                const rgb = XlsxReader.#extractXmlAttribute(tabColor.attrs, 'rgb');
+                if (rgb !== null) {
+                    worksheet.getTabColor().setARGB(rgb);
+                } else {
+                    const theme = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(tabColor.attrs, 'theme'));
+                    if (theme !== null && theme >= 0) {
+                        worksheet.getTabColor().setTheme(theme);
+                    }
+
+                    // Tint is currently ignored for tabColor unless rgb is provided.
+                    // (We don't yet have a theme-reader or a shared color reader that applies tint.)
+                }
+            } else {
+                // Match PhpSpreadsheet: tabColor element missing means the tab color is unset.
+                worksheet.resetTabColor();
+            }
+        }
+
+        // 2) sheetFormatPr: defaultRowHeight, defaultColWidth, zeroHeight
+        const sheetFormatPr = XlsxReader.#matchFirstXmlElement(wsXml, 'sheetFormatPr');
+        if (sheetFormatPr) {
+            const customHeightRaw = XlsxReader.#extractXmlAttribute(sheetFormatPr.attrs, 'customHeight');
+            const defaultRowHeight = XlsxReader.#parseXsdFloat(
+                XlsxReader.#extractXmlAttribute(sheetFormatPr.attrs, 'defaultRowHeight'),
+            );
+            if (customHeightRaw !== null && XlsxReader.#castXsdBoolean(customHeightRaw) && defaultRowHeight !== null) {
+                worksheet.getDefaultRowDimension().setRowHeight(defaultRowHeight);
+            }
+
+            const defaultColWidth = XlsxReader.#parseXsdFloat(
+                XlsxReader.#extractXmlAttribute(sheetFormatPr.attrs, 'defaultColWidth'),
+            );
+            if (defaultColWidth !== null) {
+                worksheet.getDefaultColumnDimension().setWidth(defaultColWidth);
+            }
+
+            const zeroHeightRaw = XlsxReader.#extractXmlAttribute(sheetFormatPr.attrs, 'zeroHeight');
+            if (zeroHeightRaw !== null && XlsxReader.#castXsdBoolean(zeroHeightRaw)) {
+                worksheet.getDefaultRowDimension().setZeroHeight(true);
+            }
+        }
+
+        // 3) printOptions (skip in readDataOnly)
+        if (!readDataOnly) {
+            const printOptions = XlsxReader.#matchFirstXmlElement(wsXml, 'printOptions');
+            if (printOptions) {
+                const gridLinesRaw = XlsxReader.#extractXmlAttribute(printOptions.attrs, 'gridLines');
+                if (gridLinesRaw !== null && XlsxReader.#castXsdBoolean(gridLinesRaw)) {
+                    const gridLinesSetRaw = XlsxReader.#extractXmlAttribute(printOptions.attrs, 'gridLinesSet');
+                    if (gridLinesSetRaw === null || XlsxReader.#castXsdBoolean(gridLinesSetRaw)) {
+                        worksheet.setPrintGridlines(true);
+                    }
+                }
+
+                const horizontalCenteredRaw = XlsxReader.#extractXmlAttribute(printOptions.attrs, 'horizontalCentered');
+                if (horizontalCenteredRaw !== null && XlsxReader.#castXsdBoolean(horizontalCenteredRaw)) {
+                    worksheet.getPageSetup().setHorizontalCentered(true);
+                }
+
+                const verticalCenteredRaw = XlsxReader.#extractXmlAttribute(printOptions.attrs, 'verticalCentered');
+                if (verticalCenteredRaw !== null && XlsxReader.#castXsdBoolean(verticalCenteredRaw)) {
+                    worksheet.getPageSetup().setVerticalCentered(true);
+                }
+            }
+        }
+    }
+
+    static #loadWorksheetColumnAndRowAttributesFromXml(
+        wsXml: string,
+        worksheet: Worksheet,
+        readDataOnly: boolean,
+    ): void {
+        // Port of PhpSpreadsheet Reader\Xlsx\ColumnAndRowAttributes.
+        // - Column: width/hidden/collapsed/outlineLevel always; style only when !readDataOnly.
+        // - Row: all attributes only when !readDataOnly.
+
+        // cols/col
+        const colsMatch = wsXml.match(/<cols\b[^>]*>([\s\S]*?)<\/cols\s*>/);
+        const colsXml = colsMatch?.[1] ?? '';
+        if (colsXml !== '') {
+            const colMatches = colsXml.matchAll(/<col\b([^>]*?)(?:\/\s*>|>([\s\S]*?)<\/col\s*>)/g);
+            for (const m of colMatches) {
+                const attrs = m[1] ?? '';
+
+                const min = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'min'));
+                const max = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'max'));
+                if (min === null || max === null) {
+                    continue;
+                }
+
+                const width = XlsxReader.#parseXsdFloat(XlsxReader.#extractXmlAttribute(attrs, 'width'));
+                const hidden = XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'hidden')) === true;
+                const collapsed =
+                    XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'collapsed')) === true;
+                const outlineLevel = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'outlineLevel'));
+
+                const styleIndex = !readDataOnly
+                    ? XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'style'))
+                    : null;
+
+                for (let colIndex = min; colIndex <= max && colIndex <= 16384; colIndex++) {
+                    const columnAddress = Coordinate.stringFromColumnIndex(colIndex);
+                    const dim = worksheet.getColumnDimension(columnAddress);
+                    if (styleIndex !== null) {
+                        dim.setXfIndex(styleIndex);
+                    }
+                    if (hidden) {
+                        dim.setVisible(false);
+                    }
+                    if (collapsed) {
+                        dim.setCollapsed(true);
+                    }
+                    if (outlineLevel !== null && outlineLevel > 0) {
+                        try {
+                            dim.setOutlineLevel(outlineLevel);
+                        } catch {
+                            // Ignore invalid outlineLevel.
+                        }
+                    }
+                    if (width !== null) {
+                        dim.setWidth(width);
+                    }
+                }
+            }
+        }
+
+        // sheetData/row
+        if (readDataOnly) {
+            return;
+        }
+
+        const sheetDataMatch = wsXml.match(/<sheetData\b[^>]*>([\s\S]*?)<\/sheetData\s*>/);
+        const sheetDataXml = sheetDataMatch?.[1] ?? '';
+        if (sheetDataXml === '') {
+            return;
+        }
+
+        const rowMatches = sheetDataXml.matchAll(/<row\b([^>]*?)(?:\/\s*>|>([\s\S]*?)<\/row\s*>)/g);
+        for (const m of rowMatches) {
+            const attrs = m[1] ?? '';
+
+            const rowIndex = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'r'));
+            if (rowIndex === null) {
+                continue;
+            }
+
+            const rowHeight = XlsxReader.#parseXsdFloat(XlsxReader.#extractXmlAttribute(attrs, 'ht'));
+            const customFormat = XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'customFormat'));
+            const customHeight = XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'customHeight'));
+            const hidden = XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'hidden')) === true;
+            const collapsed = XlsxReader.#parseXsdBoolean(XlsxReader.#extractXmlAttribute(attrs, 'collapsed')) === true;
+            const outlineLevel = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 'outlineLevel'));
+            const styleIndex = XlsxReader.#parseXsdInt(XlsxReader.#extractXmlAttribute(attrs, 's'));
+
+            const dim = worksheet.getRowDimension(rowIndex);
+            if (styleIndex !== null) {
+                dim.setXfIndex(styleIndex);
+            }
+            if (hidden) {
+                dim.setVisible(false);
+            }
+            if (collapsed) {
+                dim.setCollapsed(true);
+            }
+            if (outlineLevel !== null && outlineLevel > 0) {
+                try {
+                    dim.setOutlineLevel(outlineLevel);
+                } catch {
+                    // Ignore invalid outlineLevel.
+                }
+            }
+
+            // Match PhpSpreadsheet Reader/Xlsx/ColumnAndRowAttributes row logic:
+            // - height is driven by ht (customHeight is informational)
+            // - customFormat must not drive height
+            if (rowHeight !== null) {
+                // Apply height from ht regardless of customFormat.
+                // If customHeight is present, it should generally be true when ht is meaningful.
+                // We don't gate on customHeight to match PhpSpreadsheet reader behavior.
+                void customHeight;
+                dim.setRowHeight(rowHeight);
+
+                if (customFormat === true) {
+                    // Preserve customFormat flag without overriding the height.
+                    dim.setCustomFormat(true, null);
                 }
             }
         }
@@ -1535,13 +1954,12 @@ export class XlsxReader implements IReader {
 
         // Extract sheet names
         const sheetNames: string[] = [];
-        const sheetMatches = workbookXml.match(/<sheet[^>]*name="([^"]+)"/g);
-        if (sheetMatches) {
-            for (const match of sheetMatches) {
-                const nameMatch = match.match(/name="([^"]+)"/);
-                if (nameMatch && nameMatch[1]) {
-                    sheetNames.push(nameMatch[1]);
-                }
+        const sheetMatches = workbookXml.matchAll(/<sheet\b([^>]*)\/?>(?:[\s\S]*?<\/sheet\s*>)?/g);
+        for (const match of sheetMatches) {
+            const attrs = match[1] ?? '';
+            const nameRaw = XlsxReader.#extractXmlAttribute(attrs, 'name');
+            if (nameRaw) {
+                sheetNames.push(XlsxReader.decodeXmlEntities(nameRaw));
             }
         }
 
@@ -1633,17 +2051,21 @@ export class XlsxReader implements IReader {
         }
 
         // Parse sheets from workbook.xml
-        const sheetMatches = workbookXml.matchAll(
-            /<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"(?:[^>]*state="([^"]*)")?[^>]*r:id="([^"]+)"/g,
-        );
+        // Note: attribute order is not guaranteed; parse attributes rather than relying on regex group order.
+        const sheetMatches = workbookXml.matchAll(/<sheet\b([^>]*)\/?>(?:[\s\S]*?<\/sheet\s*>)?/g);
         const sheets: { name: string; rId: string; state: string }[] = [];
         for (const match of sheetMatches) {
-            const name = match[1];
-            const state = match[3];
-            const rId = match[4];
-            if (name && rId) {
-                sheets.push({ name, rId, state: state || 'visible' });
+            const attrs = match[1] ?? '';
+            const nameRaw = XlsxReader.#extractXmlAttribute(attrs, 'name');
+            const rId = XlsxReader.#extractXmlAttribute(attrs, 'r:id') ?? XlsxReader.#extractXmlAttribute(attrs, 'id');
+            if (!nameRaw || !rId) {
+                continue;
             }
+
+            const name = XlsxReader.decodeXmlEntities(nameRaw);
+            const stateRaw = XlsxReader.#extractXmlAttribute(attrs, 'state');
+            const state = stateRaw !== null ? XlsxReader.decodeXmlEntities(stateRaw) : 'visible';
+            sheets.push({ name, rId, state });
         }
 
         const worksheetInfo: WorksheetInfo[] = [];
@@ -1894,17 +2316,23 @@ export class XlsxReader implements IReader {
                 }
             }
 
-            // Parse sheets from workbook.xml
-            const sheetMatches = workbookXml.matchAll(
-                /<sheet[^>]*name="([^"]+)"[^>]*sheetId="(\d+)"[^>]*r:id="([^"]+)"/g,
-            );
-            const sheets: { name: string; rId: string }[] = [];
+            // Parse sheets from workbook.xml (including visibility state)
+            // Match PhpSpreadsheet: only set sheetState when attribute is present/non-empty.
+            const sheetMatches = workbookXml.matchAll(/<sheet\b([^>]*)\/?>(?:[\s\S]*?<\/sheet\s*>)?/g);
+            const sheets: { name: string; rId: string; state: string | null }[] = [];
             for (const match of sheetMatches) {
-                const name = match[1];
-                const rId = match[3];
-                if (name && rId) {
-                    sheets.push({ name, rId });
+                const attrs = match[1] ?? '';
+                const nameRaw = XlsxReader.#extractXmlAttribute(attrs, 'name');
+                const rId =
+                    XlsxReader.#extractXmlAttribute(attrs, 'r:id') ?? XlsxReader.#extractXmlAttribute(attrs, 'id');
+                if (!nameRaw || !rId) {
+                    continue;
                 }
+
+                const name = XlsxReader.decodeXmlEntities(nameRaw);
+                const stateRaw = XlsxReader.#extractXmlAttribute(attrs, 'state');
+                const state = stateRaw !== null ? XlsxReader.decodeXmlEntities(stateRaw) : null;
+                sheets.push({ name, rId, state });
             }
 
             // Default active sheet index to the first loaded worksheet from the file.
@@ -1947,6 +2375,10 @@ export class XlsxReader implements IReader {
                     defaultSheetUsed = spreadsheet.getIndex(worksheet) === 0;
                 }
 
+                if (sheetInfo.state !== null && sheetInfo.state !== '') {
+                    worksheet.setSheetState(sheetInfo.state);
+                }
+
                 // Read worksheet XML
                 const wsFile = zip.files.find((f) => f.path === worksheetPath);
                 if (!wsFile) {
@@ -1966,6 +2398,28 @@ export class XlsxReader implements IReader {
                     } catch {
                         // Ignore invalid sheetViews blocks.
                     }
+
+                    // Parse pageMargins/pageSetup/headerFooter/page breaks.
+                    try {
+                        XlsxReader.#loadWorksheetPageSetupFromXml(wsXml, worksheet);
+                    } catch {
+                        // Ignore invalid page setup blocks.
+                    }
+                }
+
+                // Parse sheetPr/sheetFormatPr/printOptions (printOptions only when !readDataOnly).
+                try {
+                    XlsxReader.#loadWorksheetSheetViewOptionsFromXml(wsXml, worksheet, this.#readDataOnly);
+                } catch {
+                    // Ignore invalid sheet options blocks.
+                }
+
+                // Parse column/row dimension attributes.
+                // Note: this must run regardless of readDataOnly for column width/hidden.
+                try {
+                    XlsxReader.#loadWorksheetColumnAndRowAttributesFromXml(wsXml, worksheet, this.#readDataOnly);
+                } catch {
+                    // Ignore invalid cols/row blocks.
                 }
 
                 // Parse <autoFilter ref="..."> directly from worksheet XML.

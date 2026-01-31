@@ -1,6 +1,7 @@
 # Progress - Systematic Parity Review & Fixes
 
 ## Session Log
+- [2026-02-01] Expanded XLSX worksheet view/state reading: parse workbook sheet visibility state (hidden/veryHidden), sheetPr/sheetFormatPr/printOptions (tabColor, codeName, outline summary flags, fitToPage, default dimensions, zeroHeight, print gridlines/centering), pageMargins/pageSetup/headerFooter, and manual page breaks (rowBreaks/colBreaks); added safer XML attribute extraction and tests for visibility and state readers.
 - [2026-02-01] Implemented XLSX worksheet sheetViews reading: parse view settings (gridlines/headers/rightToLeft/showZeros/view/zoomScale*), panes (xSplit/ySplit/state/topLeftCell/activePane), and selections (sqref + per-pane Pane objects) with PhpSpreadsheet parity; added round-trip tests and aligned freezePane/topLeftCell defaults and boolean parsing.
 - [2026-02-01] Added edge-case tests for sheetViews parsing by zip-patching sheet XML (readDataOnly skip, invalid activePane behavior, space-separated sqref tokenization).
 - [2026-02-01] Aligned XLSX sheetViews writer output with PhpSpreadsheet (topLeftCell emission rules; activePane only synthesized for frozen panes).

@@ -83,7 +83,7 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [x] Implement AutoFilter rules reading (worksheet autoFilter filterColumn blocks).
         - [x] Implement Worksheet sheetViews reading (pane/selection/zoom/ui flags).
             - [x] Add zip-patched edge-case tests (readDataOnly skip, invalid activePane behavior, sqref tokenization).
-        - [ ] Implement remaining XLSX view/state readers (as discovered during parity review).
+        - [x] Implement remaining XLSX view/state readers (sheet visibility state, sheetPr/sheetFormatPr/printOptions, pageMargins/pageSetup/headerFooter, row/col breaks, column/row attributes).
     - [ ] Commit parity report generator updates (already made locally).
 
 - [ ] Phase 16: Performance & Scalability <!-- id: 55 -->

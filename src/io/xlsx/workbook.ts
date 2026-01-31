@@ -49,11 +49,19 @@ export class Workbook extends WriterPart {
             const sheet = spreadsheet.getSheet(i);
             const sheetTarget = `worksheets/sheet${i + 1}.xml`;
             const rId = rIdMap.get(sheetTarget) ?? `rId${i + 4}`;
-            sheets.ele('sheet', {
+            const sheetState = sheet.getSheetState();
+            const attrs: Record<string, string | number> = {
                 name: sheet.getTitle(),
                 sheetId: i + 1,
                 'r:id': rId,
-            });
+            };
+
+            // Match PhpSpreadsheet: omit state for visible sheets.
+            if (sheetState !== 'visible' && sheetState !== '') {
+                attrs.state = sheetState;
+            }
+
+            sheets.ele('sheet', attrs);
         }
 
         // definedNames (always present, per PhpSpreadsheet ordering)

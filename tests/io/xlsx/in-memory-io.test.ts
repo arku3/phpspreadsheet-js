@@ -2,6 +2,7 @@ import path from 'node:path';
 import { describe, expect, test } from 'bun:test';
 import unzipper from 'unzipper';
 import { Spreadsheet } from '../../../src/core/spreadsheet.ts';
+import { Worksheet } from '../../../src/core/worksheet.ts';
 import { XlsxReader } from '../../../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../../../src/io/xlsx-writer.ts';
 
@@ -63,6 +64,40 @@ describe('XLSX in-memory IO', () => {
         expect(loadedSheet.getCell('C2').getValue()).toBe(2.5);
         expect(loadedSheet.getCell('D2').getValue()).toBe('=B2*C2');
         expect(loadedSheet.getCell('D2').isFormula()).toBe(true);
+    });
+
+    test('sheet visibility (hidden) round-trips via workbook.xml sheet state', async () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet1 = spreadsheet.getActiveSheet();
+        sheet1.setTitle('Visible');
+
+        const hiddenSheet = spreadsheet.createSheet('Hidden');
+        hiddenSheet.setSheetState(Worksheet.SHEETSTATE_HIDDEN);
+
+        const writer = new XlsxWriter(spreadsheet);
+        const bytes = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        const loaded = await reader.loadFromBuffer(bytes);
+
+        expect(loaded.getSheetByName('Hidden')?.getSheetState()).toBe(Worksheet.SHEETSTATE_HIDDEN);
+    });
+
+    test('sheet visibility (veryHidden) round-trips via workbook.xml sheet state', async () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet1 = spreadsheet.getActiveSheet();
+        sheet1.setTitle('Visible');
+
+        const veryHiddenSheet = spreadsheet.createSheet('VeryHidden');
+        veryHiddenSheet.setSheetState(Worksheet.SHEETSTATE_VERYHIDDEN);
+
+        const writer = new XlsxWriter(spreadsheet);
+        const bytes = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        const loaded = await reader.loadFromBuffer(bytes);
+
+        expect(loaded.getSheetByName('VeryHidden')?.getSheetState()).toBe(Worksheet.SHEETSTATE_VERYHIDDEN);
     });
 
     test('loadFromBuffer supports reading an existing fixture via Bun.file().arrayBuffer()', async () => {
