@@ -1,3 +1,4 @@
+import type { CellCache } from '../caching/cell-cache.ts';
 import { Color } from '../style/color.ts';
 import { Conditional } from '../style/conditional.ts';
 import { Style } from '../style/style.ts';
@@ -516,6 +517,27 @@ export class Worksheet {
         this.#selectedCells = coordinate.toUpperCase();
         this.#setSelectedCellsActivePane();
         return this;
+    }
+
+    /**
+     * Set the cell caching strategy for this worksheet.
+     * Note: This should be called before adding cells to the worksheet.
+     * Changing the cache strategy does not migrate existing cells.
+     *
+     * @param cache - CellCache implementation to use
+     * @returns this
+     */
+    public setCacheStrategy(cache: CellCache): this {
+        this.#cellCollection.setCacheStrategy(cache);
+        return this;
+    }
+
+    /**
+     * Get the current cell caching strategy.
+     * @returns Current CellCache implementation
+     */
+    public getCacheStrategy(): CellCache {
+        return this.#cellCollection.getCacheStrategy();
     }
 
     /**

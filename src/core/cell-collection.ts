@@ -1,61 +1,84 @@
+import type { CellCache } from '../caching/cell-cache.ts';
+import { MemoryCache } from '../caching/memory-cache.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Cell } from './cell.ts';
 import { Worksheet } from './worksheet.ts';
 
 /**
  * Collection of cells for a Worksheet.
- * Uses a Map for sparse grid storage.
+ * Uses a pluggable caching strategy for storage.
+ * Default: MemoryCache (in-memory Map)
  */
 export class CellCollection {
-    #cells: Map<string, Cell> = new Map();
+    #cache: CellCache;
+
+    constructor(cache?: CellCache) {
+        this.#cache = cache ?? new MemoryCache();
+    }
+
+    /**
+     * Set the caching strategy.
+     * Note: Changing strategy does not migrate existing cells.
+     * Call this before adding cells, or migrate manually.
+     */
+    public setCacheStrategy(cache: CellCache): void {
+        this.#cache = cache;
+    }
+
+    /**
+     * Get the current cache strategy.
+     */
+    public getCacheStrategy(): CellCache {
+        return this.#cache;
+    }
 
     /**
      * Iterate over cells without allocating an array.
      */
     public values(): IterableIterator<Cell> {
-        return this.#cells.values();
+        return this.#cache.values();
     }
 
     /**
      * Add or update a cell.
      */
     public add(coordinate: string, cell: Cell): void {
-        this.#cells.set(coordinate.toUpperCase(), cell);
+        this.#cache.set(coordinate.toUpperCase(), cell);
     }
 
     /**
      * Get a cell by coordinate.
      */
     public get(coordinate: string): Cell | undefined {
-        return this.#cells.get(coordinate.toUpperCase());
+        return this.#cache.get(coordinate.toUpperCase());
     }
 
     /**
      * Check if a cell exists.
      */
     public has(coordinate: string): boolean {
-        return this.#cells.has(coordinate.toUpperCase());
+        return this.#cache.has(coordinate.toUpperCase());
     }
 
     /**
      * Remove a cell.
      */
     public delete(coordinate: string): void {
-        this.#cells.delete(coordinate.toUpperCase());
+        this.#cache.delete(coordinate.toUpperCase());
     }
 
     /**
      * Get all coordinates that have cells.
      */
     public getCoordinates(): string[] {
-        return Array.from(this.#cells.keys());
+        return Array.from(this.#cache.keys());
     }
 
     /**
      * Get all cells.
      */
     public getCells(): Cell[] {
-        return Array.from(this.#cells.values());
+        return Array.from(this.#cache.values());
     }
 
     /**
@@ -67,7 +90,7 @@ export class CellCollection {
         let maxRow = 1;
         let maxColumnIndex = 1;
 
-        for (const coordinate of this.#cells.keys()) {
+        for (const coordinate of this.#cache.keys()) {
             const [columnIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
             if (rowIndex > maxRow) {
                 maxRow = rowIndex;
@@ -96,7 +119,7 @@ export class CellCollection {
         }
 
         let maxColumnIndex = 1;
-        for (const [coordinate] of this.#cells.entries()) {
+        for (const coordinate of this.#cache.keys()) {
             const [columnIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
             if (rowIndex === row) {
                 if (columnIndex > maxColumnIndex) {
@@ -122,7 +145,7 @@ export class CellCollection {
 
         const columnIndexToMatch = Coordinate.columnIndexFromString(column);
         let maxRow = 1;
-        for (const coordinate of this.#cells.keys()) {
+        for (const coordinate of this.#cache.keys()) {
             const [columnIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
             if (columnIndex === columnIndexToMatch) {
                 if (rowIndex > maxRow) {
@@ -141,14 +164,14 @@ export class CellCollection {
      */
     public removeRow(row: number): void {
         const coordsToDelete: string[] = [];
-        for (const coordinate of this.#cells.keys()) {
+        for (const coordinate of this.#cache.keys()) {
             const [, rowIndex] = Coordinate.indexesFromString(coordinate);
             if (rowIndex === row) {
                 coordsToDelete.push(coordinate);
             }
         }
         for (const coord of coordsToDelete) {
-            this.#cells.delete(coord);
+            this.#cache.delete(coord);
         }
     }
 
@@ -160,14 +183,14 @@ export class CellCollection {
     public removeColumn(column: string): void {
         const targetColIndex = Coordinate.columnIndexFromString(column);
         const coordsToDelete: string[] = [];
-        for (const coordinate of this.#cells.keys()) {
+        for (const coordinate of this.#cache.keys()) {
             const [colIndex] = Coordinate.indexesFromString(coordinate);
             if (colIndex === targetColIndex) {
                 coordsToDelete.push(coordinate);
             }
         }
         for (const coord of coordsToDelete) {
-            this.#cells.delete(coord);
+            this.#cache.delete(coord);
         }
     }
 
@@ -179,13 +202,13 @@ export class CellCollection {
      * you need to actively break circular references.
      */
     public clear(): void {
-        this.#cells.clear();
+        this.#cache.clear();
     }
 
     /**
      * Get the number of cells in the collection.
      */
     public getCount(): number {
-        return this.#cells.size;
+        return this.#cache.size();
     }
 }

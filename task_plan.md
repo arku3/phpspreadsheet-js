@@ -69,14 +69,14 @@ Complete systematic parity fixes identified in the review and implement the XLSX
     - [x] Implement data validation writing in Xlsx Writer. <!-- id: 64 -->
     - [x] Implement data validation reading in Xlsx Reader. <!-- id: 65 -->
 
-- [ ] Phase 15c: XLSX-only Port Focus (Next)
-    - [ ] Scope: focus on XLSX-only port (defer non-XLSX formats).
-    - [ ] XLSX Writer: implement missing parts
+- [x] Phase 15c: XLSX-only Port Focus (COMPLETE)
+    - [x] Scope: focus on XLSX-only port (defer non-XLSX formats).
+    - [x] XLSX Writer: implement missing parts
         - [x] Implement DefinedNames writing (workbook.xml).
         - [x] Implement Table writing (table parts + worksheet tableParts).
         - [x] Implement AutoFilter writing (worksheet autoFilter).
         - [x] Align sheetViews writer output with PhpSpreadsheet rules (topLeftCell emission rules; activePane fallback only for frozen).
-    - [ ] XLSX Reader: implement missing parts
+    - [x] XLSX Reader: implement missing parts
         - [x] Implement TableReader (table parts + worksheet bindings).
         - [x] Implement WorkbookView reading (workbook.xml bookViews / view state).
         - [x] Implement DefinedNames reading (workbook.xml definedNames + built-ins).
@@ -84,10 +84,30 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [x] Implement Worksheet sheetViews reading (pane/selection/zoom/ui flags).
             - [x] Add zip-patched edge-case tests (readDataOnly skip, invalid activePane behavior, sqref tokenization).
         - [x] Implement remaining XLSX view/state readers (sheet visibility state, sheetPr/sheetFormatPr/printOptions, pageMargins/pageSetup/headerFooter, row/col breaks, column/row attributes).
-    - [ ] Commit parity report generator updates (already made locally).
+    - [x] Commit parity report generator updates.
 
-- [ ] Phase 16: Performance & Scalability <!-- id: 55 -->
-    - [ ] Design and implement pluggable Cell Caching for large datasets. <!-- id: 53 -->
+- [ ] Phase 16: Performance & Scalability (IN PROGRESS) <!-- id: 55 -->
+    - [x] Design pluggable Cell Caching system (spec: planning/cell-caching-spec.md, plan: planning/implementation-plan.md)
+    - [ ] Phase 16a: CellCache Interface & MemoryCache (Foundation)
+        - [ ] Define CellCache interface (src/caching/cell-cache.ts)
+        - [ ] Refactor CellCollection to use cache strategy (src/core/cell-collection.ts)
+        - [ ] Implement MemoryCache (src/caching/memory-cache.ts)
+        - [ ] Add Worksheet.setCacheStrategy() method
+        - [ ] Add comprehensive caching tests
+    - [ ] Phase 16b: LRUCache (Eviction)
+        - [ ] Implement LRUCache with configurable size limits
+        - [ ] Add eviction callbacks
+        - [ ] Performance benchmarks vs MemoryCache
+    - [ ] Phase 16c: FileSystemCache (Persistence)
+        - [ ] Implement cell serialization (JSON)
+        - [ ] Implement FileSystemCache with disk storage
+        - [ ] Create tiered LRU + FileSystem hybrid cache
+        - [ ] Add cleanup and resource management
+    - [ ] Phase 16d: Integration & Polish
+        - [ ] Add Spreadsheet-level default cache configuration
+        - [ ] Write documentation and usage examples
+        - [ ] Performance benchmarks and comparison tests
+        - [ ] Ensure 100% backward compatibility
 
 - [ ] Phase 17: I/O Abstractions <!-- id: 68 -->
     - [x] Support in-memory I/O for Reader/Writer (Blob/ArrayBuffer/Uint8Array) in addition to filesystem paths.
