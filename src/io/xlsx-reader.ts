@@ -1540,9 +1540,24 @@ export class XlsxReader implements IReader {
 
         // Find chart type
         let plotType = 'bar';
+        let chartSmooth: boolean | null = null;
         for (const [tag, type] of Object.entries(chartTypeMap)) {
             if (plotAreaInner.includes(`<${tag}`)) {
                 plotType = type;
+                if (tag === 'c:lineChart') {
+                    const lineChartMatch = plotAreaInner.match(
+                        new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/\\s*${tag}\\s*>`),
+                    );
+                    if (lineChartMatch && lineChartMatch[0]) {
+                        const smoothMatch = lineChartMatch[0].match(
+                            /<c:smooth\b([^>]*)\/?>(?:[\\s\\S]*?<\/c:smooth\s*>)?/,
+                        );
+                        if (smoothMatch) {
+                            const smoothAttr = XlsxReader.#extractXmlAttribute(smoothMatch[1] ?? '', 'val');
+                            chartSmooth = smoothAttr ? XlsxReader.#castXsdBoolean(smoothAttr) : true;
+                        }
+                    }
+                }
                 break;
             }
         }
@@ -1563,6 +1578,37 @@ export class XlsxReader implements IReader {
                 series.setPlotOrder(Number.parseInt(idxMatch[1]!, 10));
             } else if (orderMatch) {
                 series.setPlotOrder(Number.parseInt(orderMatch[1]!, 10));
+            }
+
+            // Parse marker
+            const markerMatch = serInner.match(/<c:marker\b[^>]*>([\s\S]*?)<\/c:marker>/);
+            if (markerMatch && markerMatch[1]) {
+                const markerInner = markerMatch[1];
+                const symbolMatch = markerInner.match(/<c:symbol\b[^>]*\bval="([^"]*)"/);
+                if (symbolMatch && symbolMatch[1]) {
+                    try {
+                        series.setMarkerSymbol(symbolMatch[1] as any);
+                    } catch {
+                        // Ignore invalid marker symbols.
+                    }
+                }
+                const sizeMatch = markerInner.match(/<c:size\b[^>]*\bval="([^"]*)"/);
+                if (sizeMatch && sizeMatch[1]) {
+                    const size = Number.parseInt(sizeMatch[1]!, 10);
+                    if (Number.isFinite(size)) {
+                        series.setMarkerSize(size);
+                    }
+                }
+            }
+
+            // Parse smooth line for scatter charts (series-level)
+            const serSmoothMatch = serInner.match(/<c:smooth\b([^>]*)\/?>(?:[\s\S]*?<\/c:smooth\s*>)?/);
+            if (serSmoothMatch) {
+                const smoothAttr = XlsxReader.#extractXmlAttribute(serSmoothMatch[1] ?? '', 'val');
+                const smoothValue = smoothAttr ? XlsxReader.#castXsdBoolean(smoothAttr) : true;
+                series.setSmoothLine(smoothValue);
+            } else if (plotType === 'line' && chartSmooth !== null) {
+                series.setSmoothLine(chartSmooth);
             }
 
             // Parse shape properties (styling)
@@ -1594,6 +1640,16 @@ export class XlsxReader implements IReader {
                         const lnSrgbMatch = lnSolidFill[1].match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
                         if (lnSrgbMatch) {
                             series.setBorderColor(lnSrgbMatch[1]!);
+                        }
+                    }
+
+                    // Parse line style (dash)
+                    const dashMatch = lnMatch[2]?.match(/<a:prstDash\b[^>]*\bval="([^"]*)"/);
+                    if (dashMatch && dashMatch[1]) {
+                        try {
+                            series.setLineStyle(dashMatch[1] as any);
+                        } catch {
+                            // Ignore invalid line style.
                         }
                     }
                 }

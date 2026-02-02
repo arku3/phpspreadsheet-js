@@ -28,7 +28,23 @@ export type DirectionType = 'bar' | 'col' | 'column';
 /**
  * Line style for line charts.
  */
-export type LineStyle = 'smooth' | 'line' | 'cubic' | 'cubicSpline' | 'straight';
+export type LineStyle =
+    | 'smooth'
+    | 'line'
+    | 'cubic'
+    | 'cubicSpline'
+    | 'straight'
+    | 'solid'
+    | 'dot'
+    | 'dash'
+    | 'lgDash'
+    | 'dashDot'
+    | 'lgDashDot'
+    | 'lgDashDotDot'
+    | 'sysDash'
+    | 'sysDot'
+    | 'sysDashDot'
+    | 'sysDashDotDot';
 
 /**
  * Marker symbol for line/scatter charts.

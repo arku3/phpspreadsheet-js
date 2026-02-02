@@ -3,7 +3,7 @@ import type { Worksheet } from '../../core/worksheet.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
 import type { Chart } from '../../worksheet/chart/chart.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
-import type { DataSeries } from '../../worksheet/chart/data-series.ts';
+import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
 
 /**
  * Parse a cell range reference like 'Sheet1!$A$1:$A$5' or 'A1:A5'.
@@ -160,12 +160,30 @@ function writeDataSeriesValues(
 /**
  * Write shape properties (<c:spPr>) with fill color and line styling.
  */
+const DASH_LINE_STYLES = new Set<LineStyle>([
+    'solid',
+    'dot',
+    'dash',
+    'lgDash',
+    'dashDot',
+    'lgDashDot',
+    'lgDashDotDot',
+    'sysDash',
+    'sysDot',
+    'sysDashDot',
+    'sysDashDotDot',
+]);
+
+const SMOOTH_LINE_STYLES = new Set<LineStyle>(['smooth', 'cubic', 'cubicSpline']);
+const STRAIGHT_LINE_STYLES = new Set<LineStyle>(['line', 'straight']);
+
 function writeShapeProperties(
     parent: any,
     fillColor: string | null,
     borderColor: string | null,
     lineWidth: number | null,
     plotType: string,
+    lineStyle: LineStyle | null,
 ): void {
     const spPr = parent.ele('c:spPr');
 
@@ -180,7 +198,12 @@ function writeShapeProperties(
     // For bar charts, it's the border
     const lineColorToUse = borderColor ?? (plotType === 'line' ? fillColor : null);
 
-    if (lineColorToUse || lineWidth) {
+    const lineDash =
+        (plotType === 'line' || plotType === 'scatter') && lineStyle && DASH_LINE_STYLES.has(lineStyle)
+            ? lineStyle
+            : null;
+
+    if (lineColorToUse || lineWidth || lineDash) {
         const lineAttrs: Record<string, string> = {};
         if (lineWidth && lineWidth > 0) {
             lineAttrs.w = lineWidth.toString();
@@ -190,6 +213,10 @@ function writeShapeProperties(
         if (lineColorToUse) {
             const solidFill = ln.ele('a:solidFill');
             solidFill.ele('a:srgbClr', { val: lineColorToUse });
+        }
+
+        if (lineDash) {
+            ln.ele('a:prstDash', { val: lineDash });
         }
     }
 }
@@ -232,14 +259,24 @@ function writeDataSeries(
     const chartElement = parent.ele(chartType);
 
     // Write chart type specific attributes
+    const lineStyle = dataSeries.getLineStyle();
+
     if (plotType === 'bar') {
         const direction = dataSeries.getDirection() ?? 'col';
         chartElement.ele('c:barDir', { val: direction });
         chartElement.ele('c:grouping', { val: dataSeries.getGrouping() ?? 'clustered' });
     } else if (plotType === 'line') {
         chartElement.ele('c:grouping', { val: dataSeries.getGrouping() ?? 'standard' });
+        let smoothValue: boolean | null = null;
         if (dataSeries.getSmoothLine()) {
-            chartElement.ele('c:smooth');
+            smoothValue = true;
+        } else if (lineStyle && SMOOTH_LINE_STYLES.has(lineStyle)) {
+            smoothValue = true;
+        } else if (lineStyle && STRAIGHT_LINE_STYLES.has(lineStyle)) {
+            smoothValue = false;
+        }
+        if (smoothValue !== null) {
+            chartElement.ele('c:smooth', { val: smoothValue ? '1' : '0' });
         }
     } else if (plotType === 'pie') {
         // Pie charts don't need axes
@@ -256,7 +293,18 @@ function writeDataSeries(
     const fillColor = dataSeries.getFillColor();
     const borderColor = dataSeries.getBorderColor();
     const lineWidth = dataSeries.getLineWidth();
-    writeShapeProperties(series, fillColor, borderColor, lineWidth, plotType);
+    writeShapeProperties(series, fillColor, borderColor, lineWidth, plotType, lineStyle);
+
+    if (plotType === 'line' || plotType === 'scatter') {
+        const markerSymbol = dataSeries.getMarkerSymbol();
+        if (markerSymbol !== null) {
+            const marker = series.ele('c:marker');
+            marker.ele('c:symbol', { val: markerSymbol });
+            if (markerSymbol !== 'none') {
+                marker.ele('c:size', { val: dataSeries.getMarkerSize().toString() });
+            }
+        }
+    }
 
     // Write series label (legend entry)
     if (dataSeries.getPlotLabel()) {
