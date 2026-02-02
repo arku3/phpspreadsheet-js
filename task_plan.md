@@ -130,11 +130,18 @@ Complete systematic parity fixes identified in the review and implement the XLSX
     - **Status:** Already complete! Found fully implemented in src/calculation/
     - **Tests:** 25 tests passing across 6 test files, 51 assertions
 
-- [ ] Phase 19: Chart Support (Future) <!-- id: 71 -->
-    - [ ] Read chart data from XLSX files
-    - [ ] Write chart data to XLSX files
-    - [ ] Support basic chart types (bar, line, pie, scatter)
-    - [ ] Chart rendering metadata
+- [x] Phase 19: Chart Support - IN PROGRESS <!-- id: 71 -->
+    - [x] Chart data model class (src/worksheet/chart/chart.ts) - IMPLEMENTED
+    - [x] Worksheet integration (add/remove/get charts) - IMPLEMENTED
+    - [x] XLSX Reader reads chart files - IMPLEMENTED (fixture tests pass)
+    - [x] XLSX Writer writes chart XML scaffold - IMPLEMENTED (minimal structure)
+    - [ ] **Write actual chart data series** - TODO
+    - [ ] **Support multiple chart types** (bar, line, pie, scatter) - TODO
+    - [ ] **Link chart data to worksheet cells** - TODO
+    - [ ] **Chart rendering from real data** - TODO
+    - **Current Status:** Chart scaffold exists but doesn't render actual spreadsheet data
+    - **Tests:** 7 tests passing (structure only)
+    - **Priority:** Complete chart data series implementation
 
 - [ ] Phase 20: Image Support (Future) <!-- id: 72 -->
     - [ ] Read embedded images from XLSX
