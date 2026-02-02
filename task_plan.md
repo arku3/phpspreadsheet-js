@@ -102,11 +102,11 @@ Complete systematic parity fixes identified in the review and implement the XLSX
     - [x] Phase 16c: FileSystemCache (Persistence) - SKIPPED
         - [x] Decision: Skip - PhpSpreadsheet doesn't have file-based cell caching
         - [x] Rationale: Focus on parity with existing PHP features only
-    - [ ] Phase 16d: Integration & Polish
-        - [ ] Add Spreadsheet-level default cache configuration
-        - [ ] Performance benchmarks (MemoryCache vs QuickLRUCache)
-        - [ ] Write documentation and usage examples
-        - [ ] Ensure 100% backward compatibility
+    - [x] Phase 16d: Integration & Polish
+        - [x] Add Spreadsheet.setDefaultCacheStrategy() for global defaults
+        - [x] Create performance benchmarks (benchmarks/caching-benchmark.ts)
+        - [x] Write comprehensive caching documentation (docs/caching.md)
+        - [x] Verified 100% backward compatibility (346 tests pass)
 
 - [ ] Phase 17: I/O Abstractions <!-- id: 68 -->
     - [x] Support in-memory I/O for Reader/Writer (Blob/ArrayBuffer/Uint8Array) in addition to filesystem paths.

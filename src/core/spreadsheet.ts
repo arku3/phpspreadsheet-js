@@ -1,3 +1,4 @@
+import type { CellCache } from '../caching/cell-cache.ts';
 import { Calculation } from '../calculation/calculation.ts';
 import { Properties } from '../document/properties.ts';
 import { Security } from '../document/security.ts';
@@ -29,6 +30,7 @@ export class Spreadsheet {
     #properties: Properties;
     #security: Security;
     #theme: Theme;
+    #defaultCacheStrategy: CellCache | null = null;
 
     // Workbook view properties
     #autoFilterDateGrouping: boolean = true;
@@ -69,6 +71,27 @@ export class Spreadsheet {
      */
     public setValueBinder(binder: IValueBinder): void {
         this.#valueBinder = binder;
+    }
+
+    /**
+     * Set the default cell cache strategy for all new worksheets.
+     * This cache will be applied to worksheets created after this call.
+     * Existing worksheets are not affected.
+     *
+     * @param cache - CellCache implementation to use by default
+     * @returns this
+     */
+    public setDefaultCacheStrategy(cache: CellCache): this {
+        this.#defaultCacheStrategy = cache;
+        return this;
+    }
+
+    /**
+     * Get the default cell cache strategy.
+     * @returns Current default CellCache or null if not set
+     */
+    public getDefaultCacheStrategy(): CellCache | null {
+        return this.#defaultCacheStrategy;
     }
 
     /**
@@ -191,6 +214,10 @@ export class Spreadsheet {
      */
     public createSheet(title?: string, index?: number): Worksheet {
         const newSheet = new Worksheet(this, title);
+        // Apply default cache strategy if set
+        if (this.#defaultCacheStrategy) {
+            newSheet.setCacheStrategy(this.#defaultCacheStrategy);
+        }
         this.addSheet(newSheet, index);
         return newSheet;
     }
