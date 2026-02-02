@@ -9,6 +9,7 @@ import { Coordinate } from '../utils/coordinate.ts';
 import { Column as AutoFilterColumn } from '../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../worksheet/auto-filter/column/rule.ts';
 import { Chart, type ChartSeriesModel, type LegendPosition } from '../worksheet/chart/chart.ts';
+import { DataLabels, type DataLabelPosition } from '../worksheet/chart/data-labels.ts';
 import { DataSeriesValues } from '../worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../worksheet/chart/data-series.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
@@ -1541,21 +1542,83 @@ export class XlsxReader implements IReader {
         // Find chart type
         let plotType = 'bar';
         let chartSmooth: boolean | null = null;
+        let chartGrouping: string | null = null;
+        let chartDirection: string | null = null;
+        let scatterStyle: string | null = null;
+        let chartDataLabels: DataLabels | null = null;
         for (const [tag, type] of Object.entries(chartTypeMap)) {
             if (plotAreaInner.includes(`<${tag}`)) {
                 plotType = type;
+                const chartMatch = plotAreaInner.match(new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/\\s*${tag}\\s*>`));
+                const chartXml = chartMatch?.[0] ?? '';
+
                 if (tag === 'c:lineChart') {
-                    const lineChartMatch = plotAreaInner.match(
-                        new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/\\s*${tag}\\s*>`),
-                    );
-                    if (lineChartMatch && lineChartMatch[0]) {
-                        const smoothMatch = lineChartMatch[0].match(
-                            /<c:smooth\b([^>]*)\/?>(?:[\\s\\S]*?<\/c:smooth\s*>)?/,
-                        );
-                        if (smoothMatch) {
-                            const smoothAttr = XlsxReader.#extractXmlAttribute(smoothMatch[1] ?? '', 'val');
-                            chartSmooth = smoothAttr ? XlsxReader.#castXsdBoolean(smoothAttr) : true;
-                        }
+                    const smoothMatch = chartXml.match(/<c:smooth\b([^>]*)\/?>(?:[\\s\\S]*?<\/c:smooth\s*>)?/);
+                    if (smoothMatch) {
+                        const smoothAttr = XlsxReader.#extractXmlAttribute(smoothMatch[1] ?? '', 'val');
+                        chartSmooth = smoothAttr ? XlsxReader.#castXsdBoolean(smoothAttr) : true;
+                    }
+                    const groupingMatch = chartXml.match(/<c:grouping\b[^>]*\bval=\"([^\"]*)\"/);
+                    if (groupingMatch && groupingMatch[1]) {
+                        chartGrouping = groupingMatch[1];
+                    }
+                } else if (tag === 'c:barChart') {
+                    const groupingMatch = chartXml.match(/<c:grouping\b[^>]*\bval=\"([^\"]*)\"/);
+                    if (groupingMatch && groupingMatch[1]) {
+                        chartGrouping = groupingMatch[1];
+                    }
+                    const barDirMatch = chartXml.match(/<c:barDir\b[^>]*\bval=\"([^\"]*)\"/);
+                    if (barDirMatch && barDirMatch[1]) {
+                        chartDirection = barDirMatch[1];
+                    }
+                } else if (tag === 'c:scatterChart') {
+                    const scatterStyleMatch = chartXml.match(/<c:scatterStyle\b[^>]*\bval=\"([^\"]*)\"/);
+                    if (scatterStyleMatch && scatterStyleMatch[1]) {
+                        scatterStyle = scatterStyleMatch[1];
+                    }
+                }
+
+                // Parse chart-level data labels
+                const dLblsMatch = chartXml.match(/<c:dLbls[^>]*>[\s\S]*?<\/c:dLbls>/);
+                if (dLblsMatch && dLblsMatch[0]) {
+                    const dLblsXml = dLblsMatch[0];
+                    chartDataLabels = new DataLabels();
+
+                    // Parse boolean flags
+                    const showValMatch = dLblsXml.match(/<c:showVal\s+val=\"([^\"]*)\"/);
+                    if (showValMatch && showValMatch[1]) {
+                        chartDataLabels.setShowValue(XlsxReader.#castXsdBoolean(showValMatch[1]));
+                    }
+
+                    const showCatNameMatch = dLblsXml.match(/<c:showCatName\s+val=\"([^\"]*)\"/);
+                    if (showCatNameMatch && showCatNameMatch[1]) {
+                        chartDataLabels.setShowCategoryName(XlsxReader.#castXsdBoolean(showCatNameMatch[1]));
+                    }
+
+                    const showSerNameMatch = dLblsXml.match(/<c:showSerName\s+val=\"([^\"]*)\"/);
+                    if (showSerNameMatch && showSerNameMatch[1]) {
+                        chartDataLabels.setShowSeriesName(XlsxReader.#castXsdBoolean(showSerNameMatch[1]));
+                    }
+
+                    const showPercentMatch = dLblsXml.match(/<c:showPercent\s+val=\"([^\"]*)\"/);
+                    if (showPercentMatch && showPercentMatch[1]) {
+                        chartDataLabels.setShowPercent(XlsxReader.#castXsdBoolean(showPercentMatch[1]));
+                    }
+
+                    const showLegendKeyMatch = dLblsXml.match(/<c:showLegendKey\s+val=\"([^\"]*)\"/);
+                    if (showLegendKeyMatch && showLegendKeyMatch[1]) {
+                        chartDataLabels.setShowLegendKey(XlsxReader.#castXsdBoolean(showLegendKeyMatch[1]));
+                    }
+
+                    const showBubbleSizeMatch = dLblsXml.match(/<c:showBubbleSize\s+val=\"([^\"]*)\"/);
+                    if (showBubbleSizeMatch && showBubbleSizeMatch[1]) {
+                        chartDataLabels.setShowBubbleSize(XlsxReader.#castXsdBoolean(showBubbleSizeMatch[1]));
+                    }
+
+                    // Parse label position
+                    const dLblPosMatch = dLblsXml.match(/<c:dLblPos\s+val=\"([^\"]*)\"/);
+                    if (dLblPosMatch && dLblPosMatch[1]) {
+                        chartDataLabels.setPosition(dLblPosMatch[1] as DataLabelPosition);
                     }
                 }
                 break;
@@ -1570,6 +1633,42 @@ export class XlsxReader implements IReader {
 
             // Create data series
             const series = new DataSeries(plotType as any);
+            if (plotType === 'bar') {
+                if (chartGrouping) {
+                    try {
+                        series.setGrouping(chartGrouping as any);
+                    } catch {
+                        // Ignore invalid grouping.
+                    }
+                }
+                if (chartDirection) {
+                    try {
+                        series.setDirection(chartDirection as any);
+                    } catch {
+                        // Ignore invalid direction.
+                    }
+                }
+            } else if (plotType === 'line') {
+                if (chartGrouping) {
+                    try {
+                        series.setGrouping(chartGrouping as any);
+                    } catch {
+                        // Ignore invalid grouping.
+                    }
+                }
+            } else if (plotType === 'scatter' && scatterStyle) {
+                if (scatterStyle.toLowerCase().includes('smooth')) {
+                    series.setSmoothLine(true);
+                }
+                if (scatterStyle.includes('Marker') && series.getMarkerSymbol() === null) {
+                    series.setMarkerSymbol('circle');
+                }
+            }
+
+            // Apply chart-level data labels to this series
+            if (chartDataLabels) {
+                series.setDataLabels(chartDataLabels);
+            }
 
             // Parse idx and order
             const idxMatch = serInner.match(/<c:idx\b[^>]*\bval="([^"]*)"/);

@@ -304,6 +304,177 @@ describe('Chart Round-Trip Tests', () => {
         expect(readChart!.getPlotArea()[0]!.getPlotType()).toBe('pie');
     });
 
+    test('doughnut chart round-trip: chart type preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('DoughnutChart');
+
+        worksheet.getCell('A1').setValue('Segment');
+        worksheet.getCell('A2').setValue('A');
+        worksheet.getCell('A3').setValue('B');
+        worksheet.getCell('B1').setValue('Share');
+        worksheet.getCell('B2').setValue(40);
+        worksheet.getCell('B3').setValue(60);
+
+        const chart = new Chart();
+        chart.setName('Doughnut Chart Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('doughnut');
+        series.setPlotCategory(new DataSeriesValues('String', 'DoughnutChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'DoughnutChart!$B$2:$B$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('DoughnutChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0];
+        expect(readChart).toBeDefined();
+        expect(readChart!.getPlotArea()).toHaveLength(1);
+        expect(readChart!.getPlotArea()[0]!.getPlotType()).toBe('doughnut');
+    });
+
+    test('bar chart round-trip: grouping and direction preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('BarChartDirection');
+
+        worksheet.getCell('A1').setValue('Category');
+        worksheet.getCell('A2').setValue('One');
+        worksheet.getCell('A3').setValue('Two');
+        worksheet.getCell('B1').setValue('Series 1');
+        worksheet.getCell('B2').setValue(10);
+        worksheet.getCell('B3').setValue(20);
+
+        const chart = new Chart();
+        chart.setName('Bar Chart Direction Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('bar');
+        series.setGrouping('stacked');
+        series.setDirection('bar');
+        series.setPlotCategory(new DataSeriesValues('String', 'BarChartDirection!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'BarChartDirection!$B$2:$B$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('BarChartDirection');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0];
+        expect(readChart).toBeDefined();
+        expect(readChart!.getPlotArea()).toHaveLength(1);
+
+        const readSeries = readChart!.getPlotArea()[0]!;
+        expect(readSeries.getPlotType()).toBe('bar');
+        expect(readSeries.getGrouping()).toBe('stacked');
+        expect(readSeries.getDirection()).toBe('bar');
+    });
+
+    test('scatter chart round-trip: chart type preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('ScatterChart');
+
+        worksheet.getCell('A1').setValue('X');
+        worksheet.getCell('A2').setValue(1);
+        worksheet.getCell('A3').setValue(2);
+        worksheet.getCell('B1').setValue('Y');
+        worksheet.getCell('B2').setValue(10);
+        worksheet.getCell('B3').setValue(20);
+
+        const chart = new Chart();
+        chart.setName('Scatter Chart Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('scatter');
+        series.setPlotCategory(new DataSeriesValues('Number', 'ScatterChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'ScatterChart!$B$2:$B$3'));
+        series.setMarkerSymbol('circle');
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('ScatterChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0];
+        expect(readChart).toBeDefined();
+        expect(readChart!.getPlotArea()).toHaveLength(1);
+        expect(readChart!.getPlotArea()[0]!.getPlotType()).toBe('scatter');
+    });
+
+    test('scatter chart round-trip: smooth line and markers preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('ScatterSmooth');
+
+        worksheet.getCell('A1').setValue('X');
+        worksheet.getCell('A2').setValue(1);
+        worksheet.getCell('A3').setValue(2);
+        worksheet.getCell('B1').setValue('Y');
+        worksheet.getCell('B2').setValue(10);
+        worksheet.getCell('B3').setValue(20);
+
+        const chart = new Chart();
+        chart.setName('Scatter Smooth Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('scatter');
+        series.setPlotCategory(new DataSeriesValues('Number', 'ScatterSmooth!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'ScatterSmooth!$B$2:$B$3'));
+        series.setSmoothLine(true);
+        series.setMarkerSymbol('circle');
+        series.setMarkerSize(8);
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('ScatterSmooth');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0];
+        expect(readChart).toBeDefined();
+        expect(readChart!.getPlotArea()).toHaveLength(1);
+
+        const readSeries = readChart!.getPlotArea()[0]!;
+        expect(readSeries.getPlotType()).toBe('scatter');
+        expect(readSeries.getSmoothLine()).toBe(true);
+        expect(readSeries.getMarkerSymbol()).toBe('circle');
+        expect(readSeries.getMarkerSize()).toBe(8);
+    });
+
     test('chart with title round-trip: title preserved', async () => {
         const spreadsheet = new Spreadsheet();
         const worksheet = spreadsheet.getActiveSheet();

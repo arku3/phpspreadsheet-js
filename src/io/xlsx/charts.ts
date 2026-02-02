@@ -2,6 +2,7 @@ import { create } from 'xmlbuilder2';
 import type { Worksheet } from '../../core/worksheet.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
 import type { Chart } from '../../worksheet/chart/chart.ts';
+import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
 import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
 
@@ -222,6 +223,54 @@ function writeShapeProperties(
 }
 
 /**
+ * Write data labels to chart XML.
+ */
+function writeDataLabels(parent: any, dataLabels: DataLabels | null): void {
+    if (!dataLabels || !dataLabels.hasAnyLabel()) {
+        return;
+    }
+
+    const dLbls = parent.ele('c:dLbls');
+
+    // Write boolean flags
+    const showVal = dataLabels.getShowValue();
+    if (showVal !== null) {
+        dLbls.ele('c:showVal', { val: showVal ? '1' : '0' });
+    }
+
+    const showCatName = dataLabels.getShowCategoryName();
+    if (showCatName !== null) {
+        dLbls.ele('c:showCatName', { val: showCatName ? '1' : '0' });
+    }
+
+    const showSerName = dataLabels.getShowSeriesName();
+    if (showSerName !== null) {
+        dLbls.ele('c:showSerName', { val: showSerName ? '1' : '0' });
+    }
+
+    const showPercent = dataLabels.getShowPercent();
+    if (showPercent !== null) {
+        dLbls.ele('c:showPercent', { val: showPercent ? '1' : '0' });
+    }
+
+    const showLegendKey = dataLabels.getShowLegendKey();
+    if (showLegendKey !== null) {
+        dLbls.ele('c:showLegendKey', { val: showLegendKey ? '1' : '0' });
+    }
+
+    const showBubbleSize = dataLabels.getShowBubbleSize();
+    if (showBubbleSize !== null) {
+        dLbls.ele('c:showBubbleSize', { val: showBubbleSize ? '1' : '0' });
+    }
+
+    // Write position if set
+    const position = dataLabels.getPosition();
+    if (position !== null) {
+        dLbls.ele('c:dLblPos', { val: position });
+    }
+}
+
+/**
  * Write a single data series to chart XML.
  */
 function writeDataSeries(
@@ -246,6 +295,9 @@ function writeDataSeries(
         case 'pie':
             chartType = 'c:pieChart';
             break;
+        case 'doughnut':
+            chartType = 'c:doughnutChart';
+            break;
         case 'area':
             chartType = 'c:areaChart';
             break;
@@ -264,7 +316,12 @@ function writeDataSeries(
     if (plotType === 'bar') {
         const direction = dataSeries.getDirection() ?? 'col';
         chartElement.ele('c:barDir', { val: direction });
-        chartElement.ele('c:grouping', { val: dataSeries.getGrouping() ?? 'clustered' });
+        const grouping = dataSeries.getGrouping() ?? 'clustered';
+        chartElement.ele('c:grouping', { val: grouping });
+        chartElement.ele('c:gapWidth', { val: '150' });
+        if (grouping === 'stacked' || grouping === 'percentStacked') {
+            chartElement.ele('c:overlap', { val: '100' });
+        }
     } else if (plotType === 'line') {
         chartElement.ele('c:grouping', { val: dataSeries.getGrouping() ?? 'standard' });
         let smoothValue: boolean | null = null;
@@ -278,11 +335,27 @@ function writeDataSeries(
         if (smoothValue !== null) {
             chartElement.ele('c:smooth', { val: smoothValue ? '1' : '0' });
         }
+    } else if (plotType === 'scatter') {
+        const markerSymbol = dataSeries.getMarkerSymbol();
+        const smoothScatter = dataSeries.getSmoothLine() || (lineStyle !== null && SMOOTH_LINE_STYLES.has(lineStyle));
+        if (smoothScatter) {
+            chartElement.ele('c:scatterStyle', {
+                val: markerSymbol && markerSymbol !== 'none' ? 'smoothMarker' : 'smooth',
+            });
+        } else if (markerSymbol && markerSymbol !== 'none') {
+            chartElement.ele('c:scatterStyle', { val: 'lineMarker' });
+        } else {
+            chartElement.ele('c:scatterStyle', { val: 'line' });
+        }
     } else if (plotType === 'pie') {
-        // Pie charts don't need axes
+        chartElement.ele('c:firstSliceAng', { val: '0' });
+    } else if (plotType === 'doughnut') {
+        chartElement.ele('c:firstSliceAng', { val: '0' });
+        chartElement.ele('c:holeSize', { val: '50' });
     }
 
-    chartElement.ele('c:varyColors', { val: '0' });
+    const varyColors = plotType === 'pie' || plotType === 'doughnut' ? '1' : '0';
+    chartElement.ele('c:varyColors', { val: varyColors });
 
     // Write the data series
     const series = chartElement.ele('c:ser');
@@ -306,21 +379,36 @@ function writeDataSeries(
         }
     }
 
+    if (plotType === 'scatter') {
+        const smoothScatter = dataSeries.getSmoothLine() || (lineStyle !== null && SMOOTH_LINE_STYLES.has(lineStyle));
+        if (smoothScatter) {
+            series.ele('c:smooth', { val: '1' });
+        }
+    }
+
     // Write series label (legend entry)
     if (dataSeries.getPlotLabel()) {
         writeDataSeriesValues(series, dataSeries.getPlotLabel(), 'c:tx', worksheet);
     }
 
     // Write category axis data
-    writeDataSeriesValues(series, dataSeries.getPlotCategory(), 'c:cat', worksheet);
+    const categoryTag = plotType === 'scatter' ? 'c:xVal' : 'c:cat';
+    writeDataSeriesValues(series, dataSeries.getPlotCategory(), categoryTag, worksheet);
 
     // Write values data
     const plotValues = dataSeries.getPlotValues();
     if (plotValues.length > 0 && plotValues[0]) {
-        writeDataSeriesValues(series, plotValues[0], 'c:val', worksheet);
+        const valueTag = plotType === 'scatter' ? 'c:yVal' : 'c:val';
+        writeDataSeriesValues(series, plotValues[0], valueTag, worksheet);
     }
 
-    // Add axis references (not for pie charts)
+    // Write data labels if configured for this series
+    const dataLabels = dataSeries.getDataLabels();
+    if (dataLabels && dataLabels.hasAnyLabel()) {
+        writeDataLabels(chartElement, dataLabels);
+    }
+
+    // Add axis references for non-pie charts
     if (plotType !== 'pie' && plotType !== 'doughnut') {
         chartElement.ele('c:axId', { val: catAxId });
         chartElement.ele('c:axId', { val: valAxId });
@@ -395,43 +483,82 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
 
     // Add axes (not for pie charts)
     const hasPieChart = dataSeriesList.some((ds) => ds.getPlotType() === 'pie' || ds.getPlotType() === 'doughnut');
+    const primaryPlotType = dataSeriesList[0]?.getPlotType() ?? 'bar';
+    const useScatterAxes = primaryPlotType === 'scatter';
 
     if (!hasPieChart) {
-        // Category axis
-        {
-            const catAx = plotArea.ele('c:catAx');
-            catAx.ele('c:axId', { val: catAxId });
-            const scaling = catAx.ele('c:scaling');
-            scaling.ele('c:orientation', { val: 'minMax' });
-            catAx.ele('c:delete', { val: '0' });
-            catAx.ele('c:axPos', { val: 'b' });
-            catAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
-            catAx.ele('c:majorTickMark', { val: 'out' });
-            catAx.ele('c:minorTickMark', { val: 'none' });
-            catAx.ele('c:tickLblPos', { val: 'nextTo' });
-            catAx.ele('c:crossAx', { val: valAxId });
-            catAx.ele('c:crosses', { val: 'autoZero' });
-            catAx.ele('c:auto', { val: '1' });
-            catAx.ele('c:lblAlgn', { val: 'ctr' });
-            catAx.ele('c:lblOffset', { val: '100' });
-        }
+        if (useScatterAxes) {
+            // X value axis
+            {
+                const xValAx = plotArea.ele('c:valAx');
+                xValAx.ele('c:axId', { val: catAxId });
+                const scaling = xValAx.ele('c:scaling');
+                scaling.ele('c:orientation', { val: 'minMax' });
+                xValAx.ele('c:delete', { val: '0' });
+                xValAx.ele('c:axPos', { val: 'b' });
+                xValAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
+                xValAx.ele('c:majorTickMark', { val: 'out' });
+                xValAx.ele('c:minorTickMark', { val: 'none' });
+                xValAx.ele('c:tickLblPos', { val: 'nextTo' });
+                xValAx.ele('c:crossAx', { val: valAxId });
+                xValAx.ele('c:crosses', { val: 'autoZero' });
+                xValAx.ele('c:crossBetween', { val: 'between' });
+            }
 
-        // Value axis
-        {
-            const valAx = plotArea.ele('c:valAx');
-            valAx.ele('c:axId', { val: valAxId });
-            const scaling = valAx.ele('c:scaling');
-            scaling.ele('c:orientation', { val: 'minMax' });
-            valAx.ele('c:delete', { val: '0' });
-            valAx.ele('c:axPos', { val: 'l' });
-            valAx.ele('c:majorGridlines');
-            valAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
-            valAx.ele('c:majorTickMark', { val: 'out' });
-            valAx.ele('c:minorTickMark', { val: 'none' });
-            valAx.ele('c:tickLblPos', { val: 'nextTo' });
-            valAx.ele('c:crossAx', { val: catAxId });
-            valAx.ele('c:crosses', { val: 'autoZero' });
-            valAx.ele('c:crossBetween', { val: 'between' });
+            // Y value axis
+            {
+                const valAx = plotArea.ele('c:valAx');
+                valAx.ele('c:axId', { val: valAxId });
+                const scaling = valAx.ele('c:scaling');
+                scaling.ele('c:orientation', { val: 'minMax' });
+                valAx.ele('c:delete', { val: '0' });
+                valAx.ele('c:axPos', { val: 'l' });
+                valAx.ele('c:majorGridlines');
+                valAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
+                valAx.ele('c:majorTickMark', { val: 'out' });
+                valAx.ele('c:minorTickMark', { val: 'none' });
+                valAx.ele('c:tickLblPos', { val: 'nextTo' });
+                valAx.ele('c:crossAx', { val: catAxId });
+                valAx.ele('c:crosses', { val: 'autoZero' });
+                valAx.ele('c:crossBetween', { val: 'between' });
+            }
+        } else {
+            // Category axis
+            {
+                const catAx = plotArea.ele('c:catAx');
+                catAx.ele('c:axId', { val: catAxId });
+                const scaling = catAx.ele('c:scaling');
+                scaling.ele('c:orientation', { val: 'minMax' });
+                catAx.ele('c:delete', { val: '0' });
+                catAx.ele('c:axPos', { val: 'b' });
+                catAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
+                catAx.ele('c:majorTickMark', { val: 'out' });
+                catAx.ele('c:minorTickMark', { val: 'none' });
+                catAx.ele('c:tickLblPos', { val: 'nextTo' });
+                catAx.ele('c:crossAx', { val: valAxId });
+                catAx.ele('c:crosses', { val: 'autoZero' });
+                catAx.ele('c:auto', { val: '1' });
+                catAx.ele('c:lblAlgn', { val: 'ctr' });
+                catAx.ele('c:lblOffset', { val: '100' });
+            }
+
+            // Value axis
+            {
+                const valAx = plotArea.ele('c:valAx');
+                valAx.ele('c:axId', { val: valAxId });
+                const scaling = valAx.ele('c:scaling');
+                scaling.ele('c:orientation', { val: 'minMax' });
+                valAx.ele('c:delete', { val: '0' });
+                valAx.ele('c:axPos', { val: 'l' });
+                valAx.ele('c:majorGridlines');
+                valAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
+                valAx.ele('c:majorTickMark', { val: 'out' });
+                valAx.ele('c:minorTickMark', { val: 'none' });
+                valAx.ele('c:tickLblPos', { val: 'nextTo' });
+                valAx.ele('c:crossAx', { val: catAxId });
+                valAx.ele('c:crosses', { val: 'autoZero' });
+                valAx.ele('c:crossBetween', { val: 'between' });
+            }
         }
     }
 

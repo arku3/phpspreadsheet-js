@@ -1,3 +1,4 @@
+import { DataLabels } from './data-labels';
 import type { DataSeriesValues } from './data-series-values';
 
 /**
@@ -86,6 +87,11 @@ export class DataSeries {
     #markerSize: number;
 
     /**
+     * Data labels configuration for this series.
+     */
+    #dataLabels: DataLabels | null;
+
+    /**
      * Create a new data series.
      *
      * @param plotType - The chart type (bar, line, pie, etc.)
@@ -123,6 +129,7 @@ export class DataSeries {
         this.#lineWidth = 12700; // Default line width in EMUs (1pt = 12700 EMUs)
         this.#markerSymbol = null;
         this.#markerSize = 5; // Default marker size
+        this.#dataLabels = null;
     }
 
     /**
@@ -182,10 +189,25 @@ export class DataSeries {
     }
 
     /**
-     * Get the line style (for line charts).
+     * Get the line style for this series.
      */
     getLineStyle(): LineStyle | null {
         return this.#lineStyle;
+    }
+
+    /**
+     * Get the data labels configuration for this series.
+     */
+    getDataLabels(): DataLabels | null {
+        return this.#dataLabels;
+    }
+
+    /**
+     * Set the data labels configuration for this series.
+     * @param dataLabels - The data labels configuration
+     */
+    setDataLabels(dataLabels: DataLabels | null): void {
+        this.#dataLabels = dataLabels;
     }
 
     /**
