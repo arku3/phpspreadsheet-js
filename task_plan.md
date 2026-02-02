@@ -112,6 +112,33 @@ Complete systematic parity fixes identified in the review and implement the XLSX
     - [x] Support in-memory I/O for Reader/Writer (Blob/ArrayBuffer/Uint8Array) in addition to filesystem paths.
     - [x] Add round-trip tests for buffer-based XLSX read/write.
 
+## Extended Phases (Beyond Original Plan)
+
+- [ ] Phase 18: Formula Calculation Engine (NEW - Critical Feature) <!-- id: 70 -->
+    - [ ] Implement formula parser (tokenize and parse formula expressions)
+    - [ ] Implement calculation engine with basic arithmetic operators (+, -, *, /, ^)
+    - [ ] Implement common functions (SUM, AVERAGE, COUNT, MIN, MAX)
+    - [ ] Implement logical functions (IF, AND, OR, NOT)
+    - [ ] Implement lookup functions (VLOOKUP, HLOOKUP, INDEX, MATCH)
+    - [ ] Implement cell reference resolution (A1, $A$1, Sheet1!A1)
+    - [ ] Implement range operations (A1:A10, SUM(A1:A10))
+    - [ ] Add dependency tracking for recalculation
+    - [ ] Add Cell.getCalculatedValue() method
+    - [ ] Add Worksheet.calculateFormulas() method
+    - [ ] Add comprehensive formula tests
+    - [ ] Reference: PhpSpreadsheet Calculation engine
+
+- [ ] Phase 19: Chart Support (Future) <!-- id: 71 -->
+    - [ ] Read chart data from XLSX files
+    - [ ] Write chart data to XLSX files
+    - [ ] Support basic chart types (bar, line, pie, scatter)
+    - [ ] Chart rendering metadata
+
+- [ ] Phase 20: Image Support (Future) <!-- id: 72 -->
+    - [ ] Read embedded images from XLSX
+    - [ ] Write embedded images to XLSX
+    - [ ] Support PNG, JPEG, SVG formats
+
 ## Decisions
 - Use native private members (`#`) for internal state.
 - Strictly avoid `enum`; use `const` objects.
