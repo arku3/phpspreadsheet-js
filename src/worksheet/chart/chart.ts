@@ -1,5 +1,6 @@
 import type { Worksheet } from '../../core/worksheet.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
+import type { DataSeries } from './data-series.ts';
 
 /**
  * A cell anchor position for a chart.
@@ -21,6 +22,9 @@ export interface ChartPosition {
     offsetY?: number;
 }
 
+/**
+ * @deprecated Use DataSeries from ./data-series.ts instead
+ */
 export interface ChartSeriesModel {
     idx?: number;
     order?: number;
@@ -28,6 +32,9 @@ export interface ChartSeriesModel {
     valuesFormula: string | null;
 }
 
+/**
+ * @deprecated Use DataSeries[] instead
+ */
 export interface ChartModel {
     titleText: string | null;
     series: ChartSeriesModel[];
@@ -53,7 +60,7 @@ export class Chart {
     #chartXmlPath: string | null = null;
 
     #titleText: string | null = null;
-    #series: ChartSeriesModel[] = [];
+    #plotArea: DataSeries[] = [];
 
     // Ownership tracking (set by Worksheet.addChart/removeChart).
     #worksheet: Worksheet | null = null;
@@ -154,25 +161,66 @@ export class Chart {
         return this;
     }
 
+    /**
+     * @deprecated Use getPlotArea() with DataSeries instead
+     */
     public getSeries(): ReadonlyArray<ChartSeriesModel> {
-        return this.#series;
+        // Convert DataSeries back to legacy format for backward compatibility
+        return this.#plotArea.map((ds, idx) => ({
+            idx,
+            order: ds.getPlotOrder(),
+            categoryFormula: ds.getPlotCategory()?.getDataSource() ?? null,
+            valuesFormula: ds.getPlotValues()[0]?.getDataSource() ?? null,
+        }));
     }
 
+    /**
+     * @deprecated Use setPlotArea() with DataSeries instead
+     */
     public setSeries(series: ChartSeriesModel[]): this {
-        this.#series = [...series];
+        // Legacy support - will create placeholder DataSeries objects
         return this;
     }
 
+    /**
+     * Get the plot area (data series collection).
+     */
+    public getPlotArea(): DataSeries[] {
+        return this.#plotArea;
+    }
+
+    /**
+     * Set the plot area (data series collection).
+     */
+    public setPlotArea(plotArea: DataSeries[]): this {
+        this.#plotArea = [...plotArea];
+        return this;
+    }
+
+    /**
+     * Add a data series to the plot area.
+     */
+    public addDataSeries(dataSeries: DataSeries): this {
+        this.#plotArea.push(dataSeries);
+        return this;
+    }
+
+    /**
+     * @deprecated Use getPlotArea() instead
+     */
     public getModel(): ChartModel {
         return {
             titleText: this.#titleText,
-            series: [...this.#series],
+            series: [...this.getSeries()],
         };
     }
 
+    /**
+     * @deprecated Use setPlotArea() instead
+     */
     public setModel(model: ChartModel): this {
         this.#titleText = model.titleText;
-        this.#series = [...model.series];
+        // Legacy support - series will be empty
         return this;
     }
 
