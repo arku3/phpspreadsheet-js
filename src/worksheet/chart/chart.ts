@@ -23,6 +23,31 @@ export interface ChartPosition {
 }
 
 /**
+ * Legend position for chart.
+ */
+export type LegendPosition = 'top' | 'bottom' | 'left' | 'right' | 'none';
+
+/**
+ * Legend configuration for a chart.
+ */
+export interface LegendConfig {
+    /**
+     * Legend position.
+     */
+    position: LegendPosition;
+
+    /**
+     * Optional legend title.
+     */
+    title?: string;
+
+    /**
+     * Whether legend should overlay the chart area.
+     */
+    overlay?: boolean;
+}
+
+/**
  * @deprecated Use DataSeries from ./data-series.ts instead
  */
 export interface ChartSeriesModel {
@@ -61,6 +86,11 @@ export class Chart {
 
     #titleText: string | null = null;
     #plotArea: DataSeries[] = [];
+
+    // Legend configuration
+    #legendPosition: LegendPosition | null = 'right';
+    #legendTitle: string | null = null;
+    #legendOverlay: boolean = false;
 
     // Ownership tracking (set by Worksheet.addChart/removeChart).
     #worksheet: Worksheet | null = null;
@@ -203,6 +233,63 @@ export class Chart {
     public addDataSeries(dataSeries: DataSeries): this {
         this.#plotArea.push(dataSeries);
         return this;
+    }
+
+    // ===== Legend Methods =====
+
+    /**
+     * Get the legend position.
+     */
+    public getLegendPosition(): string | null {
+        return this.#legendPosition;
+    }
+
+    /**
+     * Set the legend position.
+     * @param position - Legend position ('top', 'bottom', 'left', 'right', 'none')
+     */
+    public setLegendPosition(position: LegendPosition): void {
+        this.#legendPosition = position;
+    }
+
+    /**
+     * Get the legend title.
+     */
+    public getLegendTitle(): string | null {
+        return this.#legendTitle;
+    }
+
+    /**
+     * Set the legend title.
+     * @param title - Legend title text
+     */
+    public setLegendTitle(title: string): void {
+        this.#legendTitle = title;
+    }
+
+    /**
+     * Get whether legend should overlay the chart.
+     */
+    public getLegendOverlay(): boolean {
+        return this.#legendOverlay;
+    }
+
+    /**
+     * Set whether legend should overlay the chart.
+     * @param overlay - Whether legend should overlay chart area
+     */
+    public setLegendOverlay(overlay: boolean): void {
+        this.#legendOverlay = overlay;
+    }
+
+    /**
+     * Configure legend with a single method.
+     * @param config - Legend configuration object
+     */
+    public setLegend(config: LegendConfig): void {
+        this.#legendPosition = config.position;
+        this.#legendTitle = config.title ?? null;
+        this.#legendOverlay = config.overlay ?? false;
     }
 
     /**

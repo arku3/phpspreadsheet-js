@@ -352,7 +352,8 @@ export class XlsxWriter implements IWriter {
                             const chartIndex = this.allocateChartIndex(chart);
                             if (chartsWritten.has(chartIndex)) continue;
                             chartsWritten.add(chartIndex);
-                            archive.append(writeChartXml(chart), {
+                            // Pass the worksheet so chart data can be resolved from cell references
+                            archive.append(writeChartXml(chart, sheet), {
                                 name: `xl/charts/chart${chartIndex}.xml`,
                             });
                         }

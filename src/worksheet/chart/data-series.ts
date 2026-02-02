@@ -31,6 +31,21 @@ export type DirectionType = 'bar' | 'col' | 'column';
 export type LineStyle = 'smooth' | 'line' | 'cubic' | 'cubicSpline' | 'straight';
 
 /**
+ * Marker symbol for line/scatter charts.
+ */
+export type MarkerSymbol =
+    | 'circle'
+    | 'dash'
+    | 'diamond'
+    | 'dot'
+    | 'none'
+    | 'plus'
+    | 'square'
+    | 'star'
+    | 'triangle'
+    | 'x';
+
+/**
  * Represents a data series in a chart.
  * A chart can have multiple data series (e.g., multiple lines in a line chart).
  */
@@ -45,6 +60,14 @@ export class DataSeries {
     #plotValues: DataSeriesValues[];
     #smoothLine: boolean;
     #plotBubbleSizes: DataSeriesValues | null;
+
+    // Styling properties
+    #fillColor: string | null;
+    #lineColor: string | null;
+    #borderColor: string | null;
+    #lineWidth: number;
+    #markerSymbol: MarkerSymbol | null;
+    #markerSize: number;
 
     /**
      * Create a new data series.
@@ -76,6 +99,14 @@ export class DataSeries {
         this.#lineStyle = null;
         this.#smoothLine = false;
         this.#plotBubbleSizes = null;
+
+        // Initialize styling properties
+        this.#fillColor = null;
+        this.#lineColor = null;
+        this.#borderColor = null;
+        this.#lineWidth = 12700; // Default line width in EMUs (1pt = 12700 EMUs)
+        this.#markerSymbol = null;
+        this.#markerSize = 5; // Default marker size
     }
 
     /**
@@ -241,5 +272,99 @@ export class DataSeries {
             return this.#plotValues[0]?.getPointCount() ?? 0;
         }
         return 0;
+    }
+
+    // ===== Styling Methods =====
+
+    /**
+     * Get the fill color (hex string like 'FF0000' for red).
+     */
+    getFillColor(): string | null {
+        return this.#fillColor;
+    }
+
+    /**
+     * Set the fill color.
+     * @param color - Hex color string (e.g., 'FF0000' for red)
+     */
+    setFillColor(color: string): void {
+        this.#fillColor = color;
+    }
+
+    /**
+     * Get the line/border color (hex string).
+     */
+    getLineColor(): string | null {
+        return this.#lineColor;
+    }
+
+    /**
+     * Set the line/border color.
+     * @param color - Hex color string (e.g., '000000' for black)
+     */
+    setLineColor(color: string): void {
+        this.#lineColor = color;
+    }
+
+    /**
+     * Get the border color (hex string).
+     * Alias for getLineColor for API consistency.
+     */
+    getBorderColor(): string | null {
+        return this.#borderColor ?? this.#lineColor;
+    }
+
+    /**
+     * Set the border color.
+     * @param color - Hex color string (e.g., '000000' for black)
+     */
+    setBorderColor(color: string): void {
+        this.#borderColor = color;
+        this.#lineColor = color; // Also set lineColor for backward compatibility
+    }
+
+    /**
+     * Get the line width (in EMUs, where 1pt = 12700 EMUs).
+     */
+    getLineWidth(): number {
+        return this.#lineWidth;
+    }
+
+    /**
+     * Set the line width.
+     * @param width - Line width in EMUs (12700 = 1pt, 25400 = 2pt, etc.)
+     */
+    setLineWidth(width: number): void {
+        this.#lineWidth = width;
+    }
+
+    /**
+     * Get the marker symbol (for line/scatter charts).
+     */
+    getMarkerSymbol(): MarkerSymbol | null {
+        return this.#markerSymbol;
+    }
+
+    /**
+     * Set the marker symbol.
+     * @param symbol - Marker symbol type
+     */
+    setMarkerSymbol(symbol: MarkerSymbol | null): void {
+        this.#markerSymbol = symbol;
+    }
+
+    /**
+     * Get the marker size.
+     */
+    getMarkerSize(): number {
+        return this.#markerSize;
+    }
+
+    /**
+     * Set the marker size.
+     * @param size - Marker size (default 5)
+     */
+    setMarkerSize(size: number): void {
+        this.#markerSize = size;
     }
 }
