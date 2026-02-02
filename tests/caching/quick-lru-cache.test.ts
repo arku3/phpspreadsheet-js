@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import { LRUCache } from '../../src/caching/lru-cache';
+import { QuickLRUCache } from '../../src/caching/quick-lru-cache';
 import { Cell, DataType } from '../../src/core/cell';
 import { Spreadsheet } from '../../src/core/spreadsheet';
 import { Worksheet } from '../../src/core/worksheet';
 
-describe('LRUCache', () => {
+describe('QuickLRUCache', () => {
     function createTestCell(): Cell {
         const spreadsheet = new Spreadsheet();
         const worksheet = spreadsheet.createSheet('Test');
@@ -13,19 +13,19 @@ describe('LRUCache', () => {
 
     describe('Basic operations', () => {
         it('should store and retrieve cells', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             const cell = createTestCell();
             cache.set('A1', cell);
             expect(cache.get('A1')).toBe(cell);
         });
 
         it('should return undefined for missing cells', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             expect(cache.get('A1')).toBeUndefined();
         });
 
         it('should check if cell exists', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             const cell = createTestCell();
             expect(cache.has('A1')).toBe(false);
             cache.set('A1', cell);
@@ -33,7 +33,7 @@ describe('LRUCache', () => {
         });
 
         it('should delete cells', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             const cell = createTestCell();
             cache.set('A1', cell);
             expect(cache.has('A1')).toBe(true);
@@ -42,7 +42,7 @@ describe('LRUCache', () => {
         });
 
         it('should clear all cells', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             const cell = createTestCell();
             cache.set('A1', cell);
             cache.set('B2', cell);
@@ -52,7 +52,7 @@ describe('LRUCache', () => {
         });
 
         it('should return correct size', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             const cell = createTestCell();
             expect(cache.size()).toBe(0);
             cache.set('A1', cell);
@@ -64,7 +64,7 @@ describe('LRUCache', () => {
 
     describe('LRU eviction behavior (quick-lru specifics)', () => {
         it('should move old entries to secondary storage when maxSize exceeded', () => {
-            const cache = new LRUCache({ maxSize: 3 });
+            const cache = new QuickLRUCache({ maxSize: 3 });
             const cell1 = createTestCell();
             const cell2 = createTestCell();
             const cell3 = createTestCell();
@@ -87,7 +87,7 @@ describe('LRUCache', () => {
         });
 
         it('should promote old entries to recent on access', () => {
-            const cache = new LRUCache({ maxSize: 3 });
+            const cache = new QuickLRUCache({ maxSize: 3 });
             const cell1 = createTestCell();
             const cell2 = createTestCell();
             const cell3 = createTestCell();
@@ -105,7 +105,7 @@ describe('LRUCache', () => {
         });
 
         it('should maintain size limit', () => {
-            const cache = new LRUCache({ maxSize: 3 });
+            const cache = new QuickLRUCache({ maxSize: 3 });
 
             // Add many cells
             for (let i = 1; i <= 10; i++) {
@@ -120,7 +120,7 @@ describe('LRUCache', () => {
 
         it('should call onEviction callback during resize', () => {
             const evicted: string[] = [];
-            const cache = new LRUCache({
+            const cache = new QuickLRUCache({
                 maxSize: 5,
                 onEviction: (key) => evicted.push(key),
             });
@@ -137,7 +137,7 @@ describe('LRUCache', () => {
 
         it('should resize and evict entries when reducing maxSize', () => {
             const evicted: string[] = [];
-            const cache = new LRUCache({
+            const cache = new QuickLRUCache({
                 maxSize: 5,
                 onEviction: (key) => evicted.push(key),
             });
@@ -155,7 +155,7 @@ describe('LRUCache', () => {
 
     describe('Batch operations', () => {
         it('should support batch get', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             const cell1 = createTestCell();
             const cell2 = createTestCell();
 
@@ -169,7 +169,7 @@ describe('LRUCache', () => {
         });
 
         it('should support batch set', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             const cell1 = createTestCell();
             const cell2 = createTestCell();
 
@@ -186,12 +186,12 @@ describe('LRUCache', () => {
 
     describe('Validation', () => {
         it('should throw error for invalid maxSize', () => {
-            expect(() => new LRUCache({ maxSize: 0 })).toThrow('maxSize must be greater than 0');
-            expect(() => new LRUCache({ maxSize: -1 })).toThrow('maxSize must be greater than 0');
+            expect(() => new QuickLRUCache({ maxSize: 0 })).toThrow('maxSize must be greater than 0');
+            expect(() => new QuickLRUCache({ maxSize: -1 })).toThrow('maxSize must be greater than 0');
         });
 
         it('should throw error for invalid resize', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             expect(() => cache.resize(0)).toThrow('maxSize must be greater than 0');
             expect(() => cache.resize(-5)).toThrow('maxSize must be greater than 0');
         });
@@ -201,7 +201,7 @@ describe('LRUCache', () => {
         it('should work as cache strategy for worksheet', () => {
             const spreadsheet = new Spreadsheet();
             const worksheet = spreadsheet.createSheet('Test');
-            const cache = new LRUCache({ maxSize: 100 });
+            const cache = new QuickLRUCache({ maxSize: 100 });
 
             worksheet.setCacheStrategy(cache);
             expect(worksheet.getCacheStrategy()).toBe(cache);
@@ -216,7 +216,7 @@ describe('LRUCache', () => {
         it('should maintain cell access through cache', () => {
             const spreadsheet = new Spreadsheet();
             const worksheet = spreadsheet.createSheet('Test');
-            const cache = new LRUCache({ maxSize: 100 });
+            const cache = new QuickLRUCache({ maxSize: 100 });
 
             worksheet.setCacheStrategy(cache);
 
@@ -232,7 +232,7 @@ describe('LRUCache', () => {
         it('should handle eviction in worksheet context', () => {
             const spreadsheet = new Spreadsheet();
             const worksheet = spreadsheet.createSheet('Test');
-            const cache = new LRUCache({ maxSize: 3 });
+            const cache = new QuickLRUCache({ maxSize: 3 });
 
             worksheet.setCacheStrategy(cache);
 
@@ -251,7 +251,7 @@ describe('LRUCache', () => {
 
     describe('Iterators', () => {
         it('should iterate over keys', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             const cell = createTestCell();
 
             cache.set('A1', cell);
@@ -264,7 +264,7 @@ describe('LRUCache', () => {
         });
 
         it('should iterate over values', () => {
-            const cache = new LRUCache({ maxSize: 10 });
+            const cache = new QuickLRUCache({ maxSize: 10 });
             const cell = createTestCell();
 
             cache.set('A1', cell);
@@ -277,12 +277,12 @@ describe('LRUCache', () => {
 
     describe('Additional quick-lru features', () => {
         it('should support getMaxSize', () => {
-            const cache = new LRUCache({ maxSize: 50 });
+            const cache = new QuickLRUCache({ maxSize: 50 });
             expect(cache.getMaxSize()).toBe(50);
         });
 
         it('should resize up', () => {
-            const cache = new LRUCache({ maxSize: 3 });
+            const cache = new QuickLRUCache({ maxSize: 3 });
             cache.set('A1', createTestCell());
             cache.set('B2', createTestCell());
 

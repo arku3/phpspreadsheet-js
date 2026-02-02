@@ -2,35 +2,39 @@ import QuickLRU from 'quick-lru';
 import type { Cell } from '../core/cell';
 import type { CellCache } from './cell-cache';
 
-export interface LRUCacheOptions {
+export interface QuickLRUCacheOptions {
     maxSize: number;
     onEviction?: (key: string, cell: Cell) => void;
 }
 
 /**
- * LRU (Least Recently Used) cache implementation using quick-lru.
+ * QuickLRU cache implementation using the quick-lru library.
  *
  * This cache limits memory usage by evicting the least recently accessed cells
  * when the size limit is exceeded. Ideal for medium-sized datasets that don't
  * fit comfortably in memory but don't require disk storage.
+ *
+ * Uses the quick-lru library which provides O(1) get/set operations and
+ * maintains both "recent" and "old" storage for optimal memory usage.
  *
  * Characteristics:
  * - Configurable max size (cell count)
  * - O(1) get/set operations
  * - Automatic eviction of old entries
  * - Optional eviction callback for cleanup
+ * - Resize capability
  *
  * Example:
  * ```typescript
- * const cache = new LRUCache({ maxSize: 10000 });
+ * const cache = new QuickLRUCache({ maxSize: 10000 });
  * worksheet.setCacheStrategy(cache);
  * ```
  */
-export class LRUCache implements CellCache {
+export class QuickLRUCache implements CellCache {
     #cache: QuickLRU<string, Cell>;
     #onEviction?: (key: string, cell: Cell) => void;
 
-    constructor(options: LRUCacheOptions) {
+    constructor(options: QuickLRUCacheOptions) {
         if (options.maxSize <= 0) {
             throw new Error('maxSize must be greater than 0');
         }

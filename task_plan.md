@@ -94,8 +94,8 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [x] Implement MemoryCache (src/caching/memory-cache.ts)
         - [x] Add Worksheet.setCacheStrategy() method
         - [x] Add comprehensive caching tests (15 tests passing)
-    - [x] Phase 16b: LRUCache (Eviction) - COMPLETE
-        - [x] Implement LRUCache using quick-lru library (src/caching/lru-cache.ts)
+    - [x] Phase 16b: QuickLRUCache (Eviction) - COMPLETE
+        - [x] Implement QuickLRUCache using quick-lru library (src/caching/quick-lru-cache.ts)
         - [x] Add configurable size limits and eviction callbacks
         - [x] Add resize capability
         - [x] Add 22 comprehensive LRU tests (all passing)
