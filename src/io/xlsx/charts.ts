@@ -440,6 +440,17 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
     if (legendPosition && legendPosition !== 'none') {
         const legend = chartElement.ele('c:legend');
 
+        const legendTitle = chart.getLegendTitle();
+        if (legendTitle) {
+            const tx = legend.ele('c:tx');
+            const rich = tx.ele('c:rich');
+            rich.ele('a:bodyPr');
+            rich.ele('a:lstStyle');
+            const p = rich.ele('a:p');
+            const r = p.ele('a:r');
+            r.ele('a:t').txt(legendTitle);
+        }
+
         // Map position to chart legend position values
         const positionMap: Record<string, string> = {
             top: 't',
