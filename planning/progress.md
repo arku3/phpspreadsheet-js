@@ -67,44 +67,29 @@
 
 ## Pending Phases
 
-- [ ] Phase 3: FileSystemCache (Persistence) - Waiting for library choice discussion
-- [ ] Phase 4: Integration & Polish
+### [x] Phase 3: FileSystemCache (Persistence) - SKIPPED
+- **Status:** SKIPPED
+- **Reason:** PhpSpreadsheet does not implement file-based cell caching
+- **Decision:** Skip to maintain parity with existing PHP features only
+- **Note:** PHP provides only in-memory caches (SimpleCache1, SimpleCache3) via PSR-16 interface
 
-## Notes
+### [ ] Phase 4: Integration & Polish
+- **Status:** PENDING
+- **Tasks:**
+  - Add Spreadsheet-level default cache configuration
+  - Performance benchmarks (MemoryCache vs QuickLRUCache)
+  - Write documentation and usage examples
+  - Ensure 100% backward compatibility
 
-- Phase 16a and 16b complete: Foundation + LRU caching system
-- Total caching tests: 37 (15 MemoryCache + 22 LRU)
-- Total project tests: 346 (all passing)
-- Next: Discuss FileSystemCache implementation approach
+## Summary
 
-## FileSystemCache Options
+- **Phase 16a:** ✅ Complete - CellCache interface + MemoryCache (15 tests)
+- **Phase 16b:** ✅ Complete - QuickLRUCache with quick-lru library (22 tests)
+- **Phase 16c:** ⏭️ Skipped - Not in PhpSpreadsheet (focus on parity)
+- **Phase 16d:** ⏳ Pending - Integration and polish
 
-Based on research, here are the main approaches for Phase 16c:
-
-### Option 1: Native Node.js + JSON (Simplest)
-- **Libraries:** None (use `node:fs` built-in)
-- **Pros:** Zero dependencies, familiar, easy to debug
-- **Cons:** No built-in caching/optimization, manual file management
-- **Best for:** Simplicity, transparency, small-to-medium datasets
-
-### Option 2: LevelDB (via `level` package)
-- **Libraries:** `level` (LevelDB bindings)
-- **Pros:** Proven key-value storage, good performance, automatic compression
-- **Cons:** Binary format (not human-readable), native dependency
-- **Best for:** Production use, large datasets, reliability
-
-### Option 3: SQLite
-- **Libraries:** `bun:sqlite` (built-in) or `better-sqlite3`
-- **Pros:** Full SQL capabilities, indexing, transactions, widely used
-- **Cons:** Overkill for simple cell storage, SQL overhead
-- **Best for:** Complex querying needs, not recommended for simple caching
-
-### Hybrid Approach
-- Two-tier: LRU hot cache + FileSystem cold storage
-- Promote on access, demote on eviction
-- Compression optional (gzip/zstd)
-
-**Awaiting decision on approach before proceeding with Phase 16c**
+**Total caching tests:** 37 (15 MemoryCache + 22 QuickLRUCache)  
+**Total project tests:** 346 (all passing)
 
 ## Notes
 

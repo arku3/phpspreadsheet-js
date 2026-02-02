@@ -98,17 +98,14 @@ Complete systematic parity fixes identified in the review and implement the XLSX
         - [x] Implement QuickLRUCache using quick-lru library (src/caching/quick-lru-cache.ts)
         - [x] Add configurable size limits and eviction callbacks
         - [x] Add resize capability
-        - [x] Add 22 comprehensive LRU tests (all passing)
-        - [ ] Performance benchmarks vs MemoryCache (deferred to Phase 16d)
-    - [ ] Phase 16c: FileSystemCache (Persistence) - PENDING (waiting for library choice)
-        - [ ] Implement cell serialization (JSON)
-        - [ ] Implement FileSystemCache with disk storage
-        - [ ] Create tiered LRU + FileSystem hybrid cache
-        - [ ] Add cleanup and resource management
+        - [x] Add 22 comprehensive QuickLRU tests (all passing)
+    - [x] Phase 16c: FileSystemCache (Persistence) - SKIPPED
+        - [x] Decision: Skip - PhpSpreadsheet doesn't have file-based cell caching
+        - [x] Rationale: Focus on parity with existing PHP features only
     - [ ] Phase 16d: Integration & Polish
         - [ ] Add Spreadsheet-level default cache configuration
+        - [ ] Performance benchmarks (MemoryCache vs QuickLRUCache)
         - [ ] Write documentation and usage examples
-        - [ ] Performance benchmarks and comparison tests
         - [ ] Ensure 100% backward compatibility
 
 - [ ] Phase 17: I/O Abstractions <!-- id: 68 -->
