@@ -88,17 +88,19 @@ Complete systematic parity fixes identified in the review and implement the XLSX
 
 - [ ] Phase 16: Performance & Scalability (IN PROGRESS) <!-- id: 55 -->
     - [x] Design pluggable Cell Caching system (spec: planning/cell-caching-spec.md, plan: planning/implementation-plan.md)
-    - [ ] Phase 16a: CellCache Interface & MemoryCache (Foundation)
-        - [ ] Define CellCache interface (src/caching/cell-cache.ts)
-        - [ ] Refactor CellCollection to use cache strategy (src/core/cell-collection.ts)
-        - [ ] Implement MemoryCache (src/caching/memory-cache.ts)
-        - [ ] Add Worksheet.setCacheStrategy() method
-        - [ ] Add comprehensive caching tests
-    - [ ] Phase 16b: LRUCache (Eviction)
-        - [ ] Implement LRUCache with configurable size limits
-        - [ ] Add eviction callbacks
-        - [ ] Performance benchmarks vs MemoryCache
-    - [ ] Phase 16c: FileSystemCache (Persistence)
+    - [x] Phase 16a: CellCache Interface & MemoryCache (Foundation) - COMPLETE
+        - [x] Define CellCache interface (src/caching/cell-cache.ts)
+        - [x] Refactor CellCollection to use cache strategy (src/core/cell-collection.ts)
+        - [x] Implement MemoryCache (src/caching/memory-cache.ts)
+        - [x] Add Worksheet.setCacheStrategy() method
+        - [x] Add comprehensive caching tests (15 tests passing)
+    - [x] Phase 16b: LRUCache (Eviction) - COMPLETE
+        - [x] Implement LRUCache using quick-lru library (src/caching/lru-cache.ts)
+        - [x] Add configurable size limits and eviction callbacks
+        - [x] Add resize capability
+        - [x] Add 22 comprehensive LRU tests (all passing)
+        - [ ] Performance benchmarks vs MemoryCache (deferred to Phase 16d)
+    - [ ] Phase 16c: FileSystemCache (Persistence) - PENDING (waiting for library choice)
         - [ ] Implement cell serialization (JSON)
         - [ ] Implement FileSystemCache with disk storage
         - [ ] Create tiered LRU + FileSystem hybrid cache
