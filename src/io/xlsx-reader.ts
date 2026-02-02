@@ -8,7 +8,9 @@ import { RichText } from '../rich-text/rich-text.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Column as AutoFilterColumn } from '../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../worksheet/auto-filter/column/rule.ts';
-import { Chart, type ChartSeriesModel } from '../worksheet/chart/chart.ts';
+import { Chart, type ChartSeriesModel, type LegendPosition } from '../worksheet/chart/chart.ts';
+import { DataSeriesValues } from '../worksheet/chart/data-series-values.ts';
+import { DataSeries } from '../worksheet/chart/data-series.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
 import { Pane } from '../worksheet/pane.ts';
 import type { IReader, WorksheetInfo } from './i-reader.ts';
@@ -1473,6 +1475,159 @@ export class XlsxReader implements IReader {
         return series;
     }
 
+    /**
+     * Parse chart data with styling (DataSeries, legend, etc.)
+     */
+    static #parseChartDataWithStyling(chartXml: string): {
+        dataSeries: DataSeries[];
+        legend: { position: LegendPosition; title?: string; overlay: boolean } | null;
+    } {
+        const dataSeries: DataSeries[] = [];
+        let legend: { position: LegendPosition; title?: string; overlay: boolean } | null = null;
+
+        // Parse legend
+        const legendMatch = chartXml.match(/<c:legend\b[^>]*>([\s\S]*?)<\/c:legend>/);
+        if (legendMatch && legendMatch[1]) {
+            const legendInner = legendMatch[1];
+
+            // Parse legend position
+            const legendPosMatch = legendInner.match(/<c:legendPos\b[^>]*\bval="([^"]*)"/);
+            const posMap: Record<string, LegendPosition> = {
+                t: 'top',
+                b: 'bottom',
+                l: 'left',
+                r: 'right',
+            };
+            const position = posMap[legendPosMatch?.[1] ?? 'r'] ?? 'right';
+
+            // Parse overlay
+            const overlayMatch = legendInner.match(/<c:overlay\b[^>]*\bval="([^"]*)"/);
+            const overlay = overlayMatch?.[1] === '1';
+
+            legend = { position, overlay };
+
+            // Parse legend title if present
+            const titleMatch = legendInner.match(/<c:tx\b[^>]*>([\s\S]*?)<\/c:tx>/);
+            if (titleMatch && titleMatch[1]) {
+                const titleText = XlsxReader.#extractTextFromATNodes(titleMatch[1]);
+                if (titleText) {
+                    legend.title = titleText;
+                }
+            }
+        }
+
+        // Determine chart type from plot area
+        const plotAreaMatch = chartXml.match(/<c:plotArea\b[^>]*>([\s\S]*?)<\/c:plotArea>/);
+        if (!plotAreaMatch || !plotAreaMatch[1]) {
+            return { dataSeries, legend };
+        }
+
+        const plotAreaInner = plotAreaMatch[1];
+
+        // Map chart type elements to plot types
+        const chartTypeMap: Record<string, string> = {
+            'c:barChart': 'bar',
+            'c:lineChart': 'line',
+            'c:pieChart': 'pie',
+            'c:areaChart': 'area',
+            'c:scatterChart': 'scatter',
+            'c:bubbleChart': 'bubble',
+            'c:doughnutChart': 'doughnut',
+            'c:radarChart': 'radar',
+            'c:surfaceChart': 'surface',
+            'c:stockChart': 'stock',
+        };
+
+        // Find chart type
+        let plotType = 'bar';
+        for (const [tag, type] of Object.entries(chartTypeMap)) {
+            if (plotAreaInner.includes(`<${tag}`)) {
+                plotType = type;
+                break;
+            }
+        }
+
+        // Parse data series
+        const serMatches = chartXml.matchAll(/<c:ser\b[^>]*>([\s\S]*?)<\/c:ser>/g);
+
+        for (const match of serMatches) {
+            const serInner = match[1] ?? '';
+
+            // Create data series
+            const series = new DataSeries(plotType as any);
+
+            // Parse idx and order
+            const idxMatch = serInner.match(/<c:idx\b[^>]*\bval="([^"]*)"/);
+            const orderMatch = serInner.match(/<c:order\b[^>]*\bval="([^"]*)"/);
+            if (idxMatch) {
+                series.setPlotOrder(Number.parseInt(idxMatch[1]!, 10));
+            } else if (orderMatch) {
+                series.setPlotOrder(Number.parseInt(orderMatch[1]!, 10));
+            }
+
+            // Parse shape properties (styling)
+            const spPrMatch = serInner.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
+            if (spPrMatch && spPrMatch[1]) {
+                const spPrInner = spPrMatch[1];
+
+                // Parse fill color
+                const solidFillMatch = spPrInner.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
+                if (solidFillMatch && solidFillMatch[1]) {
+                    const srgbMatch = solidFillMatch[1].match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+                    if (srgbMatch) {
+                        series.setFillColor(srgbMatch[1]!);
+                    }
+                }
+
+                // Parse line/border properties
+                const lnMatch = spPrInner.match(/<a:ln\b([^>]*)>([\s\S]*?)<\/a:ln>/);
+                if (lnMatch) {
+                    // Parse line width
+                    const wMatch = lnMatch[1]?.match(/\bw="([^"]*)"/);
+                    if (wMatch) {
+                        series.setLineWidth(Number.parseInt(wMatch[1]!, 10));
+                    }
+
+                    // Parse line/border color
+                    const lnSolidFill = lnMatch[2]?.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
+                    if (lnSolidFill && lnSolidFill[1]) {
+                        const lnSrgbMatch = lnSolidFill[1].match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+                        if (lnSrgbMatch) {
+                            series.setBorderColor(lnSrgbMatch[1]!);
+                        }
+                    }
+                }
+            }
+
+            // Parse category (cat/xVal)
+            const catMatch = serInner.match(/<c:cat\b[^>]*>([\s\S]*?)<\/c:cat>/);
+            const xValMatch = serInner.match(/<c:xVal\b[^>]*>([\s\S]*?)<\/c:xVal>/);
+            const catContent = catMatch?.[1] ?? xValMatch?.[1];
+            if (catContent) {
+                const fMatch = catContent.match(/<c:f>([^<]*)<\/c:f>/);
+                if (fMatch && fMatch[1]) {
+                    const isNum = catContent.includes('<c:numRef') || catContent.includes('<c:numCache');
+                    series.setPlotCategory(new DataSeriesValues(isNum ? 'Number' : 'String', fMatch[1]));
+                }
+            }
+
+            // Parse values (val/yVal)
+            const valMatch = serInner.match(/<c:val\b[^>]*>([\s\S]*?)<\/c:val>/);
+            const yValMatch = serInner.match(/<c:yVal\b[^>]*>([\s\S]*?)<\/c:yVal>/);
+            const valContent = valMatch?.[1] ?? yValMatch?.[1];
+            if (valContent) {
+                const fMatch = valContent.match(/<c:f>([^<]*)<\/c:f>/);
+                if (fMatch && fMatch[1]) {
+                    series.addPlotValues(new DataSeriesValues('Number', fMatch[1]));
+                }
+            }
+
+            dataSeries.push(series);
+        }
+
+        return { dataSeries, legend };
+    }
+
     static #parseRichTextFromXml(textXml: string): RichText {
         // Minimal rich text parser: keeps run boundaries, ignores formatting.
         // If there are <r> nodes, each becomes a text run; otherwise fall back to <t> concatenation.
@@ -1824,9 +1979,30 @@ export class XlsxReader implements IReader {
                     const chart = new Chart();
                     chart.setChartXmlPath(chartXmlPath);
 
+                    const cNvPrMatch = graphicFrameInner.match(/<xdr:cNvPr\b([^>]*)\/?>(?:[\s\S]*?)?/);
+                    if (cNvPrMatch) {
+                        const attrs = cNvPrMatch[1] ?? '';
+                        const name = XlsxReader.#extractXmlAttribute(attrs, 'name');
+                        if (name) {
+                            chart.setName(name);
+                        }
+                    }
+
                     if (chartXml) {
                         chart.setTitleText(XlsxReader.#parseChartTitleText(chartXml));
                         chart.setSeries(XlsxReader.#parseChartSeries(chartXml));
+                        // Parse new-style chart data with styling
+                        const { dataSeries, legend } = XlsxReader.#parseChartDataWithStyling(chartXml);
+                        if (dataSeries.length > 0) {
+                            chart.setPlotArea(dataSeries);
+                        }
+                        if (legend) {
+                            chart.setLegendPosition(legend.position);
+                            if (legend.title) {
+                                chart.setLegendTitle(legend.title);
+                            }
+                            chart.setLegendOverlay(legend.overlay);
+                        }
                     }
 
                     if (anchorType === 'twoCellAnchor') {
