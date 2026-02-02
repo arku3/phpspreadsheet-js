@@ -87,6 +87,16 @@ export class Chart {
     #titleText: string | null = null;
     #plotArea: DataSeries[] = [];
 
+    // Axis titles
+    #xAxisTitle: string | null = null;
+    #yAxisTitle: string | null = null;
+
+    // Axis gridlines
+    #xAxisMajorGridlines: boolean | null = null;
+    #xAxisMinorGridlines: boolean | null = null;
+    #yAxisMajorGridlines: boolean | null = null;
+    #yAxisMinorGridlines: boolean | null = null;
+
     // Legend configuration
     #legendPosition: LegendPosition | null = 'right';
     #legendTitle: string | null = null;
@@ -188,6 +198,96 @@ export class Chart {
 
     public setTitleText(titleText: string | null): this {
         this.#titleText = titleText;
+        return this;
+    }
+
+    /**
+     * Get the X-axis title text.
+     */
+    public getXAxisTitle(): string | null {
+        return this.#xAxisTitle;
+    }
+
+    /**
+     * Set the X-axis title text.
+     */
+    public setXAxisTitle(titleText: string | null): this {
+        this.#xAxisTitle = titleText;
+        return this;
+    }
+
+    /**
+     * Get the Y-axis title text.
+     */
+    public getYAxisTitle(): string | null {
+        return this.#yAxisTitle;
+    }
+
+    /**
+     * Set the Y-axis title text.
+     */
+    public setYAxisTitle(titleText: string | null): this {
+        this.#yAxisTitle = titleText;
+        return this;
+    }
+
+    /**
+     * Get whether major gridlines are shown for the X axis.
+     */
+    public getXAxisMajorGridlines(): boolean | null {
+        return this.#xAxisMajorGridlines;
+    }
+
+    /**
+     * Set whether major gridlines are shown for the X axis.
+     */
+    public setXAxisMajorGridlines(show: boolean | null): this {
+        this.#xAxisMajorGridlines = show;
+        return this;
+    }
+
+    /**
+     * Get whether minor gridlines are shown for the X axis.
+     */
+    public getXAxisMinorGridlines(): boolean | null {
+        return this.#xAxisMinorGridlines;
+    }
+
+    /**
+     * Set whether minor gridlines are shown for the X axis.
+     */
+    public setXAxisMinorGridlines(show: boolean | null): this {
+        this.#xAxisMinorGridlines = show;
+        return this;
+    }
+
+    /**
+     * Get whether major gridlines are shown for the Y axis.
+     */
+    public getYAxisMajorGridlines(): boolean | null {
+        return this.#yAxisMajorGridlines;
+    }
+
+    /**
+     * Set whether major gridlines are shown for the Y axis.
+     */
+    public setYAxisMajorGridlines(show: boolean | null): this {
+        this.#yAxisMajorGridlines = show;
+        return this;
+    }
+
+    /**
+     * Get whether minor gridlines are shown for the Y axis.
+     */
+    public getYAxisMinorGridlines(): boolean | null {
+        return this.#yAxisMinorGridlines;
+    }
+
+    /**
+     * Set whether minor gridlines are shown for the Y axis.
+     */
+    public setYAxisMinorGridlines(show: boolean | null): this {
+        this.#yAxisMinorGridlines = show;
         return this;
     }
 

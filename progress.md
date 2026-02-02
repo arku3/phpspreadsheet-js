@@ -1,6 +1,7 @@
 # Progress - Systematic Parity Review & Fixes
 
 ## Session Log
+- [2026-02-02] Added chart axis titles/gridlines read/write support with new axis tests; full suite passes.
 - [2026-02-02] Implemented chart type-specific behavior (doughnut/scatter/bar axes/grouping), added DataLabels model with XLSX reader/writer support, and expanded chart tests (round-trip, type-specific, data labels). All tests pass.
 - [2026-02-01] Expanded XLSX worksheet view/state reading: parse workbook sheet visibility state (hidden/veryHidden), sheetPr/sheetFormatPr/printOptions (tabColor, codeName, outline summary flags, fitToPage, default dimensions, zeroHeight, print gridlines/centering), pageMargins/pageSetup/headerFooter, and manual page breaks (rowBreaks/colBreaks); added safer XML attribute extraction and tests for visibility and state readers.
 - [2026-02-01] Implemented XLSX worksheet sheetViews reading: parse view settings (gridlines/headers/rightToLeft/showZeros/view/zoomScale*), panes (xSplit/ySplit/state/topLeftCell/activePane), and selections (sqref + per-pane Pane objects) with PhpSpreadsheet parity; added round-trip tests and aligned freezePane/topLeftCell defaults and boolean parsing.

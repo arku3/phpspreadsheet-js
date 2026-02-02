@@ -1482,9 +1482,25 @@ export class XlsxReader implements IReader {
     static #parseChartDataWithStyling(chartXml: string): {
         dataSeries: DataSeries[];
         legend: { position: LegendPosition; title?: string; overlay: boolean } | null;
+        axes: {
+            xAxisTitle: string | null;
+            yAxisTitle: string | null;
+            xMajorGridlines: boolean | null;
+            xMinorGridlines: boolean | null;
+            yMajorGridlines: boolean | null;
+            yMinorGridlines: boolean | null;
+        } | null;
     } {
         const dataSeries: DataSeries[] = [];
         let legend: { position: LegendPosition; title?: string; overlay: boolean } | null = null;
+        let axes: {
+            xAxisTitle: string | null;
+            yAxisTitle: string | null;
+            xMajorGridlines: boolean | null;
+            xMinorGridlines: boolean | null;
+            yMajorGridlines: boolean | null;
+            yMinorGridlines: boolean | null;
+        } | null = null;
 
         // Parse legend
         const legendMatch = chartXml.match(/<c:legend\b[^>]*>([\s\S]*?)<\/c:legend>/);
@@ -1520,10 +1536,81 @@ export class XlsxReader implements IReader {
         // Determine chart type from plot area
         const plotAreaMatch = chartXml.match(/<c:plotArea\b[^>]*>([\s\S]*?)<\/c:plotArea>/);
         if (!plotAreaMatch || !plotAreaMatch[1]) {
-            return { dataSeries, legend };
+            return { dataSeries, legend, axes };
         }
 
         const plotAreaInner = plotAreaMatch[1];
+
+        // Parse axis titles and gridlines
+        const axisMatches = plotAreaInner.matchAll(/<c:(catAx|dateAx|valAx)\b[^>]*>([\s\S]*?)<\/c:\1>/g);
+        let xAxisTitle: string | null = null;
+        let yAxisTitle: string | null = null;
+        let xMajorGridlines: boolean | null = null;
+        let xMinorGridlines: boolean | null = null;
+        let yMajorGridlines: boolean | null = null;
+        let yMinorGridlines: boolean | null = null;
+        for (const axisMatch of axisMatches) {
+            const axisType = axisMatch[1] ?? '';
+            const axisInner = axisMatch[2] ?? '';
+            const axisXml = `<c:${axisType}>${axisInner}</c:${axisType}>`;
+            const titleText = XlsxReader.#parseChartTitleText(axisXml);
+            const axPos = axisInner.match(/<c:axPos\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const hasMajorGridlines = /<c:majorGridlines\b[^>]*>/.test(axisInner);
+            const hasMinorGridlines = /<c:minorGridlines\b[^>]*>/.test(axisInner);
+
+            if (axisType === 'catAx' || axisType === 'dateAx') {
+                if (titleText) {
+                    xAxisTitle = titleText;
+                }
+                if (hasMajorGridlines) {
+                    xMajorGridlines = true;
+                }
+                if (hasMinorGridlines) {
+                    xMinorGridlines = true;
+                }
+            } else if (axisType === 'valAx') {
+                const isXAxis = axPos === 'b' || axPos === 't';
+                if (titleText) {
+                    if (isXAxis) {
+                        xAxisTitle = titleText;
+                    } else {
+                        yAxisTitle = titleText;
+                    }
+                }
+                if (hasMajorGridlines) {
+                    if (isXAxis) {
+                        xMajorGridlines = true;
+                    } else {
+                        yMajorGridlines = true;
+                    }
+                }
+                if (hasMinorGridlines) {
+                    if (isXAxis) {
+                        xMinorGridlines = true;
+                    } else {
+                        yMinorGridlines = true;
+                    }
+                }
+            }
+        }
+
+        if (
+            xAxisTitle !== null ||
+            yAxisTitle !== null ||
+            xMajorGridlines !== null ||
+            xMinorGridlines !== null ||
+            yMajorGridlines !== null ||
+            yMinorGridlines !== null
+        ) {
+            axes = {
+                xAxisTitle,
+                yAxisTitle,
+                xMajorGridlines,
+                xMinorGridlines,
+                yMajorGridlines,
+                yMinorGridlines,
+            };
+        }
 
         // Map chart type elements to plot types
         const chartTypeMap: Record<string, string> = {
@@ -1780,7 +1867,7 @@ export class XlsxReader implements IReader {
             dataSeries.push(series);
         }
 
-        return { dataSeries, legend };
+        return { dataSeries, legend, axes };
     }
 
     static #parseRichTextFromXml(textXml: string): RichText {
@@ -2147,7 +2234,7 @@ export class XlsxReader implements IReader {
                         chart.setTitleText(XlsxReader.#parseChartTitleText(chartXml));
                         chart.setSeries(XlsxReader.#parseChartSeries(chartXml));
                         // Parse new-style chart data with styling
-                        const { dataSeries, legend } = XlsxReader.#parseChartDataWithStyling(chartXml);
+                        const { dataSeries, legend, axes } = XlsxReader.#parseChartDataWithStyling(chartXml);
                         if (dataSeries.length > 0) {
                             chart.setPlotArea(dataSeries);
                         }
@@ -2157,6 +2244,18 @@ export class XlsxReader implements IReader {
                                 chart.setLegendTitle(legend.title);
                             }
                             chart.setLegendOverlay(legend.overlay);
+                        }
+                        if (axes) {
+                            if (axes.xAxisTitle !== null) {
+                                chart.setXAxisTitle(axes.xAxisTitle);
+                            }
+                            if (axes.yAxisTitle !== null) {
+                                chart.setYAxisTitle(axes.yAxisTitle);
+                            }
+                            chart.setXAxisMajorGridlines(axes.xMajorGridlines);
+                            chart.setXAxisMinorGridlines(axes.xMinorGridlines);
+                            chart.setYAxisMajorGridlines(axes.yMajorGridlines);
+                            chart.setYAxisMinorGridlines(axes.yMinorGridlines);
                         }
                     }
 

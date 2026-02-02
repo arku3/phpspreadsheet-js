@@ -271,6 +271,22 @@ function writeDataLabels(parent: any, dataLabels: DataLabels | null): void {
 }
 
 /**
+ * Write an axis title element.
+ */
+function writeAxisTitle(parent: any, titleText: string): void {
+    const title = parent.ele('c:title');
+    const tx = title.ele('c:tx');
+    const rich = tx.ele('c:rich');
+    rich.ele('a:bodyPr');
+    rich.ele('a:lstStyle');
+    const p = rich.ele('a:p');
+    const r = p.ele('a:r');
+    r.ele('a:t').txt(titleText);
+    title.ele('c:layout');
+    title.ele('c:overlay', { val: '0' });
+}
+
+/**
  * Write a single data series to chart XML.
  */
 function writeDataSeries(
@@ -497,6 +513,16 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 xValAx.ele('c:delete', { val: '0' });
                 xValAx.ele('c:axPos', { val: 'b' });
                 xValAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
+                const xAxisTitle = chart.getXAxisTitle();
+                if (xAxisTitle) {
+                    writeAxisTitle(xValAx, xAxisTitle);
+                }
+                if (chart.getXAxisMajorGridlines() === true) {
+                    xValAx.ele('c:majorGridlines');
+                }
+                if (chart.getXAxisMinorGridlines() === true) {
+                    xValAx.ele('c:minorGridlines');
+                }
                 xValAx.ele('c:majorTickMark', { val: 'out' });
                 xValAx.ele('c:minorTickMark', { val: 'none' });
                 xValAx.ele('c:tickLblPos', { val: 'nextTo' });
@@ -513,7 +539,17 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 scaling.ele('c:orientation', { val: 'minMax' });
                 valAx.ele('c:delete', { val: '0' });
                 valAx.ele('c:axPos', { val: 'l' });
-                valAx.ele('c:majorGridlines');
+                const yAxisTitle = chart.getYAxisTitle();
+                if (yAxisTitle) {
+                    writeAxisTitle(valAx, yAxisTitle);
+                }
+                const yMajorGridlines = chart.getYAxisMajorGridlines();
+                if (yMajorGridlines === null || yMajorGridlines === true) {
+                    valAx.ele('c:majorGridlines');
+                }
+                if (chart.getYAxisMinorGridlines() === true) {
+                    valAx.ele('c:minorGridlines');
+                }
                 valAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
                 valAx.ele('c:majorTickMark', { val: 'out' });
                 valAx.ele('c:minorTickMark', { val: 'none' });
@@ -532,6 +568,16 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 catAx.ele('c:delete', { val: '0' });
                 catAx.ele('c:axPos', { val: 'b' });
                 catAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
+                const xAxisTitle = chart.getXAxisTitle();
+                if (xAxisTitle) {
+                    writeAxisTitle(catAx, xAxisTitle);
+                }
+                if (chart.getXAxisMajorGridlines() === true) {
+                    catAx.ele('c:majorGridlines');
+                }
+                if (chart.getXAxisMinorGridlines() === true) {
+                    catAx.ele('c:minorGridlines');
+                }
                 catAx.ele('c:majorTickMark', { val: 'out' });
                 catAx.ele('c:minorTickMark', { val: 'none' });
                 catAx.ele('c:tickLblPos', { val: 'nextTo' });
@@ -550,7 +596,17 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 scaling.ele('c:orientation', { val: 'minMax' });
                 valAx.ele('c:delete', { val: '0' });
                 valAx.ele('c:axPos', { val: 'l' });
-                valAx.ele('c:majorGridlines');
+                const yAxisTitle = chart.getYAxisTitle();
+                if (yAxisTitle) {
+                    writeAxisTitle(valAx, yAxisTitle);
+                }
+                const yMajorGridlines = chart.getYAxisMajorGridlines();
+                if (yMajorGridlines === null || yMajorGridlines === true) {
+                    valAx.ele('c:majorGridlines');
+                }
+                if (chart.getYAxisMinorGridlines() === true) {
+                    valAx.ele('c:minorGridlines');
+                }
                 valAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
                 valAx.ele('c:majorTickMark', { val: 'out' });
                 valAx.ele('c:minorTickMark', { val: 'none' });
