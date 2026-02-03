@@ -2,7 +2,7 @@ import { create } from 'xmlbuilder2';
 import type { Worksheet } from '../../core/worksheet.ts';
 import { Font } from '../../style/font.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
-import type { Chart, GridlineStyle } from '../../worksheet/chart/chart.ts';
+import type { Chart, ChartLayout, GridlineStyle } from '../../worksheet/chart/chart.ts';
 import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
 import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
@@ -391,6 +391,41 @@ function writeGridlines(parent: any, major: boolean, style: GridlineStyle | null
 }
 
 /**
+ * Write plot area layout configuration.
+ */
+function writePlotAreaLayout(parent: any, layout: ChartLayout | null): void {
+    if (!layout) {
+        parent.ele('c:layout');
+        return;
+    }
+
+    const layoutElement = parent.ele('c:layout');
+    const manualLayout = layoutElement.ele('c:manualLayout');
+
+    if (layout.layoutTarget) {
+        manualLayout.ele('c:layoutTarget', { val: layout.layoutTarget });
+    }
+    if (layout.xMode) {
+        manualLayout.ele('c:xMode', { val: layout.xMode });
+    }
+    if (layout.yMode) {
+        manualLayout.ele('c:yMode', { val: layout.yMode });
+    }
+    if (layout.x !== null && layout.x !== undefined) {
+        manualLayout.ele('c:x', { val: String(layout.x) });
+    }
+    if (layout.y !== null && layout.y !== undefined) {
+        manualLayout.ele('c:y', { val: String(layout.y) });
+    }
+    if (layout.w !== null && layout.w !== undefined) {
+        manualLayout.ele('c:w', { val: String(layout.w) });
+    }
+    if (layout.h !== null && layout.h !== undefined) {
+        manualLayout.ele('c:h', { val: String(layout.h) });
+    }
+}
+
+/**
  * Write a single data series to chart XML.
  */
 function writeDataSeries(
@@ -620,7 +655,7 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
 
     // Plot area with data series
     const plotArea = chartElement.ele('c:plotArea');
-    plotArea.ele('c:layout');
+    writePlotAreaLayout(plotArea, chart.getPlotAreaLayout());
 
     // Get data series from the chart
     const dataSeriesList = chart.getPlotArea();

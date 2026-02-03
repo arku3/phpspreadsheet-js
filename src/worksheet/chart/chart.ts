@@ -56,6 +56,19 @@ export interface GridlineStyle {
     width?: number | null;
 }
 
+export type ChartLayoutTarget = 'inner' | 'outer';
+export type ChartLayoutMode = 'edge' | 'factor';
+
+export interface ChartLayout {
+    layoutTarget?: ChartLayoutTarget | null;
+    xMode?: ChartLayoutMode | null;
+    yMode?: ChartLayoutMode | null;
+    x?: number | null;
+    y?: number | null;
+    w?: number | null;
+    h?: number | null;
+}
+
 /**
  * @deprecated Use DataSeries from ./data-series.ts instead
  */
@@ -96,6 +109,7 @@ export class Chart {
     #titleText: string | null = null;
     #titleFont: Font | null = null;
     #plotArea: DataSeries[] = [];
+    #plotAreaLayout: ChartLayout | null = null;
 
     // Axis titles
     #xAxisTitle: string | null = null;
@@ -449,6 +463,21 @@ export class Chart {
      */
     public setPlotArea(plotArea: DataSeries[]): this {
         this.#plotArea = [...plotArea];
+        return this;
+    }
+
+    /**
+     * Get plot area layout settings.
+     */
+    public getPlotAreaLayout(): ChartLayout | null {
+        return this.#plotAreaLayout;
+    }
+
+    /**
+     * Set plot area layout settings.
+     */
+    public setPlotAreaLayout(layout: ChartLayout | null): this {
+        this.#plotAreaLayout = layout;
         return this;
     }
 

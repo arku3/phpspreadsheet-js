@@ -10,7 +10,13 @@ import { Font } from '../style/font.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Column as AutoFilterColumn } from '../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../worksheet/auto-filter/column/rule.ts';
-import { Chart, type ChartSeriesModel, type GridlineStyle, type LegendPosition } from '../worksheet/chart/chart.ts';
+import {
+    Chart,
+    type ChartLayout,
+    type ChartSeriesModel,
+    type GridlineStyle,
+    type LegendPosition,
+} from '../worksheet/chart/chart.ts';
 import { DataLabels, type DataLabelPosition } from '../worksheet/chart/data-labels.ts';
 import { DataSeriesValues } from '../worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../worksheet/chart/data-series.ts';
@@ -1664,6 +1670,64 @@ export class XlsxReader implements IReader {
         return font;
     }
 
+    static #parsePlotAreaLayout(chartXml: string): ChartLayout | null {
+        const plotAreaMatch = chartXml.match(/<c:plotArea\b[^>]*>([\s\S]*?)<\/c:plotArea>/);
+        if (!plotAreaMatch || !plotAreaMatch[1]) {
+            return null;
+        }
+
+        const plotAreaInner = plotAreaMatch[1];
+        const layoutMatch = XlsxReader.#matchFirstXmlElement(plotAreaInner, 'c:layout');
+        if (!layoutMatch) {
+            return null;
+        }
+
+        const manualLayoutMatch = XlsxReader.#matchFirstXmlElement(layoutMatch.inner, 'c:manualLayout');
+        if (!manualLayoutMatch) {
+            return null;
+        }
+
+        const manualLayoutInner = manualLayoutMatch.inner;
+        const layoutTargetRaw = manualLayoutInner.match(/<c:layoutTarget\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const xModeRaw = manualLayoutInner.match(/<c:xMode\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const yModeRaw = manualLayoutInner.match(/<c:yMode\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const xRaw = manualLayoutInner.match(/<c:x\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const yRaw = manualLayoutInner.match(/<c:y\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const wRaw = manualLayoutInner.match(/<c:w\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const hRaw = manualLayoutInner.match(/<c:h\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+
+        const layout: ChartLayout = {};
+
+        if (layoutTargetRaw !== null) {
+            layout.layoutTarget = XlsxReader.decodeXmlEntities(layoutTargetRaw) as ChartLayout['layoutTarget'];
+        }
+        if (xModeRaw !== null) {
+            layout.xMode = XlsxReader.decodeXmlEntities(xModeRaw) as ChartLayout['xMode'];
+        }
+        if (yModeRaw !== null) {
+            layout.yMode = XlsxReader.decodeXmlEntities(yModeRaw) as ChartLayout['yMode'];
+        }
+
+        const x = XlsxReader.#parseXsdFloat(xRaw);
+        if (x !== null) {
+            layout.x = x;
+        }
+        const y = XlsxReader.#parseXsdFloat(yRaw);
+        if (y !== null) {
+            layout.y = y;
+        }
+        const w = XlsxReader.#parseXsdFloat(wRaw);
+        if (w !== null) {
+            layout.w = w;
+        }
+        const h = XlsxReader.#parseXsdFloat(hRaw);
+        if (h !== null) {
+            layout.h = h;
+        }
+
+        return layout;
+    }
+
     /**
      * Parse font styling from data labels XML.
      * Looks for c:txPr/c:rich/a:p/a:r/a:rPr and extracts font properties.
@@ -1824,6 +1888,7 @@ export class XlsxReader implements IReader {
             yAxisMajorGridlineStyle: GridlineStyle | null;
             yAxisMinorGridlineStyle: GridlineStyle | null;
         } | null;
+        layout: ChartLayout | null;
     } {
         const dataSeries: DataSeries[] = [];
         let legend: { position: LegendPosition; title?: string; overlay: boolean } | null = null;
@@ -1841,6 +1906,7 @@ export class XlsxReader implements IReader {
             yAxisMajorGridlineStyle: GridlineStyle | null;
             yAxisMinorGridlineStyle: GridlineStyle | null;
         } | null = null;
+        let layout: ChartLayout | null = null;
 
         // Parse legend
         const legendMatch = chartXml.match(/<c:legend\b[^>]*>([\s\S]*?)<\/c:legend>/);
@@ -1876,10 +1942,12 @@ export class XlsxReader implements IReader {
         // Determine chart type from plot area
         const plotAreaMatch = chartXml.match(/<c:plotArea\b[^>]*>([\s\S]*?)<\/c:plotArea>/);
         if (!plotAreaMatch || !plotAreaMatch[1]) {
-            return { dataSeries, legend, axes };
+            return { dataSeries, legend, axes, layout };
         }
 
         const plotAreaInner = plotAreaMatch[1];
+
+        layout = XlsxReader.#parseChartPlotAreaLayout(plotAreaInner);
 
         // Parse axis titles and gridlines
         const axisMatches = plotAreaInner.matchAll(/<c:(catAx|dateAx|valAx)\b[^>]*>([\s\S]*?)<\/c:\1>/g);
@@ -2317,7 +2385,76 @@ export class XlsxReader implements IReader {
             dataSeries.push(series);
         }
 
-        return { dataSeries, legend, axes };
+        return { dataSeries, legend, axes, layout };
+    }
+
+    static #parseChartPlotAreaLayout(plotAreaInner: string): ChartLayout | null {
+        const layoutMatch = plotAreaInner.match(/<c:layout\b[^>]*>([\s\S]*?)<\/c:layout>/);
+        if (!layoutMatch || !layoutMatch[1]) {
+            return null;
+        }
+
+        const manualLayoutMatch = layoutMatch[1].match(/<c:manualLayout\b[^>]*>([\s\S]*?)<\/c:manualLayout>/);
+        if (!manualLayoutMatch || !manualLayoutMatch[1]) {
+            return null;
+        }
+
+        const manualLayoutInner = manualLayoutMatch[1];
+        const readAttr = (tag: string): string | null => {
+            const match = manualLayoutInner.match(new RegExp(`<c:${tag}\\b([^>]*)/?>(?:[\\s\\S]*?<\\/c:${tag}\\s*>)?`));
+            if (!match) {
+                return null;
+            }
+            return XlsxReader.#extractXmlAttribute(match[1] ?? '', 'val');
+        };
+
+        const layout: ChartLayout = {};
+
+        const layoutTarget = readAttr('layoutTarget');
+        if (layoutTarget !== null) {
+            const decoded = XlsxReader.decodeXmlEntities(layoutTarget);
+            if (decoded === 'inner' || decoded === 'outer') {
+                layout.layoutTarget = decoded;
+            }
+        }
+
+        const xMode = readAttr('xMode');
+        if (xMode !== null) {
+            const decoded = XlsxReader.decodeXmlEntities(xMode);
+            if (decoded === 'edge' || decoded === 'factor') {
+                layout.xMode = decoded;
+            }
+        }
+
+        const yMode = readAttr('yMode');
+        if (yMode !== null) {
+            const decoded = XlsxReader.decodeXmlEntities(yMode);
+            if (decoded === 'edge' || decoded === 'factor') {
+                layout.yMode = decoded;
+            }
+        }
+
+        const x = XlsxReader.#parseXsdFloat(readAttr('x'));
+        if (x !== null) {
+            layout.x = x;
+        }
+
+        const y = XlsxReader.#parseXsdFloat(readAttr('y'));
+        if (y !== null) {
+            layout.y = y;
+        }
+
+        const w = XlsxReader.#parseXsdFloat(readAttr('w'));
+        if (w !== null) {
+            layout.w = w;
+        }
+
+        const h = XlsxReader.#parseXsdFloat(readAttr('h'));
+        if (h !== null) {
+            layout.h = h;
+        }
+
+        return Object.keys(layout).length > 0 ? layout : null;
     }
 
     static #parseRichTextFromXml(textXml: string): RichText {
@@ -2686,11 +2823,18 @@ export class XlsxReader implements IReader {
                         if (titleFont) {
                             chart.setTitleFont(titleFont);
                         }
+                        const plotAreaLayout = XlsxReader.#parsePlotAreaLayout(chartXml);
+                        if (plotAreaLayout) {
+                            chart.setPlotAreaLayout(plotAreaLayout);
+                        }
                         chart.setSeries(XlsxReader.#parseChartSeries(chartXml));
                         // Parse new-style chart data with styling
-                        const { dataSeries, legend, axes } = XlsxReader.#parseChartDataWithStyling(chartXml);
+                        const { dataSeries, legend, axes, layout } = XlsxReader.#parseChartDataWithStyling(chartXml);
                         if (dataSeries.length > 0) {
                             chart.setPlotArea(dataSeries);
+                        }
+                        if (layout) {
+                            chart.setPlotAreaLayout(layout);
                         }
                         if (legend) {
                             chart.setLegendPosition(legend.position);
