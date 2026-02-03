@@ -5,10 +5,12 @@ import { NamedRange } from '../core/named-range.ts';
 import { Spreadsheet } from '../core/spreadsheet.ts';
 import { Worksheet } from '../core/worksheet.ts';
 import { RichText } from '../rich-text/rich-text.ts';
+import { Color } from '../style/color.ts';
+import { Font } from '../style/font.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Column as AutoFilterColumn } from '../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../worksheet/auto-filter/column/rule.ts';
-import { Chart, type ChartSeriesModel, type LegendPosition } from '../worksheet/chart/chart.ts';
+import { Chart, type ChartSeriesModel, type GridlineStyle, type LegendPosition } from '../worksheet/chart/chart.ts';
 import { DataLabels, type DataLabelPosition } from '../worksheet/chart/data-labels.ts';
 import { DataSeriesValues } from '../worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../worksheet/chart/data-series.ts';
@@ -1477,6 +1479,239 @@ export class XlsxReader implements IReader {
     }
 
     /**
+     * Parse font styling from axis title XML.
+     * Looks for c:title/c:tx/c:rich/a:p/a:r/a:rPr and extracts font properties.
+     */
+    static #parseChartTitleFont(axisInner: string): Font | null {
+        const titleMatch = axisInner.match(/<c:title\b[^>]*>([\s\S]*?)<\/c:title>/);
+        if (!titleMatch || !titleMatch[1]) {
+            return null;
+        }
+
+        const titleInner = titleMatch[1];
+        const txMatch = titleInner.match(/<c:tx\b[^>]*>([\s\S]*?)<\/c:tx>/);
+        if (!txMatch || !txMatch[1]) {
+            return null;
+        }
+
+        const txInner = txMatch[1];
+        const richMatch = txInner.match(/<c:rich\b[^>]*>([\s\S]*?)<\/c:rich>/);
+        if (!richMatch || !richMatch[1]) {
+            return null;
+        }
+
+        const richInner = richMatch[1];
+        const pMatch = richInner.match(/<a:p\b[^>]*>([\s\S]*?)<\/a:p>/);
+        if (!pMatch || !pMatch[1]) {
+            return null;
+        }
+
+        const pInner = pMatch[1];
+        const rMatch = pInner.match(/<a:r\b[^>]*>([\s\S]*?)<\/a:r>/);
+        if (!rMatch || !rMatch[1]) {
+            return null;
+        }
+
+        const rInner = rMatch[1];
+        const rPrMatch = rInner.match(/<a:rPr\b([^>]*)>([\s\S]*?)<\/a:rPr>/);
+        if (!rPrMatch || !rPrMatch[1] || !rPrMatch[2]) {
+            return null;
+        }
+
+        const rPrAttrs = rPrMatch[1];
+        const rPrInner = rPrMatch[2];
+
+        const font = new Font();
+
+        // Parse font name from a:rFont or a:latin
+        const rFontMatch = rPrInner.match(/<a:rFont\b[^>]*\bval="([^"]*)"/);
+        const latinMatch = rPrInner.match(/<a:latin\b[^>]*\btypeface="([^"]*)"/);
+        const fontName = rFontMatch?.[1] ?? latinMatch?.[1];
+        if (fontName) {
+            font.setName(XlsxReader.decodeXmlEntities(fontName));
+        }
+
+        // Parse font size (in hundredths of a point, divide by 100)
+        const szMatch = XlsxReader.#extractXmlAttribute(rPrAttrs, 'sz');
+        if (szMatch !== null) {
+            const szValue = Number.parseInt(szMatch, 10);
+            if (Number.isFinite(szValue) && szValue > 0) {
+                font.setSize(szValue / 100);
+            }
+        }
+
+        // Parse bold
+        if (/<a:b\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'b') === '1') {
+            font.setBold(true);
+        }
+
+        // Parse italic
+        if (/<a:i\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'i') === '1') {
+            font.setItalic(true);
+        }
+
+        // Parse color from a:solidFill/a:srgbClr or a:solidFill/a:schemeClr
+        const solidFillMatch = rPrInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+        if (solidFillMatch && solidFillMatch[1]) {
+            const solidFillInner = solidFillMatch[1];
+            const srgbClrMatch = solidFillInner.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+            if (srgbClrMatch && srgbClrMatch[1]) {
+                const colorValue = srgbClrMatch[1];
+                // Ensure color has proper format (prepend FF for ARGB if needed)
+                if (colorValue.length === 6) {
+                    font.getColor().setARGB('FF' + colorValue.toUpperCase());
+                } else if (colorValue.length === 8) {
+                    font.getColor().setARGB(colorValue.toUpperCase());
+                }
+            }
+        }
+
+        return font;
+    }
+
+    /**
+     * Parse font styling from data labels XML.
+     * Looks for c:txPr/c:rich/a:p/a:r/a:rPr and extracts font properties.
+     */
+    static #parseDataLabelFont(dLblsInner: string): Font | null {
+        const txPrMatch = dLblsInner.match(/<c:txPr\b[^>]*>([\s\S]*?)<\/c:txPr>/);
+        if (!txPrMatch || !txPrMatch[1]) {
+            return null;
+        }
+
+        const txPrInner = txPrMatch[1];
+        const richMatch = txPrInner.match(/<c:rich\b[^>]*>([\s\S]*?)<\/c:rich>/);
+        if (!richMatch || !richMatch[1]) {
+            return null;
+        }
+
+        const richInner = richMatch[1];
+        const pMatch = richInner.match(/<a:p\b[^>]*>([\s\S]*?)<\/a:p>/);
+        if (!pMatch || !pMatch[1]) {
+            return null;
+        }
+
+        const pInner = pMatch[1];
+        const rMatch = pInner.match(/<a:r\b[^>]*>([\s\S]*?)<\/a:r>/);
+        if (!rMatch || !rMatch[1]) {
+            return null;
+        }
+
+        const rInner = rMatch[1];
+        const rPrMatch = rInner.match(/<a:rPr\b([^>]*)>([\s\S]*?)<\/a:rPr>/);
+        if (!rPrMatch || !rPrMatch[1] || !rPrMatch[2]) {
+            return null;
+        }
+
+        const rPrAttrs = rPrMatch[1];
+        const rPrInner = rPrMatch[2];
+
+        const font = new Font();
+
+        // Parse font name from a:rFont or a:latin
+        const rFontMatch = rPrInner.match(/<a:rFont\b[^>]*\bval="([^"]*)"/);
+        const latinMatch = rPrInner.match(/<a:latin\b[^>]*\btypeface="([^"]*)"/);
+        const fontName = rFontMatch?.[1] ?? latinMatch?.[1];
+        if (fontName) {
+            font.setName(XlsxReader.decodeXmlEntities(fontName));
+        }
+
+        // Parse font size (in hundredths of a point, divide by 100)
+        const szMatch = XlsxReader.#extractXmlAttribute(rPrAttrs, 'sz');
+        if (szMatch !== null) {
+            const szValue = Number.parseInt(szMatch, 10);
+            if (Number.isFinite(szValue) && szValue > 0) {
+                font.setSize(szValue / 100);
+            }
+        }
+
+        // Parse bold
+        if (/<a:b\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'b') === '1') {
+            font.setBold(true);
+        }
+
+        // Parse italic
+        if (/<a:i\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'i') === '1') {
+            font.setItalic(true);
+        }
+
+        // Parse color from a:solidFill/a:srgbClr or a:solidFill/a:schemeClr
+        const solidFillMatch = rPrInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+        if (solidFillMatch && solidFillMatch[1]) {
+            const solidFillInner = solidFillMatch[1];
+            const srgbClrMatch = solidFillInner.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+            if (srgbClrMatch && srgbClrMatch[1]) {
+                const colorValue = srgbClrMatch[1];
+                // Ensure color has proper format (prepend FF for ARGB if needed)
+                if (colorValue.length === 6) {
+                    font.getColor().setARGB('FF' + colorValue.toUpperCase());
+                } else if (colorValue.length === 8) {
+                    font.getColor().setARGB(colorValue.toUpperCase());
+                }
+            }
+        }
+
+        return font;
+    }
+
+    /**
+     * Parse gridline styling from axis XML.
+     * Looks for c:majorGridlines or c:minorGridlines with c:spPr/a:ln.
+     */
+    static #parseGridlineStyle(axisInner: string, type: 'major' | 'minor'): GridlineStyle | null {
+        const gridlineTag = type === 'major' ? 'c:majorGridlines' : 'c:minorGridlines';
+        const gridlineMatch = axisInner.match(new RegExp(`<${gridlineTag}\\b[^>]*>([\\s\\S]*?)</${gridlineTag}>`));
+
+        if (!gridlineMatch || !gridlineMatch[1]) {
+            return null;
+        }
+
+        const gridlineInner = gridlineMatch[1];
+        const spPrMatch = gridlineInner.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
+        if (!spPrMatch || !spPrMatch[1]) {
+            return null;
+        }
+
+        const spPrInner = spPrMatch[1];
+        const lnMatch = spPrInner.match(/<a:ln\b([^>]*)>([\s\S]*?)<\/a:ln>/);
+        if (!lnMatch || !lnMatch[1] || !lnMatch[2]) {
+            return null;
+        }
+
+        const lnAttrs = lnMatch[1];
+        const lnInner = lnMatch[2];
+
+        const style: GridlineStyle = {};
+
+        // Parse line width (in EMUs, divide by 12700 to get points)
+        const widthAttr = XlsxReader.#extractXmlAttribute(lnAttrs, 'w');
+        if (widthAttr !== null) {
+            const widthEmu = Number.parseInt(widthAttr, 10);
+            if (Number.isFinite(widthEmu) && widthEmu > 0) {
+                style.width = widthEmu / 12700;
+            }
+        }
+
+        // Parse color from a:solidFill/a:srgbClr or a:solidFill/a:schemeClr
+        const solidFillMatch = lnInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+        if (solidFillMatch && solidFillMatch[1]) {
+            const solidFillInner = solidFillMatch[1];
+            const srgbClrMatch = solidFillInner.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+            if (srgbClrMatch && srgbClrMatch[1]) {
+                const colorValue = srgbClrMatch[1];
+                // Ensure color has proper format (prepend FF for ARGB if needed)
+                if (colorValue.length === 6) {
+                    style.color = 'FF' + colorValue.toUpperCase();
+                } else if (colorValue.length === 8) {
+                    style.color = colorValue.toUpperCase();
+                }
+            }
+        }
+
+        return Object.keys(style).length > 0 ? style : null;
+    }
+
+    /**
      * Parse chart data with styling (DataSeries, legend, etc.)
      */
     static #parseChartDataWithStyling(chartXml: string): {
@@ -1485,10 +1720,16 @@ export class XlsxReader implements IReader {
         axes: {
             xAxisTitle: string | null;
             yAxisTitle: string | null;
+            xAxisTitleFont: Font | null;
+            yAxisTitleFont: Font | null;
             xMajorGridlines: boolean | null;
             xMinorGridlines: boolean | null;
             yMajorGridlines: boolean | null;
             yMinorGridlines: boolean | null;
+            xAxisMajorGridlineStyle: GridlineStyle | null;
+            xAxisMinorGridlineStyle: GridlineStyle | null;
+            yAxisMajorGridlineStyle: GridlineStyle | null;
+            yAxisMinorGridlineStyle: GridlineStyle | null;
         } | null;
     } {
         const dataSeries: DataSeries[] = [];
@@ -1496,10 +1737,16 @@ export class XlsxReader implements IReader {
         let axes: {
             xAxisTitle: string | null;
             yAxisTitle: string | null;
+            xAxisTitleFont: Font | null;
+            yAxisTitleFont: Font | null;
             xMajorGridlines: boolean | null;
             xMinorGridlines: boolean | null;
             yMajorGridlines: boolean | null;
             yMinorGridlines: boolean | null;
+            xAxisMajorGridlineStyle: GridlineStyle | null;
+            xAxisMinorGridlineStyle: GridlineStyle | null;
+            yAxisMajorGridlineStyle: GridlineStyle | null;
+            yAxisMinorGridlineStyle: GridlineStyle | null;
         } | null = null;
 
         // Parse legend
@@ -1545,28 +1792,46 @@ export class XlsxReader implements IReader {
         const axisMatches = plotAreaInner.matchAll(/<c:(catAx|dateAx|valAx)\b[^>]*>([\s\S]*?)<\/c:\1>/g);
         let xAxisTitle: string | null = null;
         let yAxisTitle: string | null = null;
+        let xAxisTitleFont: Font | null = null;
+        let yAxisTitleFont: Font | null = null;
         let xMajorGridlines: boolean | null = null;
         let xMinorGridlines: boolean | null = null;
         let yMajorGridlines: boolean | null = null;
         let yMinorGridlines: boolean | null = null;
+        let xAxisMajorGridlineStyle: GridlineStyle | null = null;
+        let xAxisMinorGridlineStyle: GridlineStyle | null = null;
+        let yAxisMajorGridlineStyle: GridlineStyle | null = null;
+        let yAxisMinorGridlineStyle: GridlineStyle | null = null;
         for (const axisMatch of axisMatches) {
             const axisType = axisMatch[1] ?? '';
             const axisInner = axisMatch[2] ?? '';
             const axisXml = `<c:${axisType}>${axisInner}</c:${axisType}>`;
             const titleText = XlsxReader.#parseChartTitleText(axisXml);
+            const titleFont = XlsxReader.#parseChartTitleFont(axisInner);
             const axPos = axisInner.match(/<c:axPos\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
             const hasMajorGridlines = /<c:majorGridlines\b[^>]*>/.test(axisInner);
             const hasMinorGridlines = /<c:minorGridlines\b[^>]*>/.test(axisInner);
+            const majorGridlineStyle = hasMajorGridlines ? XlsxReader.#parseGridlineStyle(axisInner, 'major') : null;
+            const minorGridlineStyle = hasMinorGridlines ? XlsxReader.#parseGridlineStyle(axisInner, 'minor') : null;
 
             if (axisType === 'catAx' || axisType === 'dateAx') {
                 if (titleText) {
                     xAxisTitle = titleText;
                 }
+                if (titleFont) {
+                    xAxisTitleFont = titleFont;
+                }
                 if (hasMajorGridlines) {
                     xMajorGridlines = true;
                 }
+                if (majorGridlineStyle) {
+                    xAxisMajorGridlineStyle = majorGridlineStyle;
+                }
                 if (hasMinorGridlines) {
                     xMinorGridlines = true;
+                }
+                if (minorGridlineStyle) {
+                    xAxisMinorGridlineStyle = minorGridlineStyle;
                 }
             } else if (axisType === 'valAx') {
                 const isXAxis = axPos === 'b' || axPos === 't';
@@ -1577,11 +1842,25 @@ export class XlsxReader implements IReader {
                         yAxisTitle = titleText;
                     }
                 }
+                if (titleFont) {
+                    if (isXAxis) {
+                        xAxisTitleFont = titleFont;
+                    } else {
+                        yAxisTitleFont = titleFont;
+                    }
+                }
                 if (hasMajorGridlines) {
                     if (isXAxis) {
                         xMajorGridlines = true;
                     } else {
                         yMajorGridlines = true;
+                    }
+                }
+                if (majorGridlineStyle) {
+                    if (isXAxis) {
+                        xAxisMajorGridlineStyle = majorGridlineStyle;
+                    } else {
+                        yAxisMajorGridlineStyle = majorGridlineStyle;
                     }
                 }
                 if (hasMinorGridlines) {
@@ -1591,24 +1870,43 @@ export class XlsxReader implements IReader {
                         yMinorGridlines = true;
                     }
                 }
+                if (minorGridlineStyle) {
+                    if (isXAxis) {
+                        xAxisMinorGridlineStyle = minorGridlineStyle;
+                    } else {
+                        yAxisMinorGridlineStyle = minorGridlineStyle;
+                    }
+                }
             }
         }
 
         if (
             xAxisTitle !== null ||
             yAxisTitle !== null ||
+            xAxisTitleFont !== null ||
+            yAxisTitleFont !== null ||
             xMajorGridlines !== null ||
             xMinorGridlines !== null ||
             yMajorGridlines !== null ||
-            yMinorGridlines !== null
+            yMinorGridlines !== null ||
+            xAxisMajorGridlineStyle !== null ||
+            xAxisMinorGridlineStyle !== null ||
+            yAxisMajorGridlineStyle !== null ||
+            yAxisMinorGridlineStyle !== null
         ) {
             axes = {
                 xAxisTitle,
                 yAxisTitle,
+                xAxisTitleFont,
+                yAxisTitleFont,
                 xMajorGridlines,
                 xMinorGridlines,
                 yMajorGridlines,
                 yMinorGridlines,
+                xAxisMajorGridlineStyle,
+                xAxisMinorGridlineStyle,
+                yAxisMajorGridlineStyle,
+                yAxisMinorGridlineStyle,
             };
         }
 
@@ -1706,6 +2004,65 @@ export class XlsxReader implements IReader {
                     const dLblPosMatch = dLblsXml.match(/<c:dLblPos\s+val=\"([^\"]*)\"/);
                     if (dLblPosMatch && dLblPosMatch[1]) {
                         chartDataLabels.setPosition(dLblPosMatch[1] as DataLabelPosition);
+                    }
+
+                    // Parse number format
+                    const numFmtMatch = dLblsXml.match(/<c:numFmt\b[^>]*>/);
+                    if (numFmtMatch && numFmtMatch[0]) {
+                        const formatCode = XlsxReader.#extractXmlAttribute(numFmtMatch[0], 'formatCode');
+                        const sourceLinked = XlsxReader.#extractXmlAttribute(numFmtMatch[0], 'sourceLinked');
+                        if (formatCode) {
+                            chartDataLabels.setNumberFormat(formatCode);
+                        }
+                        if (sourceLinked) {
+                            chartDataLabels.setNumberFormatLinked(XlsxReader.#castXsdBoolean(sourceLinked));
+                        }
+                    }
+
+                    // Parse font
+                    const dLblFont = XlsxReader.#parseDataLabelFont(dLblsXml);
+                    if (dLblFont) {
+                        chartDataLabels.setFont(dLblFont);
+                    }
+
+                    // Parse fill color from c:spPr/a:solidFill/a:srgbClr
+                    const dLblSpPrMatch = dLblsXml.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
+                    if (dLblSpPrMatch && dLblSpPrMatch[1]) {
+                        const dLblSpPrInner = dLblSpPrMatch[1];
+                        const fillSolidMatch = dLblSpPrInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+                        if (fillSolidMatch && fillSolidMatch[1]) {
+                            const srgbFillMatch = fillSolidMatch[1].match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+                            if (srgbFillMatch && srgbFillMatch[1]) {
+                                const fillColor = new Color();
+                                const colorValue = srgbFillMatch[1];
+                                if (colorValue.length === 6) {
+                                    fillColor.setARGB('FF' + colorValue.toUpperCase());
+                                } else if (colorValue.length === 8) {
+                                    fillColor.setARGB(colorValue.toUpperCase());
+                                }
+                                chartDataLabels.setFillColor(fillColor);
+                            }
+                        }
+
+                        // Parse border color from c:spPr/a:ln/a:solidFill/a:srgbClr
+                        const lnMatch = dLblSpPrInner.match(/<a:ln\b[^>]*>([\s\S]*?)<\/a:ln>/);
+                        if (lnMatch && lnMatch[1]) {
+                            const lnInner = lnMatch[1];
+                            const lnSolidMatch = lnInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+                            if (lnSolidMatch && lnSolidMatch[1]) {
+                                const srgbLnMatch = lnSolidMatch[1].match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+                                if (srgbLnMatch && srgbLnMatch[1]) {
+                                    const borderColor = new Color();
+                                    const colorValue = srgbLnMatch[1];
+                                    if (colorValue.length === 6) {
+                                        borderColor.setARGB('FF' + colorValue.toUpperCase());
+                                    } else if (colorValue.length === 8) {
+                                        borderColor.setARGB(colorValue.toUpperCase());
+                                    }
+                                    chartDataLabels.setBorderColor(borderColor);
+                                }
+                            }
+                        }
                     }
                 }
                 break;
@@ -2249,13 +2606,31 @@ export class XlsxReader implements IReader {
                             if (axes.xAxisTitle !== null) {
                                 chart.setXAxisTitle(axes.xAxisTitle);
                             }
+                            if (axes.xAxisTitleFont !== null) {
+                                chart.setXAxisTitleFont(axes.xAxisTitleFont);
+                            }
                             if (axes.yAxisTitle !== null) {
                                 chart.setYAxisTitle(axes.yAxisTitle);
+                            }
+                            if (axes.yAxisTitleFont !== null) {
+                                chart.setYAxisTitleFont(axes.yAxisTitleFont);
                             }
                             chart.setXAxisMajorGridlines(axes.xMajorGridlines);
                             chart.setXAxisMinorGridlines(axes.xMinorGridlines);
                             chart.setYAxisMajorGridlines(axes.yMajorGridlines);
                             chart.setYAxisMinorGridlines(axes.yMinorGridlines);
+                            if (axes.xAxisMajorGridlineStyle !== null) {
+                                chart.setXAxisMajorGridlineStyle(axes.xAxisMajorGridlineStyle);
+                            }
+                            if (axes.xAxisMinorGridlineStyle !== null) {
+                                chart.setXAxisMinorGridlineStyle(axes.xAxisMinorGridlineStyle);
+                            }
+                            if (axes.yAxisMajorGridlineStyle !== null) {
+                                chart.setYAxisMajorGridlineStyle(axes.yAxisMajorGridlineStyle);
+                            }
+                            if (axes.yAxisMinorGridlineStyle !== null) {
+                                chart.setYAxisMinorGridlineStyle(axes.yAxisMinorGridlineStyle);
+                            }
                         }
                     }
 

@@ -1,9 +1,8 @@
 import { Color } from '../../style/color.ts';
+import { Font } from '../../style/font.ts';
 
-/**
- * Data label configuration for chart series.
- * Mirrors PhpSpreadsheet Layout data label properties.
- */
+export type DataLabelPosition = 'outEnd' | 'inEnd' | 'ctr' | 'inBase' | 'outBase' | 'bestFit' | 't';
+
 export interface DataLabelOptions {
     showValue?: boolean | null;
     showCategoryName?: boolean | null;
@@ -15,9 +14,10 @@ export interface DataLabelOptions {
     position?: DataLabelPosition | null;
     fillColor?: Color | null;
     borderColor?: Color | null;
+    font?: Font | null;
+    numberFormat?: string | null;
+    numberFormatLinked?: boolean | null;
 }
-
-export type DataLabelPosition = 'outEnd' | 'inEnd' | 'ctr' | 'inBase' | 'outBase' | 'bestFit' | 't';
 
 export class DataLabels {
     #showValue: boolean | null = null;
@@ -30,6 +30,9 @@ export class DataLabels {
     #position: DataLabelPosition | null = null;
     #fillColor: Color | null = null;
     #borderColor: Color | null = null;
+    #font: Font | null = null;
+    #numberFormat: string | null = null;
+    #numberFormatLinked: boolean | null = null;
 
     constructor(options?: DataLabelOptions) {
         if (options) {
@@ -43,6 +46,9 @@ export class DataLabels {
             this.#position = options.position ?? null;
             this.#fillColor = options.fillColor ?? null;
             this.#borderColor = options.borderColor ?? null;
+            this.#font = options.font ?? null;
+            this.#numberFormat = options.numberFormat ?? null;
+            this.#numberFormatLinked = options.numberFormatLinked ?? null;
         }
     }
 
@@ -59,7 +65,6 @@ export class DataLabels {
         );
     }
 
-    // Getters and setters
     getShowValue(): boolean | null {
         return this.#showValue;
     }
@@ -147,6 +152,33 @@ export class DataLabels {
 
     setBorderColor(color: Color | null): this {
         this.#borderColor = color;
+        return this;
+    }
+
+    getFont(): Font | null {
+        return this.#font;
+    }
+
+    setFont(font: Font | null): this {
+        this.#font = font;
+        return this;
+    }
+
+    getNumberFormat(): string | null {
+        return this.#numberFormat;
+    }
+
+    setNumberFormat(format: string | null): this {
+        this.#numberFormat = format;
+        return this;
+    }
+
+    getNumberFormatLinked(): boolean | null {
+        return this.#numberFormatLinked;
+    }
+
+    setNumberFormatLinked(linked: boolean | null): this {
+        this.#numberFormatLinked = linked;
         return this;
     }
 }

@@ -3,6 +3,8 @@ import unzipper from 'unzipper';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
+import { Color } from '../src/style/color.ts';
+import { Font } from '../src/style/font.ts';
 import { Chart } from '../src/worksheet/chart/chart.ts';
 import { DataLabels } from '../src/worksheet/chart/data-labels.ts';
 import { DataSeriesValues } from '../src/worksheet/chart/data-series-values.ts';
@@ -500,6 +502,273 @@ describe('Chart Data Labels', () => {
                 expect(series.getDataLabels()).not.toBeNull();
                 expect(series.getDataLabels()!.hasAnyLabel()).toBe(true);
             }
+        });
+    });
+
+    describe('DataLabels styling', () => {
+        test('should write styled data labels with font to chart XML', async () => {
+            const spreadsheet = new Spreadsheet();
+            const worksheet = spreadsheet.createSheet('StyledLabels');
+
+            worksheet.getCell('A1').setValue('Category');
+            worksheet.getCell('A2').setValue('A');
+            worksheet.getCell('A3').setValue('B');
+            worksheet.getCell('B1').setValue('Value');
+            worksheet.getCell('B2').setValue(100);
+            worksheet.getCell('B3').setValue(200);
+
+            const chart = new Chart();
+            const series = new DataSeries('bar');
+            series.setPlotCategory(new DataSeriesValues('String', 'StyledLabels!$A$2:$A$3'));
+            series.addPlotValues(new DataSeriesValues('Number', 'StyledLabels!$B$2:$B$3'));
+
+            const dataLabels = new DataLabels({ showValue: true });
+            const font = new Font();
+            font.setName('Arial');
+            font.setSize(12);
+            font.setBold(true);
+            font.getColor().setARGB('FF0000FF');
+            dataLabels.setFont(font);
+            series.setDataLabels(dataLabels);
+
+            chart.addDataSeries(series);
+            chart.setTopLeftPosition({ cell: 'D5' });
+            worksheet.addChart(chart);
+
+            const writer = new XlsxWriter(spreadsheet);
+            writer.setIncludeCharts(true);
+            const buffer = await writer.writeBuffer();
+
+            const chartXml = await getFirstChartXml(buffer);
+            expect(chartXml).toContain('<c:txPr>');
+            expect(chartXml).toContain('<a:rFont');
+            expect(chartXml).toContain('<a:b>');
+            expect(chartXml).toContain('<a:solidFill>');
+        });
+
+        test('should write styled data labels with number format to chart XML', async () => {
+            const spreadsheet = new Spreadsheet();
+            const worksheet = spreadsheet.createSheet('NumFmtLabels');
+
+            worksheet.getCell('A1').setValue('Category');
+            worksheet.getCell('A2').setValue('A');
+            worksheet.getCell('A3').setValue('B');
+            worksheet.getCell('B1').setValue('Value');
+            worksheet.getCell('B2').setValue(100);
+            worksheet.getCell('B3').setValue(200);
+
+            const chart = new Chart();
+            const series = new DataSeries('bar');
+            series.setPlotCategory(new DataSeriesValues('String', 'NumFmtLabels!$A$2:$A$3'));
+            series.addPlotValues(new DataSeriesValues('Number', 'NumFmtLabels!$B$2:$B$3'));
+
+            const dataLabels = new DataLabels({ showValue: true });
+            dataLabels.setNumberFormat('0.00%');
+            dataLabels.setNumberFormatLinked(false);
+            series.setDataLabels(dataLabels);
+
+            chart.addDataSeries(series);
+            chart.setTopLeftPosition({ cell: 'D5' });
+            worksheet.addChart(chart);
+
+            const writer = new XlsxWriter(spreadsheet);
+            writer.setIncludeCharts(true);
+            const buffer = await writer.writeBuffer();
+
+            const chartXml = await getFirstChartXml(buffer);
+            expect(chartXml).toContain('<c:numFmt');
+            expect(chartXml).toContain('formatCode="0.00%"');
+        });
+
+        test('should write styled data labels with fill and border colors to chart XML', async () => {
+            const spreadsheet = new Spreadsheet();
+            const worksheet = spreadsheet.createSheet('ColorLabels');
+
+            worksheet.getCell('A1').setValue('Category');
+            worksheet.getCell('A2').setValue('A');
+            worksheet.getCell('A3').setValue('B');
+            worksheet.getCell('B1').setValue('Value');
+            worksheet.getCell('B2').setValue(100);
+            worksheet.getCell('B3').setValue(200);
+
+            const chart = new Chart();
+            const series = new DataSeries('bar');
+            series.setPlotCategory(new DataSeriesValues('String', 'ColorLabels!$A$2:$A$3'));
+            series.addPlotValues(new DataSeriesValues('Number', 'ColorLabels!$B$2:$B$3'));
+
+            const dataLabels = new DataLabels({ showValue: true });
+            const fillColor = new Color();
+            fillColor.setARGB('FFFFFF00');
+            dataLabels.setFillColor(fillColor);
+            const borderColor = new Color();
+            borderColor.setARGB('FF000000');
+            dataLabels.setBorderColor(borderColor);
+            series.setDataLabels(dataLabels);
+
+            chart.addDataSeries(series);
+            chart.setTopLeftPosition({ cell: 'D5' });
+            worksheet.addChart(chart);
+
+            const writer = new XlsxWriter(spreadsheet);
+            writer.setIncludeCharts(true);
+            const buffer = await writer.writeBuffer();
+
+            const chartXml = await getFirstChartXml(buffer);
+            expect(chartXml).toContain('<c:spPr>');
+            expect(chartXml).toContain('<a:solidFill>');
+            expect(chartXml).toContain('<a:ln>');
+        });
+
+        test('should round-trip data label font styling through write and read', async () => {
+            const spreadsheet = new Spreadsheet();
+            const worksheet = spreadsheet.createSheet('RoundTripFontLabels');
+
+            worksheet.getCell('A1').setValue('Category');
+            worksheet.getCell('A2').setValue('A');
+            worksheet.getCell('A3').setValue('B');
+            worksheet.getCell('B1').setValue('Value');
+            worksheet.getCell('B2').setValue(100);
+            worksheet.getCell('B3').setValue(200);
+
+            const chart = new Chart();
+            const series = new DataSeries('bar');
+            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripFontLabels!$A$2:$A$3'));
+            series.addPlotValues(new DataSeriesValues('Number', 'RoundTripFontLabels!$B$2:$B$3'));
+
+            const dataLabels = new DataLabels({ showValue: true });
+            const font = new Font();
+            font.setName('Arial');
+            font.setSize(12);
+            font.setBold(true);
+            font.setItalic(true);
+            font.getColor().setARGB('FF0000FF');
+            dataLabels.setFont(font);
+            series.setDataLabels(dataLabels);
+
+            chart.addDataSeries(series);
+            chart.setTopLeftPosition({ cell: 'D5' });
+            worksheet.addChart(chart);
+
+            // Write
+            const writer = new XlsxWriter(spreadsheet);
+            writer.setIncludeCharts(true);
+            const buffer = await writer.writeBuffer();
+
+            // Read back
+            const reader = new XlsxReader();
+            reader.setIncludeCharts(true);
+            const readSpreadsheet = await reader.loadFromBuffer(buffer);
+            const readWorksheet = readSpreadsheet.getSheetByName('RoundTripFontLabels');
+
+            const readChart = readWorksheet!.getChartCollection()[0]!;
+            const readSeries = readChart.getPlotArea()[0]!;
+            const readDataLabels = readSeries.getDataLabels();
+
+            expect(readDataLabels).not.toBeNull();
+            const readFont = readDataLabels!.getFont();
+            expect(readFont).not.toBeNull();
+            expect(readFont!.getName()).toBe('Arial');
+            expect(readFont!.getSize()).toBe(12);
+            expect(readFont!.getBold()).toBe(true);
+            expect(readFont!.getItalic()).toBe(true);
+        });
+
+        test('should round-trip data label number format through write and read', async () => {
+            const spreadsheet = new Spreadsheet();
+            const worksheet = spreadsheet.createSheet('RoundTripNumFmt');
+
+            worksheet.getCell('A1').setValue('Category');
+            worksheet.getCell('A2').setValue('A');
+            worksheet.getCell('A3').setValue('B');
+            worksheet.getCell('B1').setValue('Value');
+            worksheet.getCell('B2').setValue(100);
+            worksheet.getCell('B3').setValue(200);
+
+            const chart = new Chart();
+            const series = new DataSeries('bar');
+            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripNumFmt!$A$2:$A$3'));
+            series.addPlotValues(new DataSeriesValues('Number', 'RoundTripNumFmt!$B$2:$B$3'));
+
+            const dataLabels = new DataLabels({ showValue: true });
+            dataLabels.setNumberFormat('0.00%');
+            dataLabels.setNumberFormatLinked(false);
+            series.setDataLabels(dataLabels);
+
+            chart.addDataSeries(series);
+            chart.setTopLeftPosition({ cell: 'D5' });
+            worksheet.addChart(chart);
+
+            // Write
+            const writer = new XlsxWriter(spreadsheet);
+            writer.setIncludeCharts(true);
+            const buffer = await writer.writeBuffer();
+
+            // Read back
+            const reader = new XlsxReader();
+            reader.setIncludeCharts(true);
+            const readSpreadsheet = await reader.loadFromBuffer(buffer);
+            const readWorksheet = readSpreadsheet.getSheetByName('RoundTripNumFmt');
+
+            const readChart = readWorksheet!.getChartCollection()[0]!;
+            const readSeries = readChart.getPlotArea()[0]!;
+            const readDataLabels = readSeries.getDataLabels();
+
+            expect(readDataLabels).not.toBeNull();
+            expect(readDataLabels!.getNumberFormat()).toBe('0.00%');
+            expect(readDataLabels!.getNumberFormatLinked()).toBe(false);
+        });
+
+        test('should round-trip data label fill and border colors through write and read', async () => {
+            const spreadsheet = new Spreadsheet();
+            const worksheet = spreadsheet.createSheet('RoundTripColors');
+
+            worksheet.getCell('A1').setValue('Category');
+            worksheet.getCell('A2').setValue('A');
+            worksheet.getCell('A3').setValue('B');
+            worksheet.getCell('B1').setValue('Value');
+            worksheet.getCell('B2').setValue(100);
+            worksheet.getCell('B3').setValue(200);
+
+            const chart = new Chart();
+            const series = new DataSeries('bar');
+            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripColors!$A$2:$A$3'));
+            series.addPlotValues(new DataSeriesValues('Number', 'RoundTripColors!$B$2:$B$3'));
+
+            const dataLabels = new DataLabels({ showValue: true });
+            const fillColor = new Color();
+            fillColor.setARGB('FFFFFF00');
+            dataLabels.setFillColor(fillColor);
+            const borderColor = new Color();
+            borderColor.setARGB('FF000000');
+            dataLabels.setBorderColor(borderColor);
+            series.setDataLabels(dataLabels);
+
+            chart.addDataSeries(series);
+            chart.setTopLeftPosition({ cell: 'D5' });
+            worksheet.addChart(chart);
+
+            // Write
+            const writer = new XlsxWriter(spreadsheet);
+            writer.setIncludeCharts(true);
+            const buffer = await writer.writeBuffer();
+
+            // Read back
+            const reader = new XlsxReader();
+            reader.setIncludeCharts(true);
+            const readSpreadsheet = await reader.loadFromBuffer(buffer);
+            const readWorksheet = readSpreadsheet.getSheetByName('RoundTripColors');
+
+            const readChart = readWorksheet!.getChartCollection()[0]!;
+            const readSeries = readChart.getPlotArea()[0]!;
+            const readDataLabels = readSeries.getDataLabels();
+
+            expect(readDataLabels).not.toBeNull();
+            const readFillColor = readDataLabels!.getFillColor();
+            expect(readFillColor).not.toBeNull();
+            expect(readFillColor!.getARGB()).toBe('FFFFFF00');
+            const readBorderColor = readDataLabels!.getBorderColor();
+            expect(readBorderColor).not.toBeNull();
+            expect(readBorderColor!.getARGB()).toBe('FF000000');
         });
     });
 });

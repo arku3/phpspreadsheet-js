@@ -1,7 +1,8 @@
 import { create } from 'xmlbuilder2';
 import type { Worksheet } from '../../core/worksheet.ts';
+import { Font } from '../../style/font.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
-import type { Chart } from '../../worksheet/chart/chart.ts';
+import type { Chart, GridlineStyle } from '../../worksheet/chart/chart.ts';
 import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
 import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
@@ -268,12 +269,74 @@ function writeDataLabels(parent: any, dataLabels: DataLabels | null): void {
     if (position !== null) {
         dLbls.ele('c:dLblPos', { val: position });
     }
+
+    // Write number format
+    const numFmt = dataLabels.getNumberFormat();
+    if (numFmt !== null) {
+        const numFmtLinked = dataLabels.getNumberFormatLinked();
+        dLbls.ele('c:numFmt', {
+            formatCode: numFmt,
+            sourceLinked: numFmtLinked !== null ? (numFmtLinked ? '1' : '0') : '0',
+        });
+    }
+
+    // Write font styling (txPr)
+    const font = dataLabels.getFont();
+    if (font) {
+        const txPr = dLbls.ele('c:txPr');
+        txPr.ele('a:bodyPr');
+        txPr.ele('a:lstStyle');
+        const p = txPr.ele('a:p');
+        const r = p.ele('a:r');
+        const rPr = r.ele('a:rPr');
+
+        const fontName = font.getName();
+        if (fontName) {
+            rPr.ele('a:rFont', { val: fontName });
+        }
+        const fontSize = font.getSize();
+        if (fontSize) {
+            rPr.ele('a:sz', { val: String(fontSize * 100) });
+        }
+        if (font.getBold()) {
+            rPr.ele('a:b');
+        }
+        if (font.getItalic()) {
+            rPr.ele('a:i');
+        }
+        const fontColor = font.getColor().getARGB();
+        if (fontColor) {
+            const solidFill = rPr.ele('a:solidFill');
+            solidFill.ele('a:srgbClr', { val: fontColor.substring(2) });
+        }
+    }
+
+    // Write border and fill styling (spPr)
+    const fillColor = dataLabels.getFillColor();
+    const borderColor = dataLabels.getBorderColor();
+    if (fillColor || borderColor) {
+        const spPr = dLbls.ele('c:spPr');
+        if (fillColor) {
+            const fillArgb = fillColor.getARGB();
+            if (fillArgb) {
+                const solidFill = spPr.ele('a:solidFill');
+                solidFill.ele('a:srgbClr', { val: fillArgb.substring(2) });
+            }
+        }
+        if (borderColor) {
+            const borderArgb = borderColor.getARGB();
+            if (borderArgb) {
+                const ln = spPr.ele('a:ln');
+                ln.ele('a:solidFill').ele('a:srgbClr', { val: borderArgb.substring(2) });
+            }
+        }
+    }
 }
 
 /**
- * Write an axis title element.
+ * Write an axis title element with optional font styling.
  */
-function writeAxisTitle(parent: any, titleText: string): void {
+function writeAxisTitle(parent: any, titleText: string, font: Font | null = null): void {
     const title = parent.ele('c:title');
     const tx = title.ele('c:tx');
     const rich = tx.ele('c:rich');
@@ -281,9 +344,53 @@ function writeAxisTitle(parent: any, titleText: string): void {
     rich.ele('a:lstStyle');
     const p = rich.ele('a:p');
     const r = p.ele('a:r');
+
+    // Write font properties if provided
+    if (font) {
+        const rPr = r.ele('a:rPr');
+        const fontName = font.getName();
+        if (fontName) {
+            rPr.ele('a:rFont', { val: fontName });
+        }
+        const fontSize = font.getSize();
+        if (fontSize) {
+            rPr.ele('a:sz', { val: String(fontSize * 100) }); // Font size in hundredths of a point
+        }
+        if (font.getBold()) {
+            rPr.ele('a:b');
+        }
+        if (font.getItalic()) {
+            rPr.ele('a:i');
+        }
+        const fontColor = font.getColor().getARGB();
+        if (fontColor) {
+            rPr.ele('a:solidFill').ele('a:srgbClr', { val: fontColor });
+        }
+    }
+
     r.ele('a:t').txt(titleText);
     title.ele('c:layout');
     title.ele('c:overlay', { val: '0' });
+}
+
+/**
+ * Write gridlines with optional styling.
+ */
+function writeGridlines(parent: any, major: boolean, style: GridlineStyle | null): void {
+    if (!major) {
+        return;
+    }
+    const gridlines = parent.ele(major ? 'c:majorGridlines' : 'c:minorGridlines');
+    if (style && (style.color || style.width)) {
+        const spPr = gridlines.ele('c:spPr');
+        if (style.color) {
+            const ln = spPr.ele('a:ln');
+            if (style.width !== null && style.width !== undefined) {
+                ln.att('w', String(style.width * 12700)); // Width in EMUs
+            }
+            ln.ele('a:solidFill').ele('a:srgbClr', { val: style.color });
+        }
+    }
 }
 
 /**
@@ -514,14 +621,16 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 xValAx.ele('c:axPos', { val: 'b' });
                 xValAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
                 const xAxisTitle = chart.getXAxisTitle();
+                const xAxisTitleFont = chart.getXAxisTitleFont();
                 if (xAxisTitle) {
-                    writeAxisTitle(xValAx, xAxisTitle);
+                    writeAxisTitle(xValAx, xAxisTitle, xAxisTitleFont);
                 }
-                if (chart.getXAxisMajorGridlines() === true) {
-                    xValAx.ele('c:majorGridlines');
+                const xMajorGrid = chart.getXAxisMajorGridlines();
+                if (xMajorGrid === true || xMajorGrid === null) {
+                    writeGridlines(xValAx, true, chart.getXAxisMajorGridlineStyle());
                 }
                 if (chart.getXAxisMinorGridlines() === true) {
-                    xValAx.ele('c:minorGridlines');
+                    writeGridlines(xValAx, false, chart.getXAxisMinorGridlineStyle());
                 }
                 xValAx.ele('c:majorTickMark', { val: 'out' });
                 xValAx.ele('c:minorTickMark', { val: 'none' });
@@ -540,15 +649,16 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 valAx.ele('c:delete', { val: '0' });
                 valAx.ele('c:axPos', { val: 'l' });
                 const yAxisTitle = chart.getYAxisTitle();
+                const yAxisTitleFont = chart.getYAxisTitleFont();
                 if (yAxisTitle) {
-                    writeAxisTitle(valAx, yAxisTitle);
+                    writeAxisTitle(valAx, yAxisTitle, yAxisTitleFont);
                 }
                 const yMajorGridlines = chart.getYAxisMajorGridlines();
                 if (yMajorGridlines === null || yMajorGridlines === true) {
-                    valAx.ele('c:majorGridlines');
+                    writeGridlines(valAx, true, chart.getYAxisMajorGridlineStyle());
                 }
                 if (chart.getYAxisMinorGridlines() === true) {
-                    valAx.ele('c:minorGridlines');
+                    writeGridlines(valAx, false, chart.getYAxisMinorGridlineStyle());
                 }
                 valAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
                 valAx.ele('c:majorTickMark', { val: 'out' });
@@ -569,14 +679,15 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 catAx.ele('c:axPos', { val: 'b' });
                 catAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
                 const xAxisTitle = chart.getXAxisTitle();
+                const xAxisTitleFont = chart.getXAxisTitleFont();
                 if (xAxisTitle) {
-                    writeAxisTitle(catAx, xAxisTitle);
+                    writeAxisTitle(catAx, xAxisTitle, xAxisTitleFont);
                 }
                 if (chart.getXAxisMajorGridlines() === true) {
-                    catAx.ele('c:majorGridlines');
+                    writeGridlines(catAx, true, chart.getXAxisMajorGridlineStyle());
                 }
                 if (chart.getXAxisMinorGridlines() === true) {
-                    catAx.ele('c:minorGridlines');
+                    writeGridlines(catAx, false, chart.getXAxisMinorGridlineStyle());
                 }
                 catAx.ele('c:majorTickMark', { val: 'out' });
                 catAx.ele('c:minorTickMark', { val: 'none' });
@@ -597,15 +708,16 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 valAx.ele('c:delete', { val: '0' });
                 valAx.ele('c:axPos', { val: 'l' });
                 const yAxisTitle = chart.getYAxisTitle();
+                const yAxisTitleFont = chart.getYAxisTitleFont();
                 if (yAxisTitle) {
-                    writeAxisTitle(valAx, yAxisTitle);
+                    writeAxisTitle(valAx, yAxisTitle, yAxisTitleFont);
                 }
                 const yMajorGridlines = chart.getYAxisMajorGridlines();
                 if (yMajorGridlines === null || yMajorGridlines === true) {
-                    valAx.ele('c:majorGridlines');
+                    writeGridlines(valAx, true, chart.getYAxisMajorGridlineStyle());
                 }
                 if (chart.getYAxisMinorGridlines() === true) {
-                    valAx.ele('c:minorGridlines');
+                    writeGridlines(valAx, false, chart.getYAxisMinorGridlineStyle());
                 }
                 valAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
                 valAx.ele('c:majorTickMark', { val: 'out' });

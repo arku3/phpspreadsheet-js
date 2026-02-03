@@ -1,4 +1,5 @@
 import type { Worksheet } from '../../core/worksheet.ts';
+import { Font } from '../../style/font.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
 import type { DataSeries } from './data-series.ts';
 
@@ -48,6 +49,14 @@ export interface LegendConfig {
 }
 
 /**
+ * Gridline styling options for chart axes.
+ */
+export interface GridlineStyle {
+    color?: string | null;
+    width?: number | null;
+}
+
+/**
  * @deprecated Use DataSeries from ./data-series.ts instead
  */
 export interface ChartSeriesModel {
@@ -91,11 +100,21 @@ export class Chart {
     #xAxisTitle: string | null = null;
     #yAxisTitle: string | null = null;
 
+    // Axis title fonts
+    #xAxisTitleFont: Font | null = null;
+    #yAxisTitleFont: Font | null = null;
+
     // Axis gridlines
     #xAxisMajorGridlines: boolean | null = null;
     #xAxisMinorGridlines: boolean | null = null;
     #yAxisMajorGridlines: boolean | null = null;
     #yAxisMinorGridlines: boolean | null = null;
+
+    // Axis gridline styling
+    #xAxisMajorGridlineStyle: GridlineStyle | null = null;
+    #xAxisMinorGridlineStyle: GridlineStyle | null = null;
+    #yAxisMajorGridlineStyle: GridlineStyle | null = null;
+    #yAxisMinorGridlineStyle: GridlineStyle | null = null;
 
     // Legend configuration
     #legendPosition: LegendPosition | null = 'right';
@@ -217,6 +236,21 @@ export class Chart {
     }
 
     /**
+     * Get the X-axis title font.
+     */
+    public getXAxisTitleFont(): Font | null {
+        return this.#xAxisTitleFont;
+    }
+
+    /**
+     * Set the X-axis title font.
+     */
+    public setXAxisTitleFont(font: Font | null): this {
+        this.#xAxisTitleFont = font;
+        return this;
+    }
+
+    /**
      * Get the Y-axis title text.
      */
     public getYAxisTitle(): string | null {
@@ -228,6 +262,21 @@ export class Chart {
      */
     public setYAxisTitle(titleText: string | null): this {
         this.#yAxisTitle = titleText;
+        return this;
+    }
+
+    /**
+     * Get the Y-axis title font.
+     */
+    public getYAxisTitleFont(): Font | null {
+        return this.#yAxisTitleFont;
+    }
+
+    /**
+     * Set the Y-axis title font.
+     */
+    public setYAxisTitleFont(font: Font | null): this {
+        this.#yAxisTitleFont = font;
         return this;
     }
 
@@ -247,6 +296,21 @@ export class Chart {
     }
 
     /**
+     * Get the X-axis major gridline style.
+     */
+    public getXAxisMajorGridlineStyle(): GridlineStyle | null {
+        return this.#xAxisMajorGridlineStyle;
+    }
+
+    /**
+     * Set the X-axis major gridline style.
+     */
+    public setXAxisMajorGridlineStyle(style: GridlineStyle | null): this {
+        this.#xAxisMajorGridlineStyle = style;
+        return this;
+    }
+
+    /**
      * Get whether minor gridlines are shown for the X axis.
      */
     public getXAxisMinorGridlines(): boolean | null {
@@ -258,6 +322,21 @@ export class Chart {
      */
     public setXAxisMinorGridlines(show: boolean | null): this {
         this.#xAxisMinorGridlines = show;
+        return this;
+    }
+
+    /**
+     * Get the X-axis minor gridline style.
+     */
+    public getXAxisMinorGridlineStyle(): GridlineStyle | null {
+        return this.#xAxisMinorGridlineStyle;
+    }
+
+    /**
+     * Set the X-axis minor gridline style.
+     */
+    public setXAxisMinorGridlineStyle(style: GridlineStyle | null): this {
+        this.#xAxisMinorGridlineStyle = style;
         return this;
     }
 
@@ -277,6 +356,21 @@ export class Chart {
     }
 
     /**
+     * Get the Y-axis major gridline style.
+     */
+    public getYAxisMajorGridlineStyle(): GridlineStyle | null {
+        return this.#yAxisMajorGridlineStyle;
+    }
+
+    /**
+     * Set the Y-axis major gridline style.
+     */
+    public setYAxisMajorGridlineStyle(style: GridlineStyle | null): this {
+        this.#yAxisMajorGridlineStyle = style;
+        return this;
+    }
+
+    /**
      * Get whether minor gridlines are shown for the Y axis.
      */
     public getYAxisMinorGridlines(): boolean | null {
@@ -288,6 +382,21 @@ export class Chart {
      */
     public setYAxisMinorGridlines(show: boolean | null): this {
         this.#yAxisMinorGridlines = show;
+        return this;
+    }
+
+    /**
+     * Get the Y-axis minor gridline style.
+     */
+    public getYAxisMinorGridlineStyle(): GridlineStyle | null {
+        return this.#yAxisMinorGridlineStyle;
+    }
+
+    /**
+     * Set the Y-axis minor gridline style.
+     */
+    public setYAxisMinorGridlineStyle(style: GridlineStyle | null): this {
+        this.#yAxisMinorGridlineStyle = style;
         return this;
     }
 
