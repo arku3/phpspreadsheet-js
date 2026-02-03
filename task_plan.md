@@ -143,9 +143,11 @@ Complete systematic parity fixes identified in the review and implement the XLSX
     - [x] **Axis titles + gridlines read/write**
     - [x] **Axis title fonts + gridline styling (color/width) read/write**
     - [x] **Data labels styling (font, number format, fill/border colors) read/write**
-    - **Current Status:** Chart series, styling, legend, data labels with styling, axis titles/gridlines with fonts/styles, and type-specific behavior implemented
-    - **Tests:** Added chart round-trip + type-specific + data-label + axis + styling tests
-    - **Priority:** Complete Phase 19, focus on more chart types if needed
+    - [x] **Additional chart types (bubble, radar, stock, surface)**
+    - [x] **Chart title font styling read/write**
+    - **Current Status:** Chart series, styling, legend, data labels with styling, axis titles/gridlines with fonts/styles, title fonts, and more chart types implemented
+    - **Tests:** Added chart round-trip + type-specific + data-label + axis + styling + new chart type tests
+    - **Priority:** Plot area layout + remaining chart types as needed
 
 - [ ] Phase 20: Image Support (Future) <!-- id: 72 -->
     - [ ] Read embedded images from XLSX

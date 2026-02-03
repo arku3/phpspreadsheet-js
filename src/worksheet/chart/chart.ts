@@ -94,6 +94,7 @@ export class Chart {
     #chartXmlPath: string | null = null;
 
     #titleText: string | null = null;
+    #titleFont: Font | null = null;
     #plotArea: DataSeries[] = [];
 
     // Axis titles
@@ -217,6 +218,21 @@ export class Chart {
 
     public setTitleText(titleText: string | null): this {
         this.#titleText = titleText;
+        return this;
+    }
+
+    /**
+     * Get the chart title font.
+     */
+    public getTitleFont(): Font | null {
+        return this.#titleFont;
+    }
+
+    /**
+     * Set the chart title font.
+     */
+    public setTitleFont(font: Font | null): this {
+        this.#titleFont = font;
         return this;
     }
 

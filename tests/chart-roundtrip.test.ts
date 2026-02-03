@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
+import { Font } from '../src/style/font.ts';
 import { Chart } from '../src/worksheet/chart/chart.ts';
 import { DataSeriesValues } from '../src/worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../src/worksheet/chart/data-series.ts';
@@ -635,5 +636,221 @@ describe('Chart Round-Trip Tests', () => {
         expect(readChart).toBeDefined();
         expect(readChart!.getChartXmlPath()).toBeTruthy();
         expect(readChart!.getChartXmlPath()).toMatch(/xl\/charts\/chart\d+\.xml$/);
+    });
+
+    test('chart title font round-trip: font properties preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('TitleFont');
+
+        worksheet.getCell('A1').setValue('Label');
+        worksheet.getCell('A2').setValue('A');
+        worksheet.getCell('B1').setValue('Value');
+        worksheet.getCell('B2').setValue(10);
+
+        const chart = new Chart();
+        chart.setName('Title Font Chart');
+        chart.setTitleText('Styled Title');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const titleFont = new Font();
+        titleFont.setName('Arial');
+        titleFont.setSize(16);
+        titleFont.setBold(true);
+        titleFont.getColor().setARGB('FFFF0000');
+        chart.setTitleFont(titleFont);
+
+        const series = new DataSeries('bar');
+        series.setPlotCategory(new DataSeriesValues('String', 'TitleFont!$A$2:$A$2'));
+        series.addPlotValues(new DataSeriesValues('Number', 'TitleFont!$B$2:$B$2'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('TitleFont');
+
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        const readFont = readChart.getTitleFont();
+
+        expect(readFont).toBeDefined();
+        expect(readFont!.getName()).toBe('Arial');
+        expect(readFont!.getSize()).toBe(16);
+        expect(readFont!.getBold()).toBe(true);
+        expect(readFont!.getColor().getARGB()).toBe('FFFF0000');
+    });
+
+    test('bubble chart round-trip: chart type preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('BubbleChart');
+
+        worksheet.getCell('A1').setValue('X');
+        worksheet.getCell('A2').setValue(1);
+        worksheet.getCell('A3').setValue(2);
+        worksheet.getCell('B1').setValue('Y');
+        worksheet.getCell('B2').setValue(10);
+        worksheet.getCell('B3').setValue(20);
+        worksheet.getCell('C1').setValue('Size');
+        worksheet.getCell('C2').setValue(5);
+        worksheet.getCell('C3').setValue(8);
+
+        const chart = new Chart();
+        chart.setName('Bubble Chart Test');
+        chart.setTopLeftPosition({ cell: 'E2' });
+
+        const series = new DataSeries('bubble');
+        series.setPlotCategory(new DataSeriesValues('Number', 'BubbleChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'BubbleChart!$B$2:$B$3'));
+        series.setPlotBubbleSizes(new DataSeriesValues('Number', 'BubbleChart!$C$2:$C$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('BubbleChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(1);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('bubble');
+    });
+
+    test('radar chart round-trip: chart type preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('RadarChart');
+
+        worksheet.getCell('A1').setValue('Category');
+        worksheet.getCell('A2').setValue('Speed');
+        worksheet.getCell('A3').setValue('Power');
+        worksheet.getCell('B1').setValue('Score');
+        worksheet.getCell('B2').setValue(70);
+        worksheet.getCell('B3').setValue(90);
+
+        const chart = new Chart();
+        chart.setName('Radar Chart Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('radar');
+        series.setPlotCategory(new DataSeriesValues('String', 'RadarChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'RadarChart!$B$2:$B$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('RadarChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(1);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('radar');
+    });
+
+    test('stock chart round-trip: chart type preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('StockChart');
+
+        worksheet.getCell('A1').setValue('Day');
+        worksheet.getCell('A2').setValue('Mon');
+        worksheet.getCell('A3').setValue('Tue');
+        worksheet.getCell('B1').setValue('Open');
+        worksheet.getCell('B2').setValue(100);
+        worksheet.getCell('B3').setValue(105);
+        worksheet.getCell('C1').setValue('High');
+        worksheet.getCell('C2').setValue(110);
+        worksheet.getCell('C3').setValue(112);
+        worksheet.getCell('D1').setValue('Low');
+        worksheet.getCell('D2').setValue(95);
+        worksheet.getCell('D3').setValue(98);
+        worksheet.getCell('E1').setValue('Close');
+        worksheet.getCell('E2').setValue(108);
+        worksheet.getCell('E3').setValue(107);
+
+        const chart = new Chart();
+        chart.setName('Stock Chart Test');
+        chart.setTopLeftPosition({ cell: 'G2' });
+
+        const series = new DataSeries('stock');
+        series.setPlotCategory(new DataSeriesValues('String', 'StockChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'StockChart!$B$2:$B$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'StockChart!$C$2:$C$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'StockChart!$D$2:$D$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'StockChart!$E$2:$E$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('StockChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(1);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('stock');
+    });
+
+    test('surface chart round-trip: chart type preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('SurfaceChart');
+
+        worksheet.getCell('A1').setValue('Category');
+        worksheet.getCell('A2').setValue('One');
+        worksheet.getCell('A3').setValue('Two');
+        worksheet.getCell('B1').setValue('Series');
+        worksheet.getCell('B2').setValue(5);
+        worksheet.getCell('B3').setValue(7);
+
+        const chart = new Chart();
+        chart.setName('Surface Chart Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('surface');
+        series.setPlotCategory(new DataSeriesValues('String', 'SurfaceChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'SurfaceChart!$B$2:$B$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('SurfaceChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(1);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('surface');
     });
 });

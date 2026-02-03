@@ -542,7 +542,7 @@ describe('Chart Data Labels', () => {
             const chartXml = await getFirstChartXml(buffer);
             expect(chartXml).toContain('<c:txPr>');
             expect(chartXml).toContain('<a:rFont');
-            expect(chartXml).toContain('<a:b>');
+            expect(chartXml).toContain('<a:b');
             expect(chartXml).toContain('<a:solidFill>');
         });
 

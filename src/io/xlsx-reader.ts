@@ -1514,11 +1514,11 @@ export class XlsxReader implements IReader {
 
         const rInner = rMatch[1];
         const rPrMatch = rInner.match(/<a:rPr\b([^>]*)>([\s\S]*?)<\/a:rPr>/);
-        if (!rPrMatch || !rPrMatch[1] || !rPrMatch[2]) {
+        if (!rPrMatch || rPrMatch[2] === undefined) {
             return null;
         }
 
-        const rPrAttrs = rPrMatch[1];
+        const rPrAttrs = rPrMatch[1] ?? '';
         const rPrInner = rPrMatch[2];
 
         const font = new Font();
@@ -1532,9 +1532,104 @@ export class XlsxReader implements IReader {
         }
 
         // Parse font size (in hundredths of a point, divide by 100)
-        const szMatch = XlsxReader.#extractXmlAttribute(rPrAttrs, 'sz');
-        if (szMatch !== null) {
-            const szValue = Number.parseInt(szMatch, 10);
+        const szAttr = XlsxReader.#extractXmlAttribute(rPrAttrs, 'sz');
+        const szElement = rPrInner.match(/<a:sz\b[^>]*\bval="([^"]*)"/);
+        const szRaw = szAttr ?? szElement?.[1] ?? null;
+        if (szRaw !== null) {
+            const szValue = Number.parseInt(szRaw, 10);
+            if (Number.isFinite(szValue) && szValue > 0) {
+                font.setSize(szValue / 100);
+            }
+        }
+
+        // Parse bold
+        if (/<a:b\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'b') === '1') {
+            font.setBold(true);
+        }
+
+        // Parse italic
+        if (/<a:i\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'i') === '1') {
+            font.setItalic(true);
+        }
+
+        // Parse color from a:solidFill/a:srgbClr or a:solidFill/a:schemeClr
+        const solidFillMatch = rPrInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+        if (solidFillMatch && solidFillMatch[1]) {
+            const solidFillInner = solidFillMatch[1];
+            const srgbClrMatch = solidFillInner.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+            if (srgbClrMatch && srgbClrMatch[1]) {
+                const colorValue = srgbClrMatch[1];
+                // Ensure color has proper format (prepend FF for ARGB if needed)
+                if (colorValue.length === 6) {
+                    font.getColor().setARGB('FF' + colorValue.toUpperCase());
+                } else if (colorValue.length === 8) {
+                    font.getColor().setARGB(colorValue.toUpperCase());
+                }
+            }
+        }
+
+        return font;
+    }
+
+    /**
+     * Parse font styling from chart-level title XML.
+     * Looks for c:title/c:tx/c:rich/a:p/a:r/a:rPr and extracts font properties.
+     */
+    static #parseChartTitleFontFromChart(chartXml: string): Font | null {
+        const titleMatch = chartXml.match(/<c:title\b[^>]*>([\s\S]*?)<\/c:title>/);
+        if (!titleMatch || !titleMatch[1]) {
+            return null;
+        }
+
+        const titleInner = titleMatch[1];
+        const txMatch = titleInner.match(/<c:tx\b[^>]*>([\s\S]*?)<\/c:tx>/);
+        if (!txMatch || !txMatch[1]) {
+            return null;
+        }
+
+        const txInner = txMatch[1];
+        const richMatch = txInner.match(/<c:rich\b[^>]*>([\s\S]*?)<\/c:rich>/);
+        if (!richMatch || !richMatch[1]) {
+            return null;
+        }
+
+        const richInner = richMatch[1];
+        const pMatch = richInner.match(/<a:p\b[^>]*>([\s\S]*?)<\/a:p>/);
+        if (!pMatch || !pMatch[1]) {
+            return null;
+        }
+
+        const pInner = pMatch[1];
+        const rMatch = pInner.match(/<a:r\b[^>]*>([\s\S]*?)<\/a:r>/);
+        if (!rMatch || !rMatch[1]) {
+            return null;
+        }
+
+        const rInner = rMatch[1];
+        const rPrMatch = rInner.match(/<a:rPr\b([^>]*)>([\s\S]*?)<\/a:rPr>/);
+        if (!rPrMatch || rPrMatch[2] === undefined) {
+            return null;
+        }
+
+        const rPrAttrs = rPrMatch[1] ?? '';
+        const rPrInner = rPrMatch[2];
+
+        const font = new Font();
+
+        // Parse font name from a:rFont or a:latin
+        const rFontMatch = rPrInner.match(/<a:rFont\b[^>]*\bval="([^"]*)"/);
+        const latinMatch = rPrInner.match(/<a:latin\b[^>]*\btypeface="([^"]*)"/);
+        const fontName = rFontMatch?.[1] ?? latinMatch?.[1];
+        if (fontName) {
+            font.setName(XlsxReader.decodeXmlEntities(fontName));
+        }
+
+        // Parse font size (in hundredths of a point, divide by 100)
+        const szAttr = XlsxReader.#extractXmlAttribute(rPrAttrs, 'sz');
+        const szElement = rPrInner.match(/<a:sz\b[^>]*\bval="([^"]*)"/);
+        const szRaw = szAttr ?? szElement?.[1] ?? null;
+        if (szRaw !== null) {
+            const szValue = Number.parseInt(szRaw, 10);
             if (Number.isFinite(szValue) && szValue > 0) {
                 font.setSize(szValue / 100);
             }
@@ -1581,12 +1676,8 @@ export class XlsxReader implements IReader {
 
         const txPrInner = txPrMatch[1];
         const richMatch = txPrInner.match(/<c:rich\b[^>]*>([\s\S]*?)<\/c:rich>/);
-        if (!richMatch || !richMatch[1]) {
-            return null;
-        }
-
-        const richInner = richMatch[1];
-        const pMatch = richInner.match(/<a:p\b[^>]*>([\s\S]*?)<\/a:p>/);
+        const pScope = richMatch?.[1] ?? txPrInner;
+        const pMatch = pScope.match(/<a:p\b[^>]*>([\s\S]*?)<\/a:p>/);
         if (!pMatch || !pMatch[1]) {
             return null;
         }
@@ -1599,11 +1690,11 @@ export class XlsxReader implements IReader {
 
         const rInner = rMatch[1];
         const rPrMatch = rInner.match(/<a:rPr\b([^>]*)>([\s\S]*?)<\/a:rPr>/);
-        if (!rPrMatch || !rPrMatch[1] || !rPrMatch[2]) {
+        if (!rPrMatch || rPrMatch[2] === undefined) {
             return null;
         }
 
-        const rPrAttrs = rPrMatch[1];
+        const rPrAttrs = rPrMatch[1] ?? '';
         const rPrInner = rPrMatch[2];
 
         const font = new Font();
@@ -1617,9 +1708,11 @@ export class XlsxReader implements IReader {
         }
 
         // Parse font size (in hundredths of a point, divide by 100)
-        const szMatch = XlsxReader.#extractXmlAttribute(rPrAttrs, 'sz');
-        if (szMatch !== null) {
-            const szValue = Number.parseInt(szMatch, 10);
+        const szAttr = XlsxReader.#extractXmlAttribute(rPrAttrs, 'sz');
+        const szElement = rPrInner.match(/<a:sz\b[^>]*\bval="([^"]*)"/);
+        const szRaw = szAttr ?? szElement?.[1] ?? null;
+        if (szRaw !== null) {
+            const szValue = Number.parseInt(szRaw, 10);
             if (Number.isFinite(szValue) && szValue > 0) {
                 font.setSize(szValue / 100);
             }
@@ -2589,6 +2682,10 @@ export class XlsxReader implements IReader {
 
                     if (chartXml) {
                         chart.setTitleText(XlsxReader.#parseChartTitleText(chartXml));
+                        const titleFont = XlsxReader.#parseChartTitleFontFromChart(chartXml);
+                        if (titleFont) {
+                            chart.setTitleFont(titleFont);
+                        }
                         chart.setSeries(XlsxReader.#parseChartSeries(chartXml));
                         // Parse new-style chart data with styling
                         const { dataSeries, legend, axes } = XlsxReader.#parseChartDataWithStyling(chartXml);

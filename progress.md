@@ -1,6 +1,7 @@
 # Progress - Systematic Parity Review & Fixes
 
 ## Session Log
+- [2026-02-02] Added chart title font styling and new chart types (bubble/radar/stock/surface), expanded chart round-trip tests; full suite passes (432 tests).
 - [2026-02-02] Added data labels styling (font, number format, fill/border colors) read/write with tests; full suite passes (419 tests).
 - [2026-02-02] Added chart axis title fonts and gridline styling (color/width) read/write with tests; full suite passes (409 tests).
 - [2026-02-02] Added chart axis titles/gridlines read/write support with new axis tests; full suite passes.

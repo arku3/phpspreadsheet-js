@@ -377,9 +377,6 @@ function writeAxisTitle(parent: any, titleText: string, font: Font | null = null
  * Write gridlines with optional styling.
  */
 function writeGridlines(parent: any, major: boolean, style: GridlineStyle | null): void {
-    if (!major) {
-        return;
-    }
     const gridlines = parent.ele(major ? 'c:majorGridlines' : 'c:minorGridlines');
     if (style && (style.color || style.width)) {
         const spPr = gridlines.ele('c:spPr');
@@ -426,6 +423,18 @@ function writeDataSeries(
             break;
         case 'scatter':
             chartType = 'c:scatterChart';
+            break;
+        case 'bubble':
+            chartType = 'c:bubbleChart';
+            break;
+        case 'radar':
+            chartType = 'c:radarChart';
+            break;
+        case 'stock':
+            chartType = 'c:stockChart';
+            break;
+        case 'surface':
+            chartType = 'c:surfaceChart';
             break;
         default:
             chartType = 'c:barChart'; // Default to bar
@@ -475,6 +484,12 @@ function writeDataSeries(
     } else if (plotType === 'doughnut') {
         chartElement.ele('c:firstSliceAng', { val: '0' });
         chartElement.ele('c:holeSize', { val: '50' });
+    } else if (plotType === 'bubble') {
+        chartElement.ele('c:bubbleScale', { val: '100' });
+    } else if (plotType === 'radar') {
+        chartElement.ele('c:radarStyle', { val: 'marker' });
+    } else if (plotType === 'surface') {
+        chartElement.ele('c:wireframe', { val: '0' });
     }
 
     const varyColors = plotType === 'pie' || plotType === 'doughnut' ? '1' : '0';
@@ -572,10 +587,35 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
         rich.ele('a:lstStyle');
         const p = rich.ele('a:p');
         const r = p.ele('a:r');
+
+        // Write font properties if provided
+        const titleFont = chart.getTitleFont();
+        if (titleFont) {
+            const rPr = r.ele('a:rPr');
+            const fontName = titleFont.getName();
+            if (fontName) {
+                rPr.ele('a:rFont', { val: fontName });
+            }
+            const fontSize = titleFont.getSize();
+            if (fontSize) {
+                rPr.ele('a:sz', { val: String(fontSize * 100) });
+            }
+            if (titleFont.getBold()) {
+                rPr.ele('a:b');
+            }
+            if (titleFont.getItalic()) {
+                rPr.ele('a:i');
+            }
+            const fontColor = titleFont.getColor().getARGB();
+            if (fontColor) {
+                const solidFill = rPr.ele('a:solidFill');
+                solidFill.ele('a:srgbClr', { val: fontColor.substring(2) });
+            }
+        }
+
         r.ele('a:t').txt(titleText);
+        title.ele('c:layout');
         title.ele('c:overlay', { val: '0' });
-    } else {
-        chartElement.ele('c:autoTitleDeleted', { val: '1' });
     }
 
     // Plot area with data series
@@ -607,7 +647,7 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
     // Add axes (not for pie charts)
     const hasPieChart = dataSeriesList.some((ds) => ds.getPlotType() === 'pie' || ds.getPlotType() === 'doughnut');
     const primaryPlotType = dataSeriesList[0]?.getPlotType() ?? 'bar';
-    const useScatterAxes = primaryPlotType === 'scatter';
+    const useScatterAxes = primaryPlotType === 'scatter' || primaryPlotType === 'bubble';
 
     if (!hasPieChart) {
         if (useScatterAxes) {

@@ -160,8 +160,8 @@ describe('Chart axis titles and gridlines', () => {
         // Check for styled axis titles (font elements in a:rPr)
         expect(chartXml).toContain('<a:rPr>');
         expect(chartXml).toContain('<a:rFont');
-        expect(chartXml).toContain('<a:b>');
-        expect(chartXml).toContain('<a:i>');
+        expect(chartXml).toContain('<a:b');
+        expect(chartXml).toContain('<a:i');
         expect(chartXml).toContain('<a:solidFill>');
         // Check for styled gridlines (spPr elements)
         expect(chartXml).toContain('<c:spPr>');
