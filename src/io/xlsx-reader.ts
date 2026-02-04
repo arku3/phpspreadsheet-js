@@ -12,6 +12,8 @@ import { Column as AutoFilterColumn } from '../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../worksheet/auto-filter/column/rule.ts';
 import {
     Chart,
+    type ChartBorderStyle,
+    type ChartGradientStop,
     type ChartLayout,
     type ChartSeriesModel,
     type GridlineStyle,
@@ -1868,6 +1870,103 @@ export class XlsxReader implements IReader {
         return Object.keys(style).length > 0 ? style : null;
     }
 
+    static #parseChartAreaStyle(chartXml: string): {
+        noFill: boolean | null;
+        fillColor: Color | null;
+        noBorder: boolean | null;
+        borderStyle: ChartBorderStyle | null;
+    } | null {
+        const spPrMatch = chartXml.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
+        if (!spPrMatch || !spPrMatch[1]) {
+            return null;
+        }
+
+        const spPrInner = spPrMatch[1];
+        const noFill = /<a:noFill\b[^>]*\/>/.test(spPrInner) ? true : null;
+
+        let fillColor: Color | null = null;
+        const fillScope = spPrInner.replace(/<a:ln\b[^>]*>[\s\S]*?<\/a:ln>/g, '');
+        const fillMatch = fillScope.match(/<a:solidFill\b[^>]*>[\s\S]*?<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+        if (fillMatch && fillMatch[1]) {
+            fillColor = new Color();
+            fillColor.setARGB(`FF${fillMatch[1].toUpperCase()}`);
+        }
+
+        let borderStyle: ChartBorderStyle | null = null;
+        const lineMatch = spPrInner.match(/<a:ln\b([^>]*)>([\s\S]*?)<\/a:ln>/);
+        if (lineMatch) {
+            borderStyle = {};
+            const widthAttr = XlsxReader.#extractXmlAttribute(lineMatch[1] ?? '', 'w');
+            if (widthAttr) {
+                const width = Number(widthAttr) / 12700;
+                if (!Number.isNaN(width)) {
+                    borderStyle.width = width;
+                }
+            }
+            const lineInner = lineMatch[2] ?? '';
+            const lineColorMatch = lineInner.match(/<a:solidFill\b[^>]*>[\s\S]*?<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+            if (lineColorMatch && lineColorMatch[1]) {
+                const borderColor = new Color();
+                borderColor.setARGB(`FF${lineColorMatch[1].toUpperCase()}`);
+                borderStyle.color = borderColor;
+            }
+        }
+
+        const noBorder = borderStyle ? null : null;
+
+        if (!noFill && !fillColor && !borderStyle && !noBorder) {
+            return null;
+        }
+
+        return { noFill, fillColor, noBorder, borderStyle };
+    }
+
+    static #parsePlotAreaStyle(plotAreaInner: string): {
+        noFill: boolean | null;
+        gradientStops: { position: number; color: Color }[];
+        gradientAngle: number | null;
+    } | null {
+        const spPrMatch = plotAreaInner.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
+        if (!spPrMatch || !spPrMatch[1]) {
+            return null;
+        }
+
+        const spPrInner = spPrMatch[1];
+        const noFill = /<a:noFill\b[^>]*\/>/.test(spPrInner) ? true : null;
+        const gradientStops: { position: number; color: Color }[] = [];
+        let gradientAngle: number | null = null;
+
+        const gradFillMatch = spPrInner.match(/<a:gradFill\b[^>]*>([\s\S]*?)<\/a:gradFill>/);
+        if (gradFillMatch && gradFillMatch[1]) {
+            const gradInner = gradFillMatch[1];
+            const stopMatches = gradInner.matchAll(/<a:gs\b[^>]*\bpos="([^"]*)"[^>]*>([\s\S]*?)<\/a:gs>/g);
+            for (const stopMatch of stopMatches) {
+                const pos = Number(stopMatch[1]) / 100000;
+                const stopInner = stopMatch[2] ?? '';
+                const colorMatch = stopInner.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+                if (colorMatch && colorMatch[1] && !Number.isNaN(pos)) {
+                    const color = new Color();
+                    color.setARGB(`FF${colorMatch[1].toUpperCase()}`);
+                    gradientStops.push({ position: pos, color });
+                }
+            }
+
+            const angleMatch = gradInner.match(/<a:lin\b[^>]*\bang="([^"]*)"/);
+            if (angleMatch && angleMatch[1]) {
+                const angle = Number(angleMatch[1]) / 60000;
+                if (!Number.isNaN(angle)) {
+                    gradientAngle = angle;
+                }
+            }
+        }
+
+        if (!noFill && gradientStops.length === 0 && gradientAngle === null) {
+            return null;
+        }
+
+        return { noFill, gradientStops, gradientAngle };
+    }
+
     /**
      * Parse chart data with styling (DataSeries, legend, etc.)
      */
@@ -1889,6 +1988,17 @@ export class XlsxReader implements IReader {
             yAxisMinorGridlineStyle: GridlineStyle | null;
         } | null;
         layout: ChartLayout | null;
+        chartAreaStyle: {
+            noFill: boolean | null;
+            fillColor: Color | null;
+            noBorder: boolean | null;
+            borderStyle: ChartBorderStyle | null;
+        } | null;
+        plotAreaStyle: {
+            noFill: boolean | null;
+            gradientStops: ChartGradientStop[];
+            gradientAngle: number | null;
+        } | null;
     } {
         const dataSeries: DataSeries[] = [];
         let legend: { position: LegendPosition; title?: string; overlay: boolean } | null = null;
@@ -1907,6 +2017,12 @@ export class XlsxReader implements IReader {
             yAxisMinorGridlineStyle: GridlineStyle | null;
         } | null = null;
         let layout: ChartLayout | null = null;
+        const chartAreaStyle = XlsxReader.#parseChartAreaStyle(chartXml);
+        let plotAreaStyle: {
+            noFill: boolean | null;
+            gradientStops: ChartGradientStop[];
+            gradientAngle: number | null;
+        } | null = null;
 
         // Parse legend
         const legendMatch = chartXml.match(/<c:legend\b[^>]*>([\s\S]*?)<\/c:legend>/);
@@ -1942,12 +2058,13 @@ export class XlsxReader implements IReader {
         // Determine chart type from plot area
         const plotAreaMatch = chartXml.match(/<c:plotArea\b[^>]*>([\s\S]*?)<\/c:plotArea>/);
         if (!plotAreaMatch || !plotAreaMatch[1]) {
-            return { dataSeries, legend, axes, layout };
+            return { dataSeries, legend, axes, layout, chartAreaStyle, plotAreaStyle };
         }
 
         const plotAreaInner = plotAreaMatch[1];
 
         layout = XlsxReader.#parseChartPlotAreaLayout(plotAreaInner);
+        plotAreaStyle = XlsxReader.#parsePlotAreaStyle(plotAreaInner);
 
         // Parse axis titles and gridlines
         const axisMatches = plotAreaInner.matchAll(/<c:(catAx|dateAx|valAx)\b[^>]*>([\s\S]*?)<\/c:\1>/g);
@@ -2385,7 +2502,7 @@ export class XlsxReader implements IReader {
             dataSeries.push(series);
         }
 
-        return { dataSeries, legend, axes, layout };
+        return { dataSeries, legend, axes, layout, chartAreaStyle, plotAreaStyle };
     }
 
     static #parseChartPlotAreaLayout(plotAreaInner: string): ChartLayout | null {
@@ -2829,12 +2946,24 @@ export class XlsxReader implements IReader {
                         }
                         chart.setSeries(XlsxReader.#parseChartSeries(chartXml));
                         // Parse new-style chart data with styling
-                        const { dataSeries, legend, axes, layout } = XlsxReader.#parseChartDataWithStyling(chartXml);
+                        const { dataSeries, legend, axes, layout, chartAreaStyle, plotAreaStyle } =
+                            XlsxReader.#parseChartDataWithStyling(chartXml);
                         if (dataSeries.length > 0) {
                             chart.setPlotArea(dataSeries);
                         }
                         if (layout) {
                             chart.setPlotAreaLayout(layout);
+                        }
+                        if (chartAreaStyle) {
+                            chart.setChartAreaNoFill(chartAreaStyle.noFill);
+                            chart.setChartAreaFillColor(chartAreaStyle.fillColor);
+                            chart.setChartAreaNoBorder(chartAreaStyle.noBorder);
+                            chart.setChartAreaBorderStyle(chartAreaStyle.borderStyle);
+                        }
+                        if (plotAreaStyle) {
+                            chart.setPlotAreaNoFill(plotAreaStyle.noFill);
+                            chart.setPlotAreaGradientStops(plotAreaStyle.gradientStops);
+                            chart.setPlotAreaGradientAngle(plotAreaStyle.gradientAngle);
                         }
                         if (legend) {
                             chart.setLegendPosition(legend.position);

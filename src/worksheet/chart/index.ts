@@ -7,6 +7,8 @@ export type {
     ChartLayout,
     ChartLayoutMode,
     ChartLayoutTarget,
+    ChartBorderStyle,
+    ChartGradientStop,
     ChartPosition,
     GridlineStyle,
     LegendConfig,

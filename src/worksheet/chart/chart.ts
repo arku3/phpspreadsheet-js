@@ -1,4 +1,5 @@
 import type { Worksheet } from '../../core/worksheet.ts';
+import { Color } from '../../style/color.ts';
 import { Font } from '../../style/font.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
 import type { DataSeries } from './data-series.ts';
@@ -56,6 +57,16 @@ export interface GridlineStyle {
     width?: number | null;
 }
 
+export interface ChartBorderStyle {
+    color?: Color | null;
+    width?: number | null;
+}
+
+export interface ChartGradientStop {
+    position: number;
+    color: Color;
+}
+
 export type ChartLayoutTarget = 'inner' | 'outer';
 export type ChartLayoutMode = 'edge' | 'factor';
 
@@ -110,6 +121,17 @@ export class Chart {
     #titleFont: Font | null = null;
     #plotArea: DataSeries[] = [];
     #plotAreaLayout: ChartLayout | null = null;
+
+    // Chart area styling
+    #chartAreaNoFill: boolean | null = null;
+    #chartAreaNoBorder: boolean | null = null;
+    #chartAreaFillColor: Color | null = null;
+    #chartAreaBorderStyle: ChartBorderStyle | null = null;
+
+    // Plot area styling
+    #plotAreaNoFill: boolean | null = null;
+    #plotAreaGradientStops: ChartGradientStop[] = [];
+    #plotAreaGradientAngle: number | null = null;
 
     // Axis titles
     #xAxisTitle: string | null = null;
@@ -478,6 +500,111 @@ export class Chart {
      */
     public setPlotAreaLayout(layout: ChartLayout | null): this {
         this.#plotAreaLayout = layout;
+        return this;
+    }
+
+    /**
+     * Get chart area no-fill setting.
+     */
+    public getChartAreaNoFill(): boolean | null {
+        return this.#chartAreaNoFill;
+    }
+
+    /**
+     * Set chart area no-fill setting.
+     */
+    public setChartAreaNoFill(noFill: boolean | null): this {
+        this.#chartAreaNoFill = noFill;
+        return this;
+    }
+
+    /**
+     * Get chart area no-border setting.
+     */
+    public getChartAreaNoBorder(): boolean | null {
+        return this.#chartAreaNoBorder;
+    }
+
+    /**
+     * Set chart area no-border setting.
+     */
+    public setChartAreaNoBorder(noBorder: boolean | null): this {
+        this.#chartAreaNoBorder = noBorder;
+        return this;
+    }
+
+    /**
+     * Get chart area fill color.
+     */
+    public getChartAreaFillColor(): Color | null {
+        return this.#chartAreaFillColor;
+    }
+
+    /**
+     * Set chart area fill color.
+     */
+    public setChartAreaFillColor(color: Color | null): this {
+        this.#chartAreaFillColor = color;
+        return this;
+    }
+
+    /**
+     * Get chart area border style.
+     */
+    public getChartAreaBorderStyle(): ChartBorderStyle | null {
+        return this.#chartAreaBorderStyle;
+    }
+
+    /**
+     * Set chart area border style.
+     */
+    public setChartAreaBorderStyle(style: ChartBorderStyle | null): this {
+        this.#chartAreaBorderStyle = style;
+        return this;
+    }
+
+    /**
+     * Get plot area no-fill setting.
+     */
+    public getPlotAreaNoFill(): boolean | null {
+        return this.#plotAreaNoFill;
+    }
+
+    /**
+     * Set plot area no-fill setting.
+     */
+    public setPlotAreaNoFill(noFill: boolean | null): this {
+        this.#plotAreaNoFill = noFill;
+        return this;
+    }
+
+    /**
+     * Get plot area gradient stops.
+     */
+    public getPlotAreaGradientStops(): ChartGradientStop[] {
+        return [...this.#plotAreaGradientStops];
+    }
+
+    /**
+     * Set plot area gradient stops.
+     */
+    public setPlotAreaGradientStops(stops: ChartGradientStop[]): this {
+        this.#plotAreaGradientStops = [...stops];
+        return this;
+    }
+
+    /**
+     * Get plot area gradient angle (degrees).
+     */
+    public getPlotAreaGradientAngle(): number | null {
+        return this.#plotAreaGradientAngle;
+    }
+
+    /**
+     * Set plot area gradient angle (degrees).
+     */
+    public setPlotAreaGradientAngle(angle: number | null): this {
+        this.#plotAreaGradientAngle = angle;
         return this;
     }
 

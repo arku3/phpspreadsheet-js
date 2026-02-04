@@ -2,7 +2,7 @@ import { create } from 'xmlbuilder2';
 import type { Worksheet } from '../../core/worksheet.ts';
 import { Font } from '../../style/font.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
-import type { Chart, ChartLayout, GridlineStyle } from '../../worksheet/chart/chart.ts';
+import type { Chart, ChartGradientStop, ChartLayout, GridlineStyle } from '../../worksheet/chart/chart.ts';
 import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
 import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
@@ -178,6 +178,10 @@ const DASH_LINE_STYLES = new Set<LineStyle>([
 
 const SMOOTH_LINE_STYLES = new Set<LineStyle>(['smooth', 'cubic', 'cubicSpline']);
 const STRAIGHT_LINE_STYLES = new Set<LineStyle>(['line', 'straight']);
+const PERCENTAGE_MULTIPLIER = 100000;
+const ANGLE_MULTIPLIER = 60000;
+
+const formatColor = (argb: string): string => argb.substring(2);
 
 function writeShapeProperties(
     parent: any,
@@ -386,6 +390,88 @@ function writeGridlines(parent: any, major: boolean, style: GridlineStyle | null
                 ln.att('w', String(style.width * 12700)); // Width in EMUs
             }
             ln.ele('a:solidFill').ele('a:srgbClr', { val: style.color });
+        }
+    }
+}
+
+/**
+ * Write chart area shape properties (<c:spPr>).
+ */
+function writeChartAreaProperties(parent: any, chart: Chart): void {
+    const noFill = chart.getChartAreaNoFill();
+    const fillColor = chart.getChartAreaFillColor();
+    const borderStyle = chart.getChartAreaBorderStyle();
+    const noBorder = chart.getChartAreaNoBorder();
+
+    if (!noFill && !fillColor && !borderStyle && !noBorder) {
+        return;
+    }
+
+    const spPr = parent.ele('c:spPr');
+
+    if (noFill) {
+        spPr.ele('a:noFill');
+    } else if (fillColor) {
+        const fillArgb = fillColor.getARGB();
+        if (fillArgb) {
+            spPr.ele('a:solidFill').ele('a:srgbClr', { val: formatColor(fillArgb) });
+        }
+    }
+
+    if (!noBorder && borderStyle) {
+        const borderColor = borderStyle.color;
+        const borderWidth = borderStyle.width;
+        if (borderColor || borderWidth) {
+            const lineAttrs: Record<string, string> = {};
+            if (borderWidth !== null && borderWidth !== undefined && borderWidth > 0) {
+                lineAttrs.w = String(borderWidth * 12700);
+            }
+            const ln = spPr.ele('a:ln', lineAttrs);
+            if (borderColor) {
+                const borderArgb = borderColor.getARGB();
+                if (borderArgb) {
+                    ln.ele('a:solidFill').ele('a:srgbClr', { val: formatColor(borderArgb) });
+                }
+            }
+        }
+    }
+}
+
+const writeGradientStops = (gradFill: any, stops: ChartGradientStop[]): void => {
+    const gsLst = gradFill.ele('a:gsLst');
+    stops.forEach((stop) => {
+        const pos = Math.round(stop.position * PERCENTAGE_MULTIPLIER);
+        const gs = gsLst.ele('a:gs', { pos: String(pos) });
+        const argb = stop.color.getARGB();
+        if (argb) {
+            gs.ele('a:srgbClr', { val: formatColor(argb) });
+        }
+    });
+};
+
+/**
+ * Write plot area shape properties (<c:spPr>).
+ */
+function writePlotAreaProperties(parent: any, chart: Chart): void {
+    const noFill = chart.getPlotAreaNoFill();
+    const gradientStops = chart.getPlotAreaGradientStops();
+    const gradientAngle = chart.getPlotAreaGradientAngle();
+
+    if (!noFill && gradientStops.length === 0 && gradientAngle === null) {
+        return;
+    }
+
+    const spPr = parent.ele('c:spPr');
+
+    if (noFill) {
+        spPr.ele('a:noFill');
+    }
+
+    if (gradientStops.length > 0) {
+        const gradFill = spPr.ele('a:gradFill');
+        writeGradientStops(gradFill, gradientStops);
+        if (gradientAngle !== null) {
+            gradFill.ele('a:lin', { ang: String(Math.round(gradientAngle * ANGLE_MULTIPLIER)) });
         }
     }
 }
@@ -653,9 +739,13 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
         title.ele('c:overlay', { val: '0' });
     }
 
+    // Chart area styling
+    writeChartAreaProperties(chartElement, chart);
+
     // Plot area with data series
     const plotArea = chartElement.ele('c:plotArea');
     writePlotAreaLayout(plotArea, chart.getPlotAreaLayout());
+    writePlotAreaProperties(plotArea, chart);
 
     // Get data series from the chart
     const dataSeriesList = chart.getPlotArea();
