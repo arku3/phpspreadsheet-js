@@ -605,6 +605,8 @@ function writeDataSeries(
     } else if (plotType === 'doughnut') {
         chartElement.ele('c:firstSliceAng', { val: '0' });
         chartElement.ele('c:holeSize', { val: '50' });
+    } else if (plotType === 'area') {
+        chartElement.ele('c:grouping', { val: dataSeries.getGrouping() ?? 'standard' });
     } else if (plotType === 'bubble') {
         chartElement.ele('c:bubbleScale', { val: '100' });
     } else if (plotType === 'radar') {

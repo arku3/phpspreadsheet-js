@@ -263,6 +263,56 @@ describe('Chart Round-Trip Tests', () => {
         expect(readChart!.getPlotArea()[0]!.getPlotType()).toBe('line');
     });
 
+    test('area chart round-trip: grouping preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('AreaChart');
+
+        worksheet.getCell('A1').setValue('Month');
+        worksheet.getCell('A2').setValue('Jan');
+        worksheet.getCell('A3').setValue('Feb');
+        worksheet.getCell('B1').setValue('Series 1');
+        worksheet.getCell('B2').setValue(10);
+        worksheet.getCell('B3').setValue(20);
+        worksheet.getCell('C1').setValue('Series 2');
+        worksheet.getCell('C2').setValue(5);
+        worksheet.getCell('C3').setValue(15);
+
+        const chart = new Chart();
+        chart.setName('Area Chart Grouping Test');
+        chart.setTopLeftPosition({ cell: 'E2' });
+
+        const series1 = new DataSeries('area');
+        series1.setGrouping('stacked');
+        series1.setPlotCategory(new DataSeriesValues('String', 'AreaChart!$A$2:$A$3'));
+        series1.addPlotValues(new DataSeriesValues('Number', 'AreaChart!$B$2:$B$3'));
+        chart.addDataSeries(series1);
+
+        const series2 = new DataSeries('area');
+        series2.setGrouping('stacked');
+        series2.setPlotCategory(new DataSeriesValues('String', 'AreaChart!$A$2:$A$3'));
+        series2.addPlotValues(new DataSeriesValues('Number', 'AreaChart!$C$2:$C$3'));
+        chart.addDataSeries(series2);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('AreaChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(2);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('area');
+        expect(readChart.getPlotArea()[0]!.getGrouping()).toBe('stacked');
+        expect(readChart.getPlotArea()[1]!.getGrouping()).toBe('stacked');
+    });
+
     test('pie chart round-trip: chart type preserved', async () => {
         const spreadsheet = new Spreadsheet();
         const worksheet = spreadsheet.getActiveSheet();

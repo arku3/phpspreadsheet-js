@@ -2234,6 +2234,11 @@ export class XlsxReader implements IReader {
                     if (barDirMatch && barDirMatch[1]) {
                         chartDirection = barDirMatch[1];
                     }
+                } else if (tag === 'c:areaChart') {
+                    const groupingMatch = chartXml.match(/<c:grouping\b[^>]*\bval=\"([^\"]*)\"/);
+                    if (groupingMatch && groupingMatch[1]) {
+                        chartGrouping = groupingMatch[1];
+                    }
                 } else if (tag === 'c:scatterChart') {
                     const scatterStyleMatch = chartXml.match(/<c:scatterStyle\b[^>]*\bval=\"([^\"]*)\"/);
                     if (scatterStyleMatch && scatterStyleMatch[1]) {
@@ -2371,6 +2376,14 @@ export class XlsxReader implements IReader {
                     }
                 }
             } else if (plotType === 'line') {
+                if (chartGrouping) {
+                    try {
+                        series.setGrouping(chartGrouping as any);
+                    } catch {
+                        // Ignore invalid grouping.
+                    }
+                }
+            } else if (plotType === 'area') {
                 if (chartGrouping) {
                     try {
                         series.setGrouping(chartGrouping as any);
