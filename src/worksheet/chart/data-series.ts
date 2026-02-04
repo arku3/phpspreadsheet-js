@@ -6,12 +6,17 @@ import type { DataSeriesValues } from './data-series-values';
  */
 export type ChartType =
     | 'bar'
+    | 'bar3D'
     | 'line'
+    | 'line3D'
     | 'area'
+    | 'area3D'
     | 'pie'
+    | 'pie3D'
     | 'doughnut'
     | 'scatter'
     | 'surface'
+    | 'surface3D'
     | 'radar'
     | 'bubble'
     | 'stock';

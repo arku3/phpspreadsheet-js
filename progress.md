@@ -1,6 +1,7 @@
 # Progress - Systematic Parity Review & Fixes
 
 ## Session Log
+- [2026-02-02] Added 3D chart variants (bar3D/line3D/area3D/pie3D/surface3D) with view3D/serAx support and round-trip tests; drawings writer test needs 30s timeout.
 - [2026-02-02] Added area chart grouping read/write and round-trip test; full suite passes (437 tests).
 - [2026-02-02] Added chart/plot area styling (fill, border, gradient) read/write and tests; full suite passes (436 tests).
 - [2026-02-02] Added plot area layout (manual layout) read/write with layout tests; full suite passes (434 tests).

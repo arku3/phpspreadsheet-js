@@ -133,6 +133,15 @@ export class Chart {
     #plotAreaGradientStops: ChartGradientStop[] = [];
     #plotAreaGradientAngle: number | null = null;
 
+    // View 3D settings
+    #rotX: number | null = null;
+    #rotY: number | null = null;
+    #rAngAx: number | null = null;
+    #perspective: number | null = null;
+
+    // Surface chart series axis ID (read-only from XLSX)
+    #serAxisId: string | null = null;
+
     // Axis titles
     #xAxisTitle: string | null = null;
     #yAxisTitle: string | null = null;
@@ -605,6 +614,81 @@ export class Chart {
      */
     public setPlotAreaGradientAngle(angle: number | null): this {
         this.#plotAreaGradientAngle = angle;
+        return this;
+    }
+
+    /**
+     * Get the X rotation for 3D view.
+     */
+    public getRotX(): number | null {
+        return this.#rotX;
+    }
+
+    /**
+     * Set the X rotation for 3D view.
+     */
+    public setRotX(rotX: number | null): this {
+        this.#rotX = rotX;
+        return this;
+    }
+
+    /**
+     * Get the Y rotation for 3D view.
+     */
+    public getRotY(): number | null {
+        return this.#rotY;
+    }
+
+    /**
+     * Set the Y rotation for 3D view.
+     */
+    public setRotY(rotY: number | null): this {
+        this.#rotY = rotY;
+        return this;
+    }
+
+    /**
+     * Get the right angle axis flag for 3D view.
+     */
+    public getRAngAx(): number | null {
+        return this.#rAngAx;
+    }
+
+    /**
+     * Set the right angle axis flag for 3D view.
+     */
+    public setRAngAx(rAngAx: number | null): this {
+        this.#rAngAx = rAngAx;
+        return this;
+    }
+
+    /**
+     * Get the perspective value for 3D view.
+     */
+    public getPerspective(): number | null {
+        return this.#perspective;
+    }
+
+    /**
+     * Set the perspective value for 3D view.
+     */
+    public setPerspective(perspective: number | null): this {
+        this.#perspective = perspective;
+        return this;
+    }
+
+    /**
+     * Get the series axis ID for surface charts.
+     */
+    public getSerAxisId(): string | null {
+        return this.#serAxisId;
+    }
+
+    /**
+     * Set the series axis ID for surface charts.
+     */
+    public setSerAxisId(serAxisId: string | null): this {
+        this.#serAxisId = serAxisId;
         return this;
     }
 

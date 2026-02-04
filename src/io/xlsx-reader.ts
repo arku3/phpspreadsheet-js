@@ -1436,6 +1436,35 @@ export class XlsxReader implements IReader {
         return null;
     }
 
+    static #parseView3D(chartXml: string): {
+        rotX: number | null;
+        rotY: number | null;
+        rAngAx: number | null;
+        perspective: number | null;
+    } | null {
+        const view3DMatch = chartXml.match(/<c:view3D\b[^>]*>([\s\S]*?)<\/c:view3D>/);
+        if (!view3DMatch || !view3DMatch[1]) {
+            return null;
+        }
+
+        const inner = view3DMatch[1];
+        const readVal = (tag: string): number | null => {
+            const match = inner.match(new RegExp(`<c:${tag}\\b[^>]*\\bval="([^"]*)"`));
+            return XlsxReader.#parseXsdInt(match?.[1] ?? null);
+        };
+
+        const rotX = readVal('rotX');
+        const rotY = readVal('rotY');
+        const rAngAx = readVal('rAngAx');
+        const perspective = readVal('perspective');
+
+        if (rotX === null && rotY === null && rAngAx === null && perspective === null) {
+            return null;
+        }
+
+        return { rotX, rotY, rAngAx, perspective };
+    }
+
     static #parseChartSeries(chartXml: string): ChartSeriesModel[] {
         const series: ChartSeriesModel[] = [];
         const serMatches = chartXml.matchAll(/<c:ser\b[^>]*>([\s\S]*?)<\/c:ser>/g);
@@ -1987,6 +2016,7 @@ export class XlsxReader implements IReader {
             yAxisMajorGridlineStyle: GridlineStyle | null;
             yAxisMinorGridlineStyle: GridlineStyle | null;
         } | null;
+        serAxisId: string | null;
         layout: ChartLayout | null;
         chartAreaStyle: {
             noFill: boolean | null;
@@ -2016,6 +2046,7 @@ export class XlsxReader implements IReader {
             yAxisMajorGridlineStyle: GridlineStyle | null;
             yAxisMinorGridlineStyle: GridlineStyle | null;
         } | null = null;
+        let serAxisId: string | null = null;
         let layout: ChartLayout | null = null;
         const chartAreaStyle = XlsxReader.#parseChartAreaStyle(chartXml);
         let plotAreaStyle: {
@@ -2058,10 +2089,18 @@ export class XlsxReader implements IReader {
         // Determine chart type from plot area
         const plotAreaMatch = chartXml.match(/<c:plotArea\b[^>]*>([\s\S]*?)<\/c:plotArea>/);
         if (!plotAreaMatch || !plotAreaMatch[1]) {
-            return { dataSeries, legend, axes, layout, chartAreaStyle, plotAreaStyle };
+            return { dataSeries, legend, axes, serAxisId, layout, chartAreaStyle, plotAreaStyle };
         }
 
         const plotAreaInner = plotAreaMatch[1];
+
+        const serAxMatch = plotAreaInner.match(/<c:serAx\b[^>]*>([\s\S]*?)<\/c:serAx>/);
+        if (serAxMatch && serAxMatch[1]) {
+            const axIdMatch = serAxMatch[1].match(/<c:axId\b[^>]*\bval="([^"]*)"/);
+            if (axIdMatch && axIdMatch[1]) {
+                serAxisId = axIdMatch[1];
+            }
+        }
 
         layout = XlsxReader.#parseChartPlotAreaLayout(plotAreaInner);
         plotAreaStyle = XlsxReader.#parsePlotAreaStyle(plotAreaInner);
@@ -2191,14 +2230,19 @@ export class XlsxReader implements IReader {
         // Map chart type elements to plot types
         const chartTypeMap: Record<string, string> = {
             'c:barChart': 'bar',
+            'c:bar3DChart': 'bar3D',
             'c:lineChart': 'line',
+            'c:line3DChart': 'line3D',
             'c:pieChart': 'pie',
+            'c:pie3DChart': 'pie3D',
             'c:areaChart': 'area',
+            'c:area3DChart': 'area3D',
             'c:scatterChart': 'scatter',
             'c:bubbleChart': 'bubble',
             'c:doughnutChart': 'doughnut',
             'c:radarChart': 'radar',
             'c:surfaceChart': 'surface',
+            'c:surface3DChart': 'surface3D',
             'c:stockChart': 'stock',
         };
 
@@ -2209,13 +2253,14 @@ export class XlsxReader implements IReader {
         let chartDirection: string | null = null;
         let scatterStyle: string | null = null;
         let chartDataLabels: DataLabels | null = null;
+        const unsmoothedTypes = new Set(['line3D']);
         for (const [tag, type] of Object.entries(chartTypeMap)) {
             if (plotAreaInner.includes(`<${tag}`)) {
                 plotType = type;
                 const chartMatch = plotAreaInner.match(new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/\\s*${tag}\\s*>`));
                 const chartXml = chartMatch?.[0] ?? '';
 
-                if (tag === 'c:lineChart') {
+                if (tag === 'c:lineChart' || tag === 'c:line3DChart') {
                     const smoothMatch = chartXml.match(/<c:smooth\b([^>]*)\/?>(?:[\\s\\S]*?<\/c:smooth\s*>)?/);
                     if (smoothMatch) {
                         const smoothAttr = XlsxReader.#extractXmlAttribute(smoothMatch[1] ?? '', 'val');
@@ -2225,7 +2270,7 @@ export class XlsxReader implements IReader {
                     if (groupingMatch && groupingMatch[1]) {
                         chartGrouping = groupingMatch[1];
                     }
-                } else if (tag === 'c:barChart') {
+                } else if (tag === 'c:barChart' || tag === 'c:bar3DChart') {
                     const groupingMatch = chartXml.match(/<c:grouping\b[^>]*\bval=\"([^\"]*)\"/);
                     if (groupingMatch && groupingMatch[1]) {
                         chartGrouping = groupingMatch[1];
@@ -2234,7 +2279,7 @@ export class XlsxReader implements IReader {
                     if (barDirMatch && barDirMatch[1]) {
                         chartDirection = barDirMatch[1];
                     }
-                } else if (tag === 'c:areaChart') {
+                } else if (tag === 'c:areaChart' || tag === 'c:area3DChart') {
                     const groupingMatch = chartXml.match(/<c:grouping\b[^>]*\bval=\"([^\"]*)\"/);
                     if (groupingMatch && groupingMatch[1]) {
                         chartGrouping = groupingMatch[1];
@@ -2244,6 +2289,10 @@ export class XlsxReader implements IReader {
                     if (scatterStyleMatch && scatterStyleMatch[1]) {
                         scatterStyle = scatterStyleMatch[1];
                     }
+                }
+
+                if (unsmoothedTypes.has(plotType)) {
+                    chartSmooth = false;
                 }
 
                 // Parse chart-level data labels
@@ -2441,7 +2490,7 @@ export class XlsxReader implements IReader {
                 const smoothAttr = XlsxReader.#extractXmlAttribute(serSmoothMatch[1] ?? '', 'val');
                 const smoothValue = smoothAttr ? XlsxReader.#castXsdBoolean(smoothAttr) : true;
                 series.setSmoothLine(smoothValue);
-            } else if (plotType === 'line' && chartSmooth !== null) {
+            } else if ((plotType === 'line' || plotType === 'line3D') && chartSmooth !== null) {
                 series.setSmoothLine(chartSmooth);
             }
 
@@ -2515,7 +2564,7 @@ export class XlsxReader implements IReader {
             dataSeries.push(series);
         }
 
-        return { dataSeries, legend, axes, layout, chartAreaStyle, plotAreaStyle };
+        return { dataSeries, legend, axes, serAxisId, layout, chartAreaStyle, plotAreaStyle };
     }
 
     static #parseChartPlotAreaLayout(plotAreaInner: string): ChartLayout | null {
@@ -2953,13 +3002,20 @@ export class XlsxReader implements IReader {
                         if (titleFont) {
                             chart.setTitleFont(titleFont);
                         }
+                        const view3D = XlsxReader.#parseView3D(chartXml);
+                        if (view3D) {
+                            chart.setRotX(view3D.rotX);
+                            chart.setRotY(view3D.rotY);
+                            chart.setRAngAx(view3D.rAngAx);
+                            chart.setPerspective(view3D.perspective);
+                        }
                         const plotAreaLayout = XlsxReader.#parsePlotAreaLayout(chartXml);
                         if (plotAreaLayout) {
                             chart.setPlotAreaLayout(plotAreaLayout);
                         }
                         chart.setSeries(XlsxReader.#parseChartSeries(chartXml));
                         // Parse new-style chart data with styling
-                        const { dataSeries, legend, axes, layout, chartAreaStyle, plotAreaStyle } =
+                        const { dataSeries, legend, axes, serAxisId, layout, chartAreaStyle, plotAreaStyle } =
                             XlsxReader.#parseChartDataWithStyling(chartXml);
                         if (dataSeries.length > 0) {
                             chart.setPlotArea(dataSeries);
@@ -3014,6 +3070,9 @@ export class XlsxReader implements IReader {
                             if (axes.yAxisMinorGridlineStyle !== null) {
                                 chart.setYAxisMinorGridlineStyle(axes.yAxisMinorGridlineStyle);
                             }
+                        }
+                        if (serAxisId) {
+                            chart.setSerAxisId(serAxisId);
                         }
                     }
 

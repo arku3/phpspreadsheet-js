@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import unzipper from 'unzipper';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
@@ -6,6 +7,14 @@ import { Font } from '../src/style/font.ts';
 import { Chart } from '../src/worksheet/chart/chart.ts';
 import { DataSeriesValues } from '../src/worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../src/worksheet/chart/data-series.ts';
+
+const getFirstChartXml = async (buffer: Uint8Array | ArrayBuffer): Promise<string> => {
+    const zipBuffer = buffer instanceof ArrayBuffer ? Buffer.from(new Uint8Array(buffer)) : Buffer.from(buffer);
+    const zip = await unzipper.Open.buffer(zipBuffer);
+    const chartFile = zip.files.find((file) => file.path.startsWith('xl/charts/chart') && file.path.endsWith('.xml'));
+    expect(chartFile).toBeDefined();
+    return (await chartFile!.buffer()).toString('utf-8');
+};
 
 describe('Chart Round-Trip Tests', () => {
     test('basic bar chart round-trip: chart exists after write and read', async () => {
@@ -902,5 +911,202 @@ describe('Chart Round-Trip Tests', () => {
         const readChart = readWorksheet!.getChartCollection()[0]!;
         expect(readChart.getPlotArea()).toHaveLength(1);
         expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('surface');
+    });
+
+    test('bar3D chart round-trip: chart type preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('Bar3DChart');
+
+        worksheet.getCell('A1').setValue('Category');
+        worksheet.getCell('A2').setValue('One');
+        worksheet.getCell('A3').setValue('Two');
+        worksheet.getCell('B1').setValue('Values');
+        worksheet.getCell('B2').setValue(10);
+        worksheet.getCell('B3').setValue(15);
+
+        const chart = new Chart();
+        chart.setName('Bar 3D Chart Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('bar3D');
+        series.setPlotCategory(new DataSeriesValues('String', 'Bar3DChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'Bar3DChart!$B$2:$B$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('Bar3DChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(1);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('bar3D');
+    });
+
+    test('line3D chart round-trip: chart type preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('Line3DChart');
+
+        worksheet.getCell('A1').setValue('Day');
+        worksheet.getCell('A2').setValue('Mon');
+        worksheet.getCell('A3').setValue('Tue');
+        worksheet.getCell('B1').setValue('Count');
+        worksheet.getCell('B2').setValue(3);
+        worksheet.getCell('B3').setValue(7);
+
+        const chart = new Chart();
+        chart.setName('Line 3D Chart Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('line3D');
+        series.setPlotCategory(new DataSeriesValues('String', 'Line3DChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'Line3DChart!$B$2:$B$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('Line3DChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(1);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('line3D');
+    });
+
+    test('area3D chart round-trip: chart type preserved', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('Area3DChart');
+
+        worksheet.getCell('A1').setValue('Month');
+        worksheet.getCell('A2').setValue('Jan');
+        worksheet.getCell('A3').setValue('Feb');
+        worksheet.getCell('B1').setValue('Series');
+        worksheet.getCell('B2').setValue(20);
+        worksheet.getCell('B3').setValue(30);
+
+        const chart = new Chart();
+        chart.setName('Area 3D Chart Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('area3D');
+        series.setPlotCategory(new DataSeriesValues('String', 'Area3DChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'Area3DChart!$B$2:$B$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('Area3DChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(1);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('area3D');
+    });
+
+    test('pie3D chart round-trip: chart type preserved and first slice angle written', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('Pie3DChart');
+
+        worksheet.getCell('A1').setValue('Segment');
+        worksheet.getCell('A2').setValue('A');
+        worksheet.getCell('A3').setValue('B');
+        worksheet.getCell('B1').setValue('Share');
+        worksheet.getCell('B2').setValue(40);
+        worksheet.getCell('B3').setValue(60);
+
+        const chart = new Chart();
+        chart.setName('Pie 3D Chart Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('pie3D');
+        series.setPlotCategory(new DataSeriesValues('String', 'Pie3DChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'Pie3DChart!$B$2:$B$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const chartXml = await getFirstChartXml(buffer);
+        expect(chartXml).toContain('<c:firstSliceAng val="0"');
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('Pie3DChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(1);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('pie3D');
+    });
+
+    test('surface3D chart round-trip: chart type preserved and XML includes ser axis', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('Surface3DChart');
+
+        worksheet.getCell('A1').setValue('Category');
+        worksheet.getCell('A2').setValue('One');
+        worksheet.getCell('A3').setValue('Two');
+        worksheet.getCell('B1').setValue('Series');
+        worksheet.getCell('B2').setValue(5);
+        worksheet.getCell('B3').setValue(7);
+
+        const chart = new Chart();
+        chart.setName('Surface 3D Chart Test');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('surface3D');
+        series.setPlotCategory(new DataSeriesValues('String', 'Surface3DChart!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'Surface3DChart!$B$2:$B$3'));
+        chart.addDataSeries(series);
+
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const chartXml = await getFirstChartXml(buffer);
+        expect(chartXml).toContain('<c:surface3DChart>');
+        expect(chartXml).toContain('<c:serAx>');
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('Surface3DChart');
+
+        expect(readWorksheet!.getChartCollection()).toHaveLength(1);
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        expect(readChart.getPlotArea()).toHaveLength(1);
+        expect(readChart.getPlotArea()[0]!.getPlotType()).toBe('surface3D');
     });
 });
