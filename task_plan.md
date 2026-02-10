@@ -80,8 +80,16 @@ In-memory I/O with Blob/ArrayBuffer/Uint8Array support for Reader and Writer.
 ### Phase 18: Formula Calculation Engine (COMPLETE)
 Formula parser, tokenizer, 100+ functions, and Cell.getCalculatedValue().
 
-### Phase 19: Chart Support (COMPLETE)
-Chart data model, XLSX Reader/Writer, 15 chart types, combo charts, data series, titles, legends, data labels, axis styling, plot area layout, and 3D view settings.
+### Phase 19: Chart Support (COMPLETE - 60-70% PHP Parity)
+15 chart types (2D/3D), combo charts, data series, titles, legends, data labels, axis styling, plot area layout, and 3D view settings.
+
+**Known Limitations vs PHP:**
+- Missing classes: Title, Legend, PlotArea, Axis, TrendLine, ChartColor (8 total)
+- DataSeries uses single values vs PHP arrays (architectural mismatch)
+- Missing: trend lines, date axis, axis scaling, effects (shadow/glow), per-data-point colors
+- Limited: legend styling, axis customization, color types (only srgbClr)
+
+**Estimated parity effort:** 3-4 weeks for full feature completeness
 
 ## Upcoming Priorities
 
