@@ -1,91 +1,69 @@
-# Progress - Systematic Parity Review & Fixes
+# Progress - phpspreadsheet-js
 
-## Session Log
-- [2026-02-02] Added combo chart support (bar+line, area+line) with writer grouping by plotType and reader multi-block parsing; 4 combo tests; full suite passes (446 tests).
-- [2026-02-02] Added 3D chart variants (bar3D/line3D/area3D/pie3D/surface3D) with view3D/serAx support and round-trip tests; drawings writer test needs 30s timeout.
-- [2026-02-02] Added area chart grouping read/write and round-trip test; full suite passes (437 tests).
-- [2026-02-02] Added chart/plot area styling (fill, border, gradient) read/write and tests; full suite passes (436 tests).
-- [2026-02-02] Added plot area layout (manual layout) read/write with layout tests; full suite passes (434 tests).
-- [2026-02-02] Added chart title font styling and new chart types (bubble/radar/stock/surface), expanded chart round-trip tests; full suite passes (432 tests).
-- [2026-02-02] Added data labels styling (font, number format, fill/border colors) read/write with tests; full suite passes (419 tests).
-- [2026-02-02] Added chart axis title fonts and gridline styling (color/width) read/write with tests; full suite passes (409 tests).
-- [2026-02-02] Added chart axis titles/gridlines read/write support with new axis tests; full suite passes.
-- [2026-02-02] Implemented chart type-specific behavior (doughnut/scatter/bar axes/grouping), added DataLabels model with XLSX reader/writer support, and expanded chart tests (round-trip, type-specific, data labels). All tests pass.
-- [2026-02-01] Expanded XLSX worksheet view/state reading: parse workbook sheet visibility state (hidden/veryHidden), sheetPr/sheetFormatPr/printOptions (tabColor, codeName, outline summary flags, fitToPage, default dimensions, zeroHeight, print gridlines/centering), pageMargins/pageSetup/headerFooter, and manual page breaks (rowBreaks/colBreaks); added safer XML attribute extraction and tests for visibility and state readers.
-- [2026-02-01] Implemented XLSX worksheet sheetViews reading: parse view settings (gridlines/headers/rightToLeft/showZeros/view/zoomScale*), panes (xSplit/ySplit/state/topLeftCell/activePane), and selections (sqref + per-pane Pane objects) with PhpSpreadsheet parity; added round-trip tests and aligned freezePane/topLeftCell defaults and boolean parsing.
-- [2026-02-01] Added edge-case tests for sheetViews parsing by zip-patching sheet XML (readDataOnly skip, invalid activePane behavior, space-separated sqref tokenization).
-- [2026-02-01] Aligned XLSX sheetViews writer output with PhpSpreadsheet (topLeftCell emission rules; activePane only synthesized for frozen panes).
-- [2026-01-31] Implemented XLSX AutoFilter rule reading: parse worksheet `<autoFilter>` + `<filterColumn>` blocks (filters/customFilters/dynamicFilter/top10), load into AutoFilter model; added round-trip test coverage.
-- [2026-01-31] Planned IO refactor: add in-memory Reader/Writer support (Blob/ArrayBuffer/Uint8Array) alongside filesystem paths.
-- [2026-01-31] Implemented in-memory XLSX IO: add `XlsxWriter.writeBuffer()` and `XlsxReader.loadFromBuffer()`/`listWorksheet*FromBuffer()`, and add buffer round-trip tests.
-- [2026-01-31] Implemented embedded chart writing (minimal): add `XlsxWriter.includeCharts`, emit chart DrawingML anchors + chart parts, and add zip-level writer test.
-- [2026-01-31] Added embedded chart support (reader, partial): chart fixture, chart collection API, chart discovery via drawing parts, and minimal chart XML parsing (title + series formulas).
-- [2026-01-30] Implemented worksheet drawings/images (DrawingML) read/write: parse `<drawing r:id>` -> `xl/drawings/drawing*.xml` + media rels, and write drawing parts + media with stable non-numeric sheet rel ids.
-- [2026-01-30] Implemented memory disposal cycle breaking: `Worksheet.disconnectCells()` detaches retained `Cell` instances; added `Cell.detach()` and iteration helpers; extended memory management tests.
-- [2026-01-30] Stabilized XLSX comments writer tests by isolating temp files and avoiding cross-test deletion races.
-- [2026-01-30] Implemented XLSX classic comments reading (comments*.xml via sheet rels) and added fixture-backed reader tests.
-- [2026-01-30] Implemented classic cell comments (Excel notes): `Comment` model + Worksheet/Cell APIs, and XLSX writer support (comments*.xml + vmlDrawing*.vml + legacyDrawing + rels/content types) with tests.
-- [2026-01-30] Aligned Color API with PHP tint behavior, fixed Style export array, and adjusted XLSX writer fill colors.
-- [2026-01-30] Updated worksheet row breaks handling and verify scripts; verified XLSX output with PhpSpreadsheet.
-- [2026-01-30] Conducted deep systematic parity audit of Core, Style, I/O, and Calculation modules.
-- [2026-01-30] Created `review/parity-check.md` documenting ~40 specific implementation gaps.
-- [2026-01-30] Refactored `Cell` and `CellCollection` to resolve circular dependencies and improve type safety.
-- [2026-01-30] Implemented `getHighestRow/Column` and `getHighestDataRow/Column` in `Worksheet`.
-- [2026-01-30] Implemented `toArray`, `fromArray`, and `rangeToArray` in `Worksheet` with formula calculation support.
-- [2026-01-29] Started implementing `src/calculation/calculation.ts`.
-- [2026-01-29] Fixed LSP errors regarding mixed `private` and `#` usage.
-- [2026-01-29] Basic arithmetic operators (+, -, *, /) implemented in `Calculation`.
-- [2026-01-29] Basic A1 reference resolution implemented.
-- [2026-01-29] Implemented Function Registry and basic function support (SUM, IF, etc.).
-- [2026-01-29] Implemented Branch Pruning for IF statements.
-- [2026-01-29] Implemented Subexpression handling and Argument processing.
-- [2026-01-29] Implemented Cross-Sheet References and Range resolution.
-- [2026-01-29] Implemented Row-Major / Column-Major range extraction.
-- [2026-01-29] Implemented Named Formula support.
-- [2026-01-29] Implemented Calculation Caching mechanism.
-- [2026-01-29] Implemented Structured References (Excel Tables).
-- [2026-01-29] Implemented Spill Operator (#) via ANCHORARRAY transformation.
-- [2026-01-29] Implemented Matrix/Array Constant refinements ({1,2;3,4}).
-- [2026-01-29] Implemented Rich Text infrastructure (TextElement, Run, RichText).
-- [2026-01-29] Ported Style components (Alignment, NumberFormat, Fill, Border, Borders).
-- [2026-01-29] Updated Cell and DefaultValueBinder to support RichText (TYPE_INLINE).
-- [2026-01-29] Added unit tests for Rich Text and verified with Bun.
-- [2026-01-29] Implemented Style and Protection classes with applyFromArray support across styles.
-- [2026-01-29] Added applyFromArray unit tests for Style components.
-- [2026-01-29] Implemented Style Supervisor behavior and Xf index management in Workbook.
-- [2026-01-29] Performed systematic parity review of Styles, Core, Calculation, and Rich Text modules.
-- [2026-01-29] Refactored FormulaToken to use private properties and explicit getters/setters.
-- [2026-01-29] Aligned Spreadsheet and Worksheet constants (visibility, sheet states) with PHP.
-- [2026-01-29] Implemented Worksheet PageSetup and PageMargins.
-- [2026-01-29] Implemented Worksheet ColumnDimension and RowDimension.
-- [2026-01-29] Implemented Spreadsheet.garbageCollect() for Xf index pruning.
-- [2026-01-29] Implemented fully functional XLSX Writer with style, dimension, and formula support.
-- [2026-01-29] Verified XLSX writer output using PhpSpreadsheet.
-- [2026-01-29] Implemented Merged Cells support in Worksheet and XLSX Writer.
-- [2026-01-29] Conducted comprehensive parity review; identified critical gaps in UI controls, Metadata, and Memory management.
-- [2026-01-29] Implemented Worksheet Interactivity (Freeze Panes, Zoom, View settings) and updated XLSX Writer.
-- [2026-01-29] Configured `bunfig.toml` and restricted tests to the `tests/` directory.
-- [2026-01-29] Fixed `PageSetup` print area insertion logic and verified with unit tests.
-- [2026-01-29] Updated `AGENTS.md` with persistence guidelines and subagent parity mandates.
-- [2026-01-29] Implemented `AutoFilter.showHideRows()` with support for simple, custom, dynamic, and top-ten filters; verified with unit tests.
-- [2026-01-29] Implemented Document Properties (Metadata) system with support for custom properties and XLSX writing; verified with PHP bridge.
-- [2026-01-29] Implemented `PasswordHasher` utility for legacy and ISO password hashing; verified with unit tests and PHP.
-- [2026-01-29] Implemented Workbook Security and Protection with XLSX Writer integration.
-- [2026-01-29] Enhanced Spreadsheet core with workbook view properties (showSheetTabs, tabRatio, etc.).
-- [2026-01-29] Verified Workbook Security and XLSX writing with unit tests.
-- [2026-01-29] Implemented Conditional Formatting support in Worksheet and XLSX Writer (DXF, rules).
-- [2026-01-29] Implemented Theme writer and integrated it into XLSX export process.
-- [2026-01-29] Enhanced Color class with theme and tint resolution support.
-- [2026-01-29] Refactored XLSX Styles writer for full Theme/Tint parity.
-- [2026-01-29] Implemented Conditional Formatting Wizards (CellValue, TextValue, DateValue, Duplicates, Unique, Errors, Blanks, Expression).
-- [2026-01-29] Created unit tests for all Conditional Formatting Wizards.
-- [2026-01-29] Developed CellMatcher, StyleMerger, and CellStyleAssessor for Calculation Engine integration.
-- [2026-01-29] Conducted Systematic Writer Parity Review: fixed theme/tint preservation in `applyFromArray` and `exportArray`.
+## Phase 19: Chart Support (COMPLETE)
+15 chart types (2D/3D), combo charts, styling (data labels, axis, titles, fills, gradients), plot area layout, view3D, surface serAx.
 
-## Completed Tasks
-- Comprehensive PHP-to-TS parity audit and roadmap update.
-- Fixed `Cell` and `CellCollection` architecture and resolved circular dependencies.
-- Implemented `Worksheet` data bound and array import/export parity.
-- Worksheet Interactivity (Freeze Panes, Zoom, Views) and XLSX Writer support.
-- Workbook Security (Passwords, Hashing) and UI settings with XLSX Writer support.
-- Conditional Formatting and Themes/Tinting infrastructure.
+## Phase 18: Formula Calculation Engine (COMPLETE)
+100+ functions, parser, tokenizer, dependency tracking, structured references, spill operator (#), array constants.
+
+## Phase 17: I/O Abstractions (COMPLETE)
+In-memory I/O with ArrayBuffer/Uint8Array support for Reader and Writer.
+
+## Phase 16: Performance & Scalability (COMPLETE)
+Cell caching (MemoryCache, QuickLRUCache), memory disposal (disconnectCells, Cell.detach), cycle breaking.
+
+## Phase 15: I/O Extension & Graphics (COMPLETE)
+DrawingML drawings/images, XLSX comments (reading/writing), embedded charts, full XLSX Reader parity.
+
+## Phase 15c: XLSX Port Focus (COMPLETE)
+AutoFilter (rules, showHideRows), Tables, worksheet views (panes, selections, zoom), page setup, headers/footers.
+
+## Phase 15b: Data Validation (COMPLETE)
+DataValidation class with rules, XLSX read/write support.
+
+## Phase 14: Advanced Worksheet Features (COMPLETE)
+Hyperlinks, page setup (margins, orientation), row/column breaks.
+
+## Phase 13: Engineering & Text Functions (COMPLETE)
+Engineering functions (COMPLEX, CONVERT), 100+ total functions.
+
+## Phase 12: Lookup & Reference (COMPLETE)
+VLOOKUP, HLOOKUP, INDEX, MATCH, OFFSET, INDIRECT, cross-sheet references.
+
+## Phase 11: Function Categories (COMPLETE)
+Statistical, Date/Time, Financial, Logical functions.
+
+## Phase 10: Calculation Engine Core (COMPLETE)
+Math/Trig functions, range operations, dependency tracking.
+
+## Phase 9: XLSX Advanced Features (COMPLETE)
+Conditional Formatting (DXF, wizards), Themes, AutoFilter, Document Properties.
+
+## Phase 8: XLSX Writer Foundation (COMPLETE)
+Full XLSX Writer with styles, dimensions, formulas, merged cells, themes.
+
+## Phase 7: Formula Foundation (COMPLETE)
+Formula tokenizer, parser, A1/R1C1 references.
+
+## Phase 6: Advanced Styling (COMPLETE)
+Rich Text, Conditional Formatting wizards, Color (theme, tint), CellMatcher, StyleMerger.
+
+## Phase 5: Worksheet Operations (COMPLETE)
+Highest row/column, array conversion (to/from/range), row/column manipulation, PageSetup, freeze panes, zoom.
+
+## Phase 4: Number Formatting (COMPLETE)
+NumberFormat class with format codes (General, Number, Date, Time).
+
+## Phase 3: Basic Styling (COMPLETE)
+Style components (Alignment, Fill, Border), Style Supervisor, Xf index management.
+
+## Phase 2: Cell Management (COMPLETE)
+Cell/CellCollection architecture refactor, circular dependency resolution.
+
+## Phase 1: Core Infrastructure (COMPLETE)
+Workbook Security (passwords, hashing), UI settings, Spreadsheet.garbageCollect(), constants aligned with PHP.
+
+## Current Status
+- **Tests:** 446+ passing
+- **Latest:** Phase 19 complete
+- **Next:** Phase 20 (Advanced Features) or documentation
