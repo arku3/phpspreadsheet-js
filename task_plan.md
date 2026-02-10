@@ -93,10 +93,17 @@ Formula parser, tokenizer, 100+ functions, and Cell.getCalculatedValue().
 
 ## Upcoming Priorities
 
-### Phase 20: Advanced Features
+### Phase 20: Chart Parity & Advanced Features
+- [ ] **Chart PHP Parity (CRITICAL)** - Close 30-40% gap vs PhpSpreadsheet
+  - [ ] Missing classes: Title, Legend, PlotArea, Axis, GridLines, Properties, ChartColor, TrendLine
+  - [ ] Fix DataSeries architecture (arrays vs single values)
+  - [ ] Add trend lines, date axis, axis scaling
+  - [ ] Add effects (shadow/glow/soft edges), per-data-point colors
+  - [ ] Add cell-referenced titles, legend styling
+  - [ ] Support schemeClr/sysClr color types
 - [ ] Conditional formatting enhancements
 - [ ] Pivot table support (Phase 21)
-- [ ] Advanced chart features (trendlines, error bars)
+- [ ] Advanced chart features (error bars)
 - [ ] Sparklines
 
 ### Phase 22: Documentation & Polish
