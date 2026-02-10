@@ -514,132 +514,84 @@ function writePlotAreaLayout(parent: any, layout: ChartLayout | null): void {
 }
 
 /**
- * Write a single data series to chart XML.
+ * Get chart type element name from plot type.
  */
-function writeDataSeries(
+function getChartTypeElement(plotType: string): string {
+    switch (plotType) {
+        case 'bar':
+            return 'c:barChart';
+        case 'bar3D':
+            return 'c:bar3DChart';
+        case 'line':
+            return 'c:lineChart';
+        case 'line3D':
+            return 'c:line3DChart';
+        case 'pie':
+            return 'c:pieChart';
+        case 'pie3D':
+            return 'c:pie3DChart';
+        case 'doughnut':
+            return 'c:doughnutChart';
+        case 'area':
+            return 'c:areaChart';
+        case 'area3D':
+            return 'c:area3DChart';
+        case 'scatter':
+            return 'c:scatterChart';
+        case 'bubble':
+            return 'c:bubbleChart';
+        case 'radar':
+            return 'c:radarChart';
+        case 'stock':
+            return 'c:stockChart';
+        case 'surface':
+            return 'c:surfaceChart';
+        case 'surface3D':
+            return 'c:surface3DChart';
+        default:
+            return 'c:barChart';
+    }
+}
+
+/**
+ * Check if a plot type is a pie/doughnut chart (cannot be combined in combo charts).
+ */
+function isPieChartType(plotType: string): boolean {
+    return plotType === 'pie' || plotType === 'pie3D' || plotType === 'doughnut';
+}
+
+/**
+ * Group data series by their plot type.
+ */
+function groupSeriesByPlotType(dataSeriesList: DataSeries[]): Map<string, DataSeries[]> {
+    const groups = new Map<string, DataSeries[]>();
+
+    for (const series of dataSeriesList) {
+        const plotType = series.getPlotType();
+        if (!groups.has(plotType)) {
+            groups.set(plotType, []);
+        }
+        groups.get(plotType)!.push(series);
+    }
+
+    return groups;
+}
+
+/**
+ * Write a single data series element (<c:ser>) to chart XML.
+ * This writes only the series content, not the chart type wrapper.
+ */
+function writeDataSeriesElement(
     parent: any,
     dataSeries: DataSeries,
     seriesIndex: number,
-    catAxId: string,
-    valAxId: string,
-    serAxId: string | null,
     worksheet: Worksheet | null = null,
 ): void {
     const plotType = dataSeries.getPlotType();
-
-    // Determine chart type element
-    let chartType: string;
-    switch (plotType) {
-        case 'bar':
-            chartType = 'c:barChart';
-            break;
-        case 'bar3D':
-            chartType = 'c:bar3DChart';
-            break;
-        case 'line':
-            chartType = 'c:lineChart';
-            break;
-        case 'line3D':
-            chartType = 'c:line3DChart';
-            break;
-        case 'pie':
-            chartType = 'c:pieChart';
-            break;
-        case 'pie3D':
-            chartType = 'c:pie3DChart';
-            break;
-        case 'doughnut':
-            chartType = 'c:doughnutChart';
-            break;
-        case 'area':
-            chartType = 'c:areaChart';
-            break;
-        case 'area3D':
-            chartType = 'c:area3DChart';
-            break;
-        case 'scatter':
-            chartType = 'c:scatterChart';
-            break;
-        case 'bubble':
-            chartType = 'c:bubbleChart';
-            break;
-        case 'radar':
-            chartType = 'c:radarChart';
-            break;
-        case 'stock':
-            chartType = 'c:stockChart';
-            break;
-        case 'surface':
-            chartType = 'c:surfaceChart';
-            break;
-        case 'surface3D':
-            chartType = 'c:surface3DChart';
-            break;
-        default:
-            chartType = 'c:barChart'; // Default to bar
-    }
-
-    const chartElement = parent.ele(chartType);
-
-    // Write chart type specific attributes
     const lineStyle = dataSeries.getLineStyle();
 
-    if (plotType === 'bar' || plotType === 'bar3D') {
-        const direction = dataSeries.getDirection() ?? 'col';
-        chartElement.ele('c:barDir', { val: direction });
-        const grouping = dataSeries.getGrouping() ?? 'clustered';
-        chartElement.ele('c:grouping', { val: grouping });
-        chartElement.ele('c:gapWidth', { val: '150' });
-        if (grouping === 'stacked' || grouping === 'percentStacked') {
-            chartElement.ele('c:overlap', { val: '100' });
-        }
-    } else if (plotType === 'line' || plotType === 'line3D') {
-        chartElement.ele('c:grouping', { val: dataSeries.getGrouping() ?? 'standard' });
-        let smoothValue: boolean | null = null;
-        if (plotType === 'line') {
-            if (dataSeries.getSmoothLine()) {
-                smoothValue = true;
-            } else if (lineStyle && SMOOTH_LINE_STYLES.has(lineStyle)) {
-                smoothValue = true;
-            } else if (lineStyle && STRAIGHT_LINE_STYLES.has(lineStyle)) {
-                smoothValue = false;
-            }
-        }
-        if (smoothValue !== null) {
-            chartElement.ele('c:smooth', { val: smoothValue ? '1' : '0' });
-        }
-    } else if (plotType === 'scatter') {
-        const markerSymbol = dataSeries.getMarkerSymbol();
-        const smoothScatter = dataSeries.getSmoothLine() || (lineStyle !== null && SMOOTH_LINE_STYLES.has(lineStyle));
-        if (smoothScatter) {
-            chartElement.ele('c:scatterStyle', {
-                val: markerSymbol && markerSymbol !== 'none' ? 'smoothMarker' : 'smooth',
-            });
-        } else if (markerSymbol && markerSymbol !== 'none') {
-            chartElement.ele('c:scatterStyle', { val: 'lineMarker' });
-        } else {
-            chartElement.ele('c:scatterStyle', { val: 'line' });
-        }
-    } else if (plotType === 'pie' || plotType === 'pie3D') {
-        chartElement.ele('c:firstSliceAng', { val: '0' });
-    } else if (plotType === 'doughnut') {
-        chartElement.ele('c:firstSliceAng', { val: '0' });
-        chartElement.ele('c:holeSize', { val: '50' });
-    } else if (plotType === 'area' || plotType === 'area3D') {
-        chartElement.ele('c:grouping', { val: dataSeries.getGrouping() ?? 'standard' });
-    } else if (plotType === 'bubble') {
-        chartElement.ele('c:bubbleScale', { val: '100' });
-    } else if (plotType === 'radar') {
-        chartElement.ele('c:radarStyle', { val: 'marker' });
-    } else if (plotType === 'surface' || plotType === 'surface3D') {
-        chartElement.ele('c:wireframe', { val: '0' });
-    }
-
-    const varyColors = plotType === 'pie' || plotType === 'pie3D' || plotType === 'doughnut' ? '1' : '0';
-    chartElement.ele('c:varyColors', { val: varyColors });
-
     // Write the data series
-    const series = chartElement.ele('c:ser');
+    const series = parent.ele('c:ser');
     series.ele('c:idx', { val: seriesIndex.toString() });
     series.ele('c:order', { val: dataSeries.getPlotOrder().toString() });
 
@@ -682,21 +634,113 @@ function writeDataSeries(
         const valueTag = plotType === 'scatter' ? 'c:yVal' : 'c:val';
         writeDataSeriesValues(series, plotValues[0], valueTag, worksheet);
     }
+}
 
-    // Write data labels if configured for this series
-    const dataLabels = dataSeries.getDataLabels();
-    if (dataLabels && dataLabels.hasAnyLabel()) {
-        writeDataLabels(chartElement, dataLabels);
+/**
+ * Write a chart type block with all series of that type.
+ * This creates the chart type element (e.g., <c:barChart>) containing all series.
+ */
+function writeChartTypeBlock(
+    parent: any,
+    plotType: string,
+    seriesList: DataSeries[],
+    startSeriesIndex: number,
+    catAxId: string,
+    valAxId: string,
+    serAxId: string | null,
+    worksheet: Worksheet | null = null,
+): number {
+    const chartType = getChartTypeElement(plotType);
+    const chartElement = parent.ele(chartType);
+
+    // Get representative series for type-specific attributes
+    const firstSeries = seriesList[0];
+    const lineStyle = firstSeries?.getLineStyle() ?? null;
+
+    // Write chart type specific attributes
+    if (plotType === 'bar' || plotType === 'bar3D') {
+        const direction = firstSeries?.getDirection() ?? 'col';
+        chartElement.ele('c:barDir', { val: direction });
+        const grouping = firstSeries?.getGrouping() ?? 'clustered';
+        chartElement.ele('c:grouping', { val: grouping });
+        chartElement.ele('c:gapWidth', { val: '150' });
+        if (grouping === 'stacked' || grouping === 'percentStacked') {
+            chartElement.ele('c:overlap', { val: '100' });
+        }
+    } else if (plotType === 'line' || plotType === 'line3D') {
+        chartElement.ele('c:grouping', { val: firstSeries?.getGrouping() ?? 'standard' });
+        let smoothValue: boolean | null = null;
+        if (plotType === 'line') {
+            if (firstSeries?.getSmoothLine()) {
+                smoothValue = true;
+            } else if (lineStyle && SMOOTH_LINE_STYLES.has(lineStyle)) {
+                smoothValue = true;
+            } else if (lineStyle && STRAIGHT_LINE_STYLES.has(lineStyle)) {
+                smoothValue = false;
+            }
+        }
+        if (smoothValue !== null) {
+            chartElement.ele('c:smooth', { val: smoothValue ? '1' : '0' });
+        }
+    } else if (plotType === 'scatter') {
+        const markerSymbol = firstSeries?.getMarkerSymbol();
+        const smoothScatter = firstSeries?.getSmoothLine() || (lineStyle !== null && SMOOTH_LINE_STYLES.has(lineStyle));
+        if (smoothScatter) {
+            chartElement.ele('c:scatterStyle', {
+                val: markerSymbol && markerSymbol !== 'none' ? 'smoothMarker' : 'smooth',
+            });
+        } else if (markerSymbol && markerSymbol !== 'none') {
+            chartElement.ele('c:scatterStyle', { val: 'lineMarker' });
+        } else {
+            chartElement.ele('c:scatterStyle', { val: 'line' });
+        }
+    } else if (plotType === 'pie' || plotType === 'pie3D') {
+        chartElement.ele('c:firstSliceAng', { val: '0' });
+    } else if (plotType === 'doughnut') {
+        chartElement.ele('c:firstSliceAng', { val: '0' });
+        chartElement.ele('c:holeSize', { val: '50' });
+    } else if (plotType === 'area' || plotType === 'area3D') {
+        chartElement.ele('c:grouping', { val: firstSeries?.getGrouping() ?? 'standard' });
+    } else if (plotType === 'bubble') {
+        chartElement.ele('c:bubbleScale', { val: '100' });
+        chartElement.ele('c:showNegBubbles', { val: '0' });
+    } else if (plotType === 'radar') {
+        chartElement.ele('c:radarStyle', { val: 'marker' });
+    } else if (plotType === 'surface' || plotType === 'surface3D') {
+        chartElement.ele('c:wireframe', { val: '0' });
+    }
+
+    // varyColors: 1 for pie/doughnut or if multiple series, 0 otherwise
+    const varyColors = isPieChartType(plotType) || seriesList.length > 1 ? '1' : '0';
+    chartElement.ele('c:varyColors', { val: varyColors });
+
+    // Write all series for this chart type
+    let seriesIndex = startSeriesIndex;
+    for (const dataSeries of seriesList) {
+        writeDataSeriesElement(chartElement, dataSeries, seriesIndex, worksheet);
+        seriesIndex++;
+    }
+
+    // Write data labels if configured for any series in this group
+    // Note: For combo charts, data labels are typically configured per chart type block
+    for (const dataSeries of seriesList) {
+        const dataLabels = dataSeries.getDataLabels();
+        if (dataLabels && dataLabels.hasAnyLabel()) {
+            writeDataLabels(chartElement, dataLabels);
+            break; // Only write once per chart type block
+        }
     }
 
     // Add axis references for non-pie charts
-    if (plotType !== 'pie' && plotType !== 'pie3D' && plotType !== 'doughnut') {
+    if (!isPieChartType(plotType)) {
         chartElement.ele('c:axId', { val: catAxId });
         chartElement.ele('c:axId', { val: valAxId });
         if ((plotType === 'surface' || plotType === 'surface3D') && serAxId) {
             chartElement.ele('c:axId', { val: serAxId });
         }
     }
+
+    return seriesIndex;
 }
 
 /**
@@ -808,10 +852,44 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
         barChart.ele('c:axId', { val: catAxId });
         barChart.ele('c:axId', { val: valAxId });
     } else {
-        // Write each data series with worksheet reference for data resolution
-        dataSeriesList.forEach((dataSeries, index) => {
-            writeDataSeries(plotArea, dataSeries, index, catAxId, valAxId, serAxId, chartWorksheet);
-        });
+        // Group series by plotType for combo chart support
+        const seriesGroups = groupSeriesByPlotType(dataSeriesList);
+
+        // Check if we have pie/doughnut charts (they can't be combined)
+        const hasPieChart = Array.from(seriesGroups.keys()).some(isPieChartType);
+
+        if (hasPieChart) {
+            // For pie charts, only write the pie chart type (can't be combined)
+            // Priority: doughnut > pie3D > pie
+            let pieType: string | null = null;
+            if (seriesGroups.has('doughnut')) {
+                pieType = 'doughnut';
+            } else if (seriesGroups.has('pie3D')) {
+                pieType = 'pie3D';
+            } else if (seriesGroups.has('pie')) {
+                pieType = 'pie';
+            }
+
+            if (pieType) {
+                const pieSeriesList = seriesGroups.get(pieType)!;
+                writeChartTypeBlock(plotArea, pieType, pieSeriesList, 0, catAxId, valAxId, serAxId, chartWorksheet);
+            }
+        } else {
+            // Write each chart type group (combo charts)
+            let seriesIndex = 0;
+            for (const [plotType, seriesList] of seriesGroups) {
+                seriesIndex = writeChartTypeBlock(
+                    plotArea,
+                    plotType,
+                    seriesList,
+                    seriesIndex,
+                    catAxId,
+                    valAxId,
+                    serAxId,
+                    chartWorksheet,
+                );
+            }
+        }
     }
 
     // Add axes (not for pie charts)

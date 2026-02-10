@@ -2246,19 +2246,34 @@ export class XlsxReader implements IReader {
             'c:stockChart': 'stock',
         };
 
-        // Find chart type
-        let plotType = 'bar';
-        let chartSmooth: boolean | null = null;
-        let chartGrouping: string | null = null;
-        let chartDirection: string | null = null;
-        let scatterStyle: string | null = null;
-        let chartDataLabels: DataLabels | null = null;
+        // Find all chart type blocks in the plotArea (for combo charts)
+        interface ChartBlockInfo {
+            tag: string;
+            plotType: string;
+            chartXml: string;
+            smooth: boolean | null;
+            grouping: string | null;
+            direction: string | null;
+            scatterStyle: string | null;
+            dataLabels: DataLabels | null;
+        }
+
+        const chartBlocks: ChartBlockInfo[] = [];
         const unsmoothedTypes = new Set(['line3D']);
+
         for (const [tag, type] of Object.entries(chartTypeMap)) {
-            if (plotAreaInner.includes(`<${tag}`)) {
-                plotType = type;
-                const chartMatch = plotAreaInner.match(new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/\\s*${tag}\\s*>`));
-                const chartXml = chartMatch?.[0] ?? '';
+            // Find all occurrences of this chart type in the plotArea
+            const chartRegex = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/\\s*${tag}\\s*>`, 'g');
+            const chartMatches = [...plotAreaInner.matchAll(chartRegex)];
+
+            for (const chartMatch of chartMatches) {
+                const chartXml = chartMatch[0] ?? '';
+                const plotType = type;
+                let chartSmooth: boolean | null = null;
+                let chartGrouping: string | null = null;
+                let chartDirection: string | null = null;
+                let scatterStyle: string | null = null;
+                let chartDataLabels: DataLabels | null = null;
 
                 if (tag === 'c:lineChart' || tag === 'c:line3DChart') {
                     const smoothMatch = chartXml.match(/<c:smooth\b([^>]*)\/?>(?:[\\s\\S]*?<\/c:smooth\s*>)?/);
@@ -2397,171 +2412,198 @@ export class XlsxReader implements IReader {
                         }
                     }
                 }
-                break;
+
+                chartBlocks.push({
+                    tag,
+                    plotType,
+                    chartXml,
+                    smooth: chartSmooth,
+                    grouping: chartGrouping,
+                    direction: chartDirection,
+                    scatterStyle,
+                    dataLabels: chartDataLabels,
+                });
             }
         }
 
-        // Parse data series
-        const serMatches = chartXml.matchAll(/<c:ser\b[^>]*>([\s\S]*?)<\/c:ser>/g);
+        // Default to bar if no chart blocks found
+        if (chartBlocks.length === 0) {
+            chartBlocks.push({
+                tag: 'c:barChart',
+                plotType: 'bar',
+                chartXml: '',
+                smooth: null,
+                grouping: null,
+                direction: null,
+                scatterStyle: null,
+                dataLabels: null,
+            });
+        }
 
-        for (const match of serMatches) {
-            const serInner = match[1] ?? '';
+        // Parse data series from each chart block
+        for (const block of chartBlocks) {
+            // Parse series from this specific chart block only
+            const serMatches = block.chartXml.matchAll(/<c:ser\b[^>]*>([\s\S]*?)<\/c:ser>/g);
 
-            // Create data series
-            const series = new DataSeries(plotType as any);
-            if (plotType === 'bar') {
-                if (chartGrouping) {
-                    try {
-                        series.setGrouping(chartGrouping as any);
-                    } catch {
-                        // Ignore invalid grouping.
-                    }
-                }
-                if (chartDirection) {
-                    try {
-                        series.setDirection(chartDirection as any);
-                    } catch {
-                        // Ignore invalid direction.
-                    }
-                }
-            } else if (plotType === 'line') {
-                if (chartGrouping) {
-                    try {
-                        series.setGrouping(chartGrouping as any);
-                    } catch {
-                        // Ignore invalid grouping.
-                    }
-                }
-            } else if (plotType === 'area') {
-                if (chartGrouping) {
-                    try {
-                        series.setGrouping(chartGrouping as any);
-                    } catch {
-                        // Ignore invalid grouping.
-                    }
-                }
-            } else if (plotType === 'scatter' && scatterStyle) {
-                if (scatterStyle.toLowerCase().includes('smooth')) {
-                    series.setSmoothLine(true);
-                }
-                if (scatterStyle.includes('Marker') && series.getMarkerSymbol() === null) {
-                    series.setMarkerSymbol('circle');
-                }
-            }
+            for (const match of serMatches) {
+                const serInner = match[1] ?? '';
 
-            // Apply chart-level data labels to this series
-            if (chartDataLabels) {
-                series.setDataLabels(chartDataLabels);
-            }
-
-            // Parse idx and order
-            const idxMatch = serInner.match(/<c:idx\b[^>]*\bval="([^"]*)"/);
-            const orderMatch = serInner.match(/<c:order\b[^>]*\bval="([^"]*)"/);
-            if (idxMatch) {
-                series.setPlotOrder(Number.parseInt(idxMatch[1]!, 10));
-            } else if (orderMatch) {
-                series.setPlotOrder(Number.parseInt(orderMatch[1]!, 10));
-            }
-
-            // Parse marker
-            const markerMatch = serInner.match(/<c:marker\b[^>]*>([\s\S]*?)<\/c:marker>/);
-            if (markerMatch && markerMatch[1]) {
-                const markerInner = markerMatch[1];
-                const symbolMatch = markerInner.match(/<c:symbol\b[^>]*\bval="([^"]*)"/);
-                if (symbolMatch && symbolMatch[1]) {
-                    try {
-                        series.setMarkerSymbol(symbolMatch[1] as any);
-                    } catch {
-                        // Ignore invalid marker symbols.
-                    }
-                }
-                const sizeMatch = markerInner.match(/<c:size\b[^>]*\bval="([^"]*)"/);
-                if (sizeMatch && sizeMatch[1]) {
-                    const size = Number.parseInt(sizeMatch[1]!, 10);
-                    if (Number.isFinite(size)) {
-                        series.setMarkerSize(size);
-                    }
-                }
-            }
-
-            // Parse smooth line for scatter charts (series-level)
-            const serSmoothMatch = serInner.match(/<c:smooth\b([^>]*)\/?>(?:[\s\S]*?<\/c:smooth\s*>)?/);
-            if (serSmoothMatch) {
-                const smoothAttr = XlsxReader.#extractXmlAttribute(serSmoothMatch[1] ?? '', 'val');
-                const smoothValue = smoothAttr ? XlsxReader.#castXsdBoolean(smoothAttr) : true;
-                series.setSmoothLine(smoothValue);
-            } else if ((plotType === 'line' || plotType === 'line3D') && chartSmooth !== null) {
-                series.setSmoothLine(chartSmooth);
-            }
-
-            // Parse shape properties (styling)
-            const spPrMatch = serInner.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
-            if (spPrMatch && spPrMatch[1]) {
-                const spPrInner = spPrMatch[1];
-
-                // Parse fill color
-                const solidFillMatch = spPrInner.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
-                if (solidFillMatch && solidFillMatch[1]) {
-                    const srgbMatch = solidFillMatch[1].match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
-                    if (srgbMatch) {
-                        series.setFillColor(srgbMatch[1]!);
-                    }
-                }
-
-                // Parse line/border properties
-                const lnMatch = spPrInner.match(/<a:ln\b([^>]*)>([\s\S]*?)<\/a:ln>/);
-                if (lnMatch) {
-                    // Parse line width
-                    const wMatch = lnMatch[1]?.match(/\bw="([^"]*)"/);
-                    if (wMatch) {
-                        series.setLineWidth(Number.parseInt(wMatch[1]!, 10));
-                    }
-
-                    // Parse line/border color
-                    const lnSolidFill = lnMatch[2]?.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
-                    if (lnSolidFill && lnSolidFill[1]) {
-                        const lnSrgbMatch = lnSolidFill[1].match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
-                        if (lnSrgbMatch) {
-                            series.setBorderColor(lnSrgbMatch[1]!);
-                        }
-                    }
-
-                    // Parse line style (dash)
-                    const dashMatch = lnMatch[2]?.match(/<a:prstDash\b[^>]*\bval="([^"]*)"/);
-                    if (dashMatch && dashMatch[1]) {
+                // Create data series with this block's plot type
+                const series = new DataSeries(block.plotType as any);
+                if (block.plotType === 'bar') {
+                    if (block.grouping) {
                         try {
-                            series.setLineStyle(dashMatch[1] as any);
+                            series.setGrouping(block.grouping as any);
                         } catch {
-                            // Ignore invalid line style.
+                            // Ignore invalid grouping.
+                        }
+                    }
+                    if (block.direction) {
+                        try {
+                            series.setDirection(block.direction as any);
+                        } catch {
+                            // Ignore invalid direction.
+                        }
+                    }
+                } else if (block.plotType === 'line') {
+                    if (block.grouping) {
+                        try {
+                            series.setGrouping(block.grouping as any);
+                        } catch {
+                            // Ignore invalid grouping.
+                        }
+                    }
+                } else if (block.plotType === 'area') {
+                    if (block.grouping) {
+                        try {
+                            series.setGrouping(block.grouping as any);
+                        } catch {
+                            // Ignore invalid grouping.
+                        }
+                    }
+                } else if (block.plotType === 'scatter' && block.scatterStyle) {
+                    if (block.scatterStyle.toLowerCase().includes('smooth')) {
+                        series.setSmoothLine(true);
+                    }
+                    if (block.scatterStyle.includes('Marker') && series.getMarkerSymbol() === null) {
+                        series.setMarkerSymbol('circle');
+                    }
+                }
+
+                // Apply chart-level data labels to this series
+                if (block.dataLabels) {
+                    series.setDataLabels(block.dataLabels);
+                }
+
+                // Parse idx and order
+                const idxMatch = serInner.match(/<c:idx\b[^>]*\bval="([^"]*)"/);
+                const orderMatch = serInner.match(/<c:order\b[^>]*\bval="([^"]*)"/);
+                if (idxMatch) {
+                    series.setPlotOrder(Number.parseInt(idxMatch[1]!, 10));
+                } else if (orderMatch) {
+                    series.setPlotOrder(Number.parseInt(orderMatch[1]!, 10));
+                }
+
+                // Parse marker
+                const markerMatch = serInner.match(/<c:marker\b[^>]*>([\s\S]*?)<\/c:marker>/);
+                if (markerMatch && markerMatch[1]) {
+                    const markerInner = markerMatch[1];
+                    const symbolMatch = markerInner.match(/<c:symbol\b[^>]*\bval="([^"]*)"/);
+                    if (symbolMatch && symbolMatch[1]) {
+                        try {
+                            series.setMarkerSymbol(symbolMatch[1] as any);
+                        } catch {
+                            // Ignore invalid marker symbols.
+                        }
+                    }
+                    const sizeMatch = markerInner.match(/<c:size\b[^>]*\bval="([^"]*)"/);
+                    if (sizeMatch && sizeMatch[1]) {
+                        const size = Number.parseInt(sizeMatch[1]!, 10);
+                        if (Number.isFinite(size)) {
+                            series.setMarkerSize(size);
                         }
                     }
                 }
-            }
 
-            // Parse category (cat/xVal)
-            const catMatch = serInner.match(/<c:cat\b[^>]*>([\s\S]*?)<\/c:cat>/);
-            const xValMatch = serInner.match(/<c:xVal\b[^>]*>([\s\S]*?)<\/c:xVal>/);
-            const catContent = catMatch?.[1] ?? xValMatch?.[1];
-            if (catContent) {
-                const fMatch = catContent.match(/<c:f>([^<]*)<\/c:f>/);
-                if (fMatch && fMatch[1]) {
-                    const isNum = catContent.includes('<c:numRef') || catContent.includes('<c:numCache');
-                    series.setPlotCategory(new DataSeriesValues(isNum ? 'Number' : 'String', fMatch[1]));
+                // Parse smooth line for scatter charts (series-level)
+                const serSmoothMatch = serInner.match(/<c:smooth\b([^>]*)\/?>(?:[\s\S]*?<\/c:smooth\s*>)?/);
+                if (serSmoothMatch) {
+                    const smoothAttr = XlsxReader.#extractXmlAttribute(serSmoothMatch[1] ?? '', 'val');
+                    const smoothValue = smoothAttr ? XlsxReader.#castXsdBoolean(smoothAttr) : true;
+                    series.setSmoothLine(smoothValue);
+                } else if ((block.plotType === 'line' || block.plotType === 'line3D') && block.smooth !== null) {
+                    series.setSmoothLine(block.smooth);
                 }
-            }
 
-            // Parse values (val/yVal)
-            const valMatch = serInner.match(/<c:val\b[^>]*>([\s\S]*?)<\/c:val>/);
-            const yValMatch = serInner.match(/<c:yVal\b[^>]*>([\s\S]*?)<\/c:yVal>/);
-            const valContent = valMatch?.[1] ?? yValMatch?.[1];
-            if (valContent) {
-                const fMatch = valContent.match(/<c:f>([^<]*)<\/c:f>/);
-                if (fMatch && fMatch[1]) {
-                    series.addPlotValues(new DataSeriesValues('Number', fMatch[1]));
+                // Parse shape properties (styling)
+                const spPrMatch = serInner.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
+                if (spPrMatch && spPrMatch[1]) {
+                    const spPrInner = spPrMatch[1];
+
+                    // Parse fill color
+                    const solidFillMatch = spPrInner.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
+                    if (solidFillMatch && solidFillMatch[1]) {
+                        const srgbMatch = solidFillMatch[1].match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+                        if (srgbMatch) {
+                            series.setFillColor(srgbMatch[1]!);
+                        }
+                    }
+
+                    // Parse line/border properties
+                    const lnMatch = spPrInner.match(/<a:ln\b([^>]*)>([\s\S]*?)<\/a:ln>/);
+                    if (lnMatch) {
+                        // Parse line width
+                        const wMatch = lnMatch[1]?.match(/\bw="([^"]*)"/);
+                        if (wMatch) {
+                            series.setLineWidth(Number.parseInt(wMatch[1]!, 10));
+                        }
+
+                        // Parse line/border color
+                        const lnSolidFill = lnMatch[2]?.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
+                        if (lnSolidFill && lnSolidFill[1]) {
+                            const lnSrgbMatch = lnSolidFill[1].match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+                            if (lnSrgbMatch) {
+                                series.setBorderColor(lnSrgbMatch[1]!);
+                            }
+                        }
+
+                        // Parse line style (dash)
+                        const dashMatch = lnMatch[2]?.match(/<a:prstDash\b[^>]*\bval="([^"]*)"/);
+                        if (dashMatch && dashMatch[1]) {
+                            try {
+                                series.setLineStyle(dashMatch[1] as any);
+                            } catch {
+                                // Ignore invalid line style.
+                            }
+                        }
+                    }
                 }
-            }
 
-            dataSeries.push(series);
+                // Parse category (cat/xVal)
+                const catMatch = serInner.match(/<c:cat\b[^>]*>([\s\S]*?)<\/c:cat>/);
+                const xValMatch = serInner.match(/<c:xVal\b[^>]*>([\s\S]*?)<\/c:xVal>/);
+                const catContent = catMatch?.[1] ?? xValMatch?.[1];
+                if (catContent) {
+                    const fMatch = catContent.match(/<c:f>([^<]*)<\/c:f>/);
+                    if (fMatch && fMatch[1]) {
+                        const isNum = catContent.includes('<c:numRef') || catContent.includes('<c:numCache');
+                        series.setPlotCategory(new DataSeriesValues(isNum ? 'Number' : 'String', fMatch[1]));
+                    }
+                }
+
+                // Parse values (val/yVal)
+                const valMatch = serInner.match(/<c:val\b[^>]*>([\s\S]*?)<\/c:val>/);
+                const yValMatch = serInner.match(/<c:yVal\b[^>]*>([\s\S]*?)<\/c:yVal>/);
+                const valContent = valMatch?.[1] ?? yValMatch?.[1];
+                if (valContent) {
+                    const fMatch = valContent.match(/<c:f>([^<]*)<\/c:f>/);
+                    if (fMatch && fMatch[1]) {
+                        series.addPlotValues(new DataSeriesValues('Number', fMatch[1]));
+                    }
+                }
+
+                dataSeries.push(series);
+            }
         }
 
         return { dataSeries, legend, axes, serAxisId, layout, chartAreaStyle, plotAreaStyle };
