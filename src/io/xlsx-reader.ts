@@ -22,6 +22,7 @@ import {
 import { DataLabels, type DataLabelPosition } from '../worksheet/chart/data-labels.ts';
 import { DataSeriesValues } from '../worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../worksheet/chart/data-series.ts';
+import { TrendLine, type TrendLineType } from '../worksheet/chart/trend-line.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
 import { Pane } from '../worksheet/pane.ts';
 import type { IReader, WorksheetInfo } from './i-reader.ts';
@@ -2535,6 +2536,103 @@ export class XlsxReader implements IReader {
                     series.setSmoothLine(block.smooth);
                 }
 
+                // Parse trend lines
+                const trendLines: TrendLine[] = [];
+                const trendlineMatches = serInner.matchAll(/<c:trendline\b[^>]*>([\s\S]*?)<\/c:trendline>/g);
+                for (const trendlineMatch of trendlineMatches) {
+                    const trendlineInner = trendlineMatch[1] ?? '';
+                    const trendLine = new TrendLine();
+
+                    // Parse trendlineType
+                    const trendlineTypeMatch = trendlineInner.match(/<c:trendlineType\b[^>]*\bval="([^"]*)"/);
+                    if (trendlineTypeMatch?.[1]) {
+                        trendLine.setTrendLineType(trendlineTypeMatch[1] as TrendLineType);
+                    }
+
+                    // Parse name
+                    const nameMatch = trendlineInner.match(/<c:name>([^<]*)<\/c:name>/);
+                    if (nameMatch?.[1]) {
+                        trendLine.setName(XlsxReader.decodeXmlEntities(nameMatch[1]));
+                    }
+
+                    // Parse order (for polynomial trend lines)
+                    const orderMatch = trendlineInner.match(/<c:order\b[^>]*\bval="([^"]*)"/);
+                    if (orderMatch?.[1]) {
+                        const order = Number.parseInt(orderMatch[1], 10);
+                        if (Number.isFinite(order)) {
+                            trendLine.setOrder(order);
+                        }
+                    }
+
+                    // Parse period (for moving average)
+                    const periodMatch = trendlineInner.match(/<c:period\b[^>]*\bval="([^"]*)"/);
+                    if (periodMatch?.[1]) {
+                        const period = Number.parseInt(periodMatch[1], 10);
+                        if (Number.isFinite(period)) {
+                            trendLine.setPeriod(period);
+                        }
+                    }
+
+                    // Parse displayRSquared
+                    const dispRSqrMatch = trendlineInner.match(/<c:dispRSqr\b[^>]*\bval="([^"]*)"/);
+                    if (dispRSqrMatch?.[1]) {
+                        trendLine.setDisplayRSquared(XlsxReader.#castXsdBoolean(dispRSqrMatch[1]));
+                    }
+
+                    // Parse displayEquation (from trendlineLbl structure)
+                    const trendlineLblMatch = trendlineInner.match(/<c:trendlineLbl\b[^>]*>/);
+                    if (trendlineLblMatch) {
+                        trendLine.setDisplayEquation(true);
+                    }
+
+                    // Parse forward/backward/intercept
+                    const forwardMatch = trendlineInner.match(/<c:forward\b[^>]*\bval="([^"]*)"/);
+                    if (forwardMatch?.[1]) {
+                        const forward = Number.parseFloat(forwardMatch[1]);
+                        if (Number.isFinite(forward)) {
+                            trendLine.setForward(forward);
+                        }
+                    }
+
+                    const backwardMatch = trendlineInner.match(/<c:backward\b[^>]*\bval="([^"]*)"/);
+                    if (backwardMatch?.[1]) {
+                        const backward = Number.parseFloat(backwardMatch[1]);
+                        if (Number.isFinite(backward)) {
+                            trendLine.setBackward(backward);
+                        }
+                    }
+
+                    const interceptMatch = trendlineInner.match(/<c:intercept\b[^>]*\bval="([^"]*)"/);
+                    if (interceptMatch?.[1]) {
+                        const intercept = Number.parseFloat(interceptMatch[1]);
+                        if (Number.isFinite(intercept)) {
+                            trendLine.setIntercept(intercept);
+                        }
+                    }
+
+                    // Parse line styling from spPr/ln
+                    const trendlineSpPrMatch = trendlineInner.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
+                    if (trendlineSpPrMatch?.[1]) {
+                        const spPrInner = trendlineSpPrMatch[1];
+                        const lnMatch = spPrInner.match(/<a:ln\b([^>]*)>([\s\S]*?)<\/a:ln>/);
+                        if (lnMatch) {
+                            // Parse line width
+                            const wMatch = lnMatch[1]?.match(/\bw="([^"]*)"/);
+                            if (wMatch?.[1]) {
+                                trendLine.setLineWidth(Number.parseInt(wMatch[1], 10));
+                            }
+
+                            // Parse line style (dash)
+                            const dashMatch = lnMatch[2]?.match(/<a:prstDash\b[^>]*\bval="([^"]*)"/);
+                            if (dashMatch?.[1]) {
+                                trendLine.setLineStyle(dashMatch[1]);
+                            }
+                        }
+                    }
+
+                    trendLines.push(trendLine);
+                }
+
                 // Parse shape properties (styling)
                 const spPrMatch = serInner.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
                 if (spPrMatch && spPrMatch[1]) {
@@ -2598,7 +2696,12 @@ export class XlsxReader implements IReader {
                 if (valContent) {
                     const fMatch = valContent.match(/<c:f>([^<]*)<\/c:f>/);
                     if (fMatch && fMatch[1]) {
-                        series.addPlotValues(new DataSeriesValues('Number', fMatch[1]));
+                        const dataSeriesValues = new DataSeriesValues('Number', fMatch[1]);
+                        // Add trend lines to the values
+                        for (const trendLine of trendLines) {
+                            dataSeriesValues.addTrendLine(trendLine);
+                        }
+                        series.addPlotValues(dataSeriesValues);
                     }
                 }
 

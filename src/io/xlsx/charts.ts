@@ -6,6 +6,7 @@ import type { Chart, ChartGradientStop, ChartLayout, GridlineStyle } from '../..
 import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
 import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
+import { TrendLine, TRENDLINE_MOVING_AVERAGE, TRENDLINE_POLYNOMIAL } from '../../worksheet/chart/trend-line.ts';
 
 /**
  * Parse a cell range reference like 'Sheet1!$A$1:$A$5' or 'A1:A5'.
@@ -578,6 +579,110 @@ function groupSeriesByPlotType(dataSeriesList: DataSeries[]): Map<string, DataSe
 }
 
 /**
+ * Write a trend line element (<c:trendline>) to chart XML.
+ */
+function writeTrendLine(parent: any, trendLine: TrendLine, plotType: string): void {
+    const trendlineEl = parent.ele('c:trendline');
+
+    // Write name if set
+    const name = trendLine.getName();
+    if (name) {
+        trendlineEl.ele('c:name').txt(name);
+    }
+
+    // Write shape properties with line styling
+    const lineColor = trendLine.getLineColor();
+    const lineWidth = trendLine.getLineWidth();
+    const lineStyle = trendLine.getLineStyle();
+
+    if (lineColor || lineWidth !== null || lineStyle) {
+        const spPr = trendlineEl.ele('c:spPr');
+        const lineAttrs: Record<string, string> = {};
+        if (lineWidth !== null && lineWidth > 0) {
+            lineAttrs.w = String(lineWidth);
+        }
+        const ln = spPr.ele('a:ln', lineAttrs);
+
+        if (lineColor && lineColor.isUsable()) {
+            const colorValue = lineColor.getValue();
+            const colorType = lineColor.getType();
+            if (colorValue) {
+                if (colorType === 'srgbClr' || colorType === '') {
+                    ln.ele('a:solidFill').ele('a:srgbClr', { val: colorValue });
+                }
+            }
+        }
+
+        if (lineStyle) {
+            ln.ele('a:prstDash', { val: lineStyle });
+        }
+    }
+
+    // Write trend line type
+    const trendLineType = trendLine.getTrendLineType();
+    trendlineEl.ele('c:trendlineType', { val: trendLineType });
+
+    // Write backward value if not 0
+    const backward = trendLine.getBackward();
+    if (backward !== 0.0) {
+        trendlineEl.ele('c:backward', { val: String(backward) });
+    }
+
+    // Write forward value if not 0
+    const forward = trendLine.getForward();
+    if (forward !== 0.0) {
+        trendlineEl.ele('c:forward', { val: String(forward) });
+    }
+
+    // Write intercept value if not 0
+    const intercept = trendLine.getIntercept();
+    if (intercept !== 0.0) {
+        trendlineEl.ele('c:intercept', { val: String(intercept) });
+    }
+
+    // Write order for polynomial trend lines
+    if (trendLineType === TRENDLINE_POLYNOMIAL) {
+        const order = trendLine.getOrder();
+        trendlineEl.ele('c:order', { val: String(order) });
+    }
+
+    // Write period for moving average trend lines
+    if (trendLineType === TRENDLINE_MOVING_AVERAGE) {
+        const period = trendLine.getPeriod();
+        trendlineEl.ele('c:period', { val: String(period) });
+    }
+
+    // Write display R-squared value
+    const dispRSqr = trendLine.getDisplayRSquared();
+    trendlineEl.ele('c:dispRSqr', { val: dispRSqr ? '1' : '0' });
+
+    // Write display equation value
+    const dispEq = trendLine.getDisplayEquation();
+    trendlineEl.ele('c:dispEq', { val: dispEq ? '1' : '0' });
+
+    // Write trend line label for scatter and line charts
+    if (plotType === 'scatter' || plotType === 'line') {
+        const trendlineLbl = trendlineEl.ele('c:trendlineLbl');
+        trendlineLbl.ele('c:layout');
+        trendlineLbl.ele('c:numFmt', { formatCode: 'General', sourceLinked: '0' });
+    }
+}
+
+/**
+ * Write all trend lines for a data series values object.
+ */
+function writeTrendLines(parent: any, plotValues: DataSeriesValues | null, plotType: string): void {
+    if (!plotValues) {
+        return;
+    }
+
+    const trendLines = plotValues.getTrendLines();
+    for (const trendLine of trendLines) {
+        writeTrendLine(parent, trendLine, plotType);
+    }
+}
+
+/**
  * Write a single data series element (<c:ser>) to chart XML.
  * This writes only the series content, not the chart type wrapper.
  */
@@ -637,6 +742,9 @@ function writeDataSeriesElement(
     if (plotValues.length > 0 && plotValues[0]) {
         const valueTag = plotType === 'scatter' ? 'c:yVal' : 'c:val';
         writeDataSeriesValues(series, plotValues[0], valueTag, worksheet);
+
+        // Write trend lines for this series
+        writeTrendLines(series, plotValues[0], plotType);
     }
 }
 
