@@ -30,7 +30,7 @@ describe('Chart legend title', () => {
         chart.setLegendTitle('Sales Legend');
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'LegendData!$A$2:$A$2'));
+        series.addPlotCategory(new DataSeriesValues('String', 'LegendData!$A$2:$A$2'));
         series.addPlotValues(new DataSeriesValues('Number', 'LegendData!$B$2:$B$2'));
         chart.addDataSeries(series);
         chart.setTopLeftPosition({ cell: 'D5' });
@@ -59,7 +59,7 @@ describe('Chart legend title', () => {
         chart.setLegendTitle('Quarterly Results');
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'LegendRoundTrip!$A$2:$A$2'));
+        series.addPlotCategory(new DataSeriesValues('String', 'LegendRoundTrip!$A$2:$A$2'));
         series.addPlotValues(new DataSeriesValues('Number', 'LegendRoundTrip!$B$2:$B$2'));
         chart.addDataSeries(series);
         chart.setTopLeftPosition({ cell: 'D5' });

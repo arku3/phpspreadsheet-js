@@ -33,7 +33,7 @@ const buildStyledChart = (): Spreadsheet => {
     chart.setTopLeftPosition({ cell: 'D2' });
 
     const series = new DataSeries('bar');
-    series.setPlotCategory(new DataSeriesValues('String', 'StyleData!$A$2:$A$3'));
+    series.addPlotCategory(new DataSeriesValues('String', 'StyleData!$A$2:$A$3'));
     series.addPlotValues(new DataSeriesValues('Number', 'StyleData!$B$2:$B$3'));
     chart.addDataSeries(series);
 

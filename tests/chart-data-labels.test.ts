@@ -105,7 +105,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'DataLabelsTest!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'DataLabelsTest!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'DataLabelsTest!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showValue: true });
@@ -137,7 +137,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'DataLabelsCatName!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'DataLabelsCatName!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'DataLabelsCatName!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showCategoryName: true });
@@ -169,7 +169,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'DataLabelsMulti!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'DataLabelsMulti!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'DataLabelsMulti!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({
@@ -209,7 +209,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('pie');
-            series.setPlotCategory(new DataSeriesValues('String', 'DataLabelsPos!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'DataLabelsPos!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'DataLabelsPos!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({
@@ -244,7 +244,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'NoDataLabels!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'NoDataLabels!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'NoDataLabels!$B$2:$B$3'));
 
             // DataLabels with no enabled flags
@@ -279,7 +279,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripVal!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'RoundTripVal!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'RoundTripVal!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showValue: true });
@@ -325,7 +325,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripCat!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'RoundTripCat!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'RoundTripCat!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showCategoryName: true });
@@ -367,7 +367,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripMulti!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'RoundTripMulti!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'RoundTripMulti!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({
@@ -415,7 +415,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('pie');
-            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripPos!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'RoundTripPos!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'RoundTripPos!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({
@@ -467,14 +467,14 @@ describe('Chart Data Labels', () => {
 
             // Series 1 with showValue
             const series1 = new DataSeries('bar');
-            series1.setPlotCategory(new DataSeriesValues('String', 'MultiSeriesLabels!$A$2:$A$3'));
+            series1.addPlotCategory(new DataSeriesValues('String', 'MultiSeriesLabels!$A$2:$A$3'));
             series1.addPlotValues(new DataSeriesValues('Number', 'MultiSeriesLabels!$B$2:$B$3'));
             series1.setDataLabels(new DataLabels({ showValue: true }));
             chart.addDataSeries(series1);
 
             // Series 2 with showCategoryName
             const series2 = new DataSeries('bar');
-            series2.setPlotCategory(new DataSeriesValues('String', 'MultiSeriesLabels!$A$2:$A$3'));
+            series2.addPlotCategory(new DataSeriesValues('String', 'MultiSeriesLabels!$A$2:$A$3'));
             series2.addPlotValues(new DataSeriesValues('Number', 'MultiSeriesLabels!$C$2:$C$3'));
             series2.setDataLabels(new DataLabels({ showCategoryName: true }));
             chart.addDataSeries(series2);
@@ -519,7 +519,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'StyledLabels!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'StyledLabels!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'StyledLabels!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showValue: true });
@@ -559,7 +559,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'NumFmtLabels!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'NumFmtLabels!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'NumFmtLabels!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showValue: true });
@@ -593,7 +593,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'ColorLabels!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'ColorLabels!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'ColorLabels!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showValue: true });
@@ -632,7 +632,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripFontLabels!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'RoundTripFontLabels!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'RoundTripFontLabels!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showValue: true });
@@ -686,7 +686,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripNumFmt!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'RoundTripNumFmt!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'RoundTripNumFmt!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showValue: true });
@@ -731,7 +731,7 @@ describe('Chart Data Labels', () => {
 
             const chart = new Chart();
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'RoundTripColors!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'RoundTripColors!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'RoundTripColors!$B$2:$B$3'));
 
             const dataLabels = new DataLabels({ showValue: true });

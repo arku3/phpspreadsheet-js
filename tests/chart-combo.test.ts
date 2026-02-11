@@ -43,13 +43,13 @@ describe('Combo Chart Tests', () => {
 
         // Series 1: Bar chart (Sales)
         const barSeries = new DataSeries('bar');
-        barSeries.setPlotCategory(new DataSeriesValues('String', 'ComboBarLine!$A$2:$A$4'));
+        barSeries.addPlotCategory(new DataSeriesValues('String', 'ComboBarLine!$A$2:$A$4'));
         barSeries.addPlotValues(new DataSeriesValues('Number', 'ComboBarLine!$B$2:$B$4'));
         chart.addDataSeries(barSeries);
 
         // Series 2: Line chart (Target)
         const lineSeries = new DataSeries('line');
-        lineSeries.setPlotCategory(new DataSeriesValues('String', 'ComboBarLine!$A$2:$A$4'));
+        lineSeries.addPlotCategory(new DataSeriesValues('String', 'ComboBarLine!$A$2:$A$4'));
         lineSeries.addPlotValues(new DataSeriesValues('Number', 'ComboBarLine!$C$2:$C$4'));
         chart.addDataSeries(lineSeries);
 
@@ -93,13 +93,13 @@ describe('Combo Chart Tests', () => {
 
         // Series 1: Bar chart (Sales)
         const barSeries = new DataSeries('bar');
-        barSeries.setPlotCategory(new DataSeriesValues('String', 'ComboBarLine!$A$2:$A$4'));
+        barSeries.addPlotCategory(new DataSeriesValues('String', 'ComboBarLine!$A$2:$A$4'));
         barSeries.addPlotValues(new DataSeriesValues('Number', 'ComboBarLine!$B$2:$B$4'));
         chart.addDataSeries(barSeries);
 
         // Series 2: Line chart (Target)
         const lineSeries = new DataSeries('line');
-        lineSeries.setPlotCategory(new DataSeriesValues('String', 'ComboBarLine!$A$2:$A$4'));
+        lineSeries.addPlotCategory(new DataSeriesValues('String', 'ComboBarLine!$A$2:$A$4'));
         lineSeries.addPlotValues(new DataSeriesValues('Number', 'ComboBarLine!$C$2:$C$4'));
         chart.addDataSeries(lineSeries);
 
@@ -164,13 +164,13 @@ describe('Combo Chart Tests', () => {
 
         // Series 1: Area chart (Revenue)
         const areaSeries = new DataSeries('area');
-        areaSeries.setPlotCategory(new DataSeriesValues('String', 'ComboAreaLine!$A$2:$A$5'));
+        areaSeries.addPlotCategory(new DataSeriesValues('String', 'ComboAreaLine!$A$2:$A$5'));
         areaSeries.addPlotValues(new DataSeriesValues('Number', 'ComboAreaLine!$B$2:$B$5'));
         chart.addDataSeries(areaSeries);
 
         // Series 2: Line chart (Growth Rate)
         const lineSeries = new DataSeries('line');
-        lineSeries.setPlotCategory(new DataSeriesValues('String', 'ComboAreaLine!$A$2:$A$5'));
+        lineSeries.addPlotCategory(new DataSeriesValues('String', 'ComboAreaLine!$A$2:$A$5'));
         lineSeries.addPlotValues(new DataSeriesValues('Number', 'ComboAreaLine!$C$2:$C$5'));
         chart.addDataSeries(lineSeries);
 
@@ -217,13 +217,13 @@ describe('Combo Chart Tests', () => {
 
         // Series 1: Area chart (Revenue)
         const areaSeries = new DataSeries('area');
-        areaSeries.setPlotCategory(new DataSeriesValues('String', 'ComboAreaLine!$A$2:$A$5'));
+        areaSeries.addPlotCategory(new DataSeriesValues('String', 'ComboAreaLine!$A$2:$A$5'));
         areaSeries.addPlotValues(new DataSeriesValues('Number', 'ComboAreaLine!$B$2:$B$5'));
         chart.addDataSeries(areaSeries);
 
         // Series 2: Line chart (Growth Rate)
         const lineSeries = new DataSeries('line');
-        lineSeries.setPlotCategory(new DataSeriesValues('String', 'ComboAreaLine!$A$2:$A$5'));
+        lineSeries.addPlotCategory(new DataSeriesValues('String', 'ComboAreaLine!$A$2:$A$5'));
         lineSeries.addPlotValues(new DataSeriesValues('Number', 'ComboAreaLine!$C$2:$C$5'));
         chart.addDataSeries(lineSeries);
 

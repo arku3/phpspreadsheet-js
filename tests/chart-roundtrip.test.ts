@@ -74,7 +74,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'SalesData!$A$1:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'SalesData!$A$1:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'SalesData!$B$1:$B$3'));
         chart.addDataSeries(series);
 
@@ -136,19 +136,19 @@ describe('Chart Round-Trip Tests', () => {
 
         // Series 1: Product A
         const series1 = new DataSeries('bar');
-        series1.setPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$4'));
+        series1.addPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$4'));
         series1.addPlotValues(new DataSeriesValues('Number', 'MultiSeries!$B$2:$B$4'));
         chart.addDataSeries(series1);
 
         // Series 2: Product B
         const series2 = new DataSeries('bar');
-        series2.setPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$4'));
+        series2.addPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$4'));
         series2.addPlotValues(new DataSeriesValues('Number', 'MultiSeries!$C$2:$C$4'));
         chart.addDataSeries(series2);
 
         // Series 3: Product C
         const series3 = new DataSeries('bar');
-        series3.setPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$4'));
+        series3.addPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$4'));
         series3.addPlotValues(new DataSeriesValues('Number', 'MultiSeries!$D$2:$D$4'));
         chart.addDataSeries(series3);
 
@@ -198,7 +198,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setBottomRightPosition({ cell: 'H10', offsetX: 200, offsetY: 150 });
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'BarChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'BarChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'BarChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -249,7 +249,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('line');
-        series.setPlotCategory(new DataSeriesValues('String', 'LineChart!$A$2:$A$4'));
+        series.addPlotCategory(new DataSeriesValues('String', 'LineChart!$A$2:$A$4'));
         series.addPlotValues(new DataSeriesValues('Number', 'LineChart!$B$2:$B$4'));
         chart.addDataSeries(series);
 
@@ -293,13 +293,13 @@ describe('Chart Round-Trip Tests', () => {
 
         const series1 = new DataSeries('area');
         series1.setGrouping('stacked');
-        series1.setPlotCategory(new DataSeriesValues('String', 'AreaChart!$A$2:$A$3'));
+        series1.addPlotCategory(new DataSeriesValues('String', 'AreaChart!$A$2:$A$3'));
         series1.addPlotValues(new DataSeriesValues('Number', 'AreaChart!$B$2:$B$3'));
         chart.addDataSeries(series1);
 
         const series2 = new DataSeries('area');
         series2.setGrouping('stacked');
-        series2.setPlotCategory(new DataSeriesValues('String', 'AreaChart!$A$2:$A$3'));
+        series2.addPlotCategory(new DataSeriesValues('String', 'AreaChart!$A$2:$A$3'));
         series2.addPlotValues(new DataSeriesValues('Number', 'AreaChart!$C$2:$C$3'));
         chart.addDataSeries(series2);
 
@@ -341,7 +341,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('pie');
-        series.setPlotCategory(new DataSeriesValues('String', 'PieChart!$A$2:$A$4'));
+        series.addPlotCategory(new DataSeriesValues('String', 'PieChart!$A$2:$A$4'));
         series.addPlotValues(new DataSeriesValues('Number', 'PieChart!$B$2:$B$4'));
         chart.addDataSeries(series);
 
@@ -381,7 +381,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('doughnut');
-        series.setPlotCategory(new DataSeriesValues('String', 'DoughnutChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'DoughnutChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'DoughnutChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -422,7 +422,7 @@ describe('Chart Round-Trip Tests', () => {
         const series = new DataSeries('bar');
         series.setGrouping('stacked');
         series.setDirection('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'BarChartDirection!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'BarChartDirection!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'BarChartDirection!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -465,7 +465,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('scatter');
-        series.setPlotCategory(new DataSeriesValues('Number', 'ScatterChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('Number', 'ScatterChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'ScatterChart!$B$2:$B$3'));
         series.setMarkerSymbol('circle');
         chart.addDataSeries(series);
@@ -505,7 +505,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('scatter');
-        series.setPlotCategory(new DataSeriesValues('Number', 'ScatterSmooth!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('Number', 'ScatterSmooth!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'ScatterSmooth!$B$2:$B$3'));
         series.setSmoothLine(true);
         series.setMarkerSymbol('circle');
@@ -553,7 +553,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'TitledChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'TitledChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'TitledChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -600,7 +600,7 @@ describe('Chart Round-Trip Tests', () => {
         chart1.setName('Chart 1');
         chart1.setTopLeftPosition({ cell: 'G2' });
         const series1 = new DataSeries('bar');
-        series1.setPlotCategory(new DataSeriesValues('String', 'MultiChart!$A$2:$A$3'));
+        series1.addPlotCategory(new DataSeriesValues('String', 'MultiChart!$A$2:$A$3'));
         series1.addPlotValues(new DataSeriesValues('Number', 'MultiChart!$B$2:$B$3'));
         chart1.addDataSeries(series1);
         worksheet.addChart(chart1);
@@ -610,7 +610,7 @@ describe('Chart Round-Trip Tests', () => {
         chart2.setName('Chart 2');
         chart2.setTopLeftPosition({ cell: 'G15' });
         const series2 = new DataSeries('line');
-        series2.setPlotCategory(new DataSeriesValues('String', 'MultiChart!$D$2:$D$3'));
+        series2.addPlotCategory(new DataSeriesValues('String', 'MultiChart!$D$2:$D$3'));
         series2.addPlotValues(new DataSeriesValues('Number', 'MultiChart!$E$2:$E$3'));
         chart2.addDataSeries(series2);
         worksheet.addChart(chart2);
@@ -676,7 +676,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setName('Path Test');
         chart.setTopLeftPosition({ cell: 'D2' });
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'ChartPath!$A$2:$A$2'));
+        series.addPlotCategory(new DataSeriesValues('String', 'ChartPath!$A$2:$A$2'));
         series.addPlotValues(new DataSeriesValues('Number', 'ChartPath!$B$2:$B$2'));
         chart.addDataSeries(series);
         worksheet.addChart(chart);
@@ -720,7 +720,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTitleFont(titleFont);
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'TitleFont!$A$2:$A$2'));
+        series.addPlotCategory(new DataSeriesValues('String', 'TitleFont!$A$2:$A$2'));
         series.addPlotValues(new DataSeriesValues('Number', 'TitleFont!$B$2:$B$2'));
         chart.addDataSeries(series);
 
@@ -765,9 +765,9 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'E2' });
 
         const series = new DataSeries('bubble');
-        series.setPlotCategory(new DataSeriesValues('Number', 'BubbleChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('Number', 'BubbleChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'BubbleChart!$B$2:$B$3'));
-        series.setPlotBubbleSizes(new DataSeriesValues('Number', 'BubbleChart!$C$2:$C$3'));
+        series.setPlotBubbleSizes([new DataSeriesValues('Number', 'BubbleChart!$C$2:$C$3')]);
         chart.addDataSeries(series);
 
         worksheet.addChart(chart);
@@ -804,7 +804,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('radar');
-        series.setPlotCategory(new DataSeriesValues('String', 'RadarChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'RadarChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'RadarChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -851,7 +851,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'G2' });
 
         const series = new DataSeries('stock');
-        series.setPlotCategory(new DataSeriesValues('String', 'StockChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'StockChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'StockChart!$B$2:$B$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'StockChart!$C$2:$C$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'StockChart!$D$2:$D$3'));
@@ -892,7 +892,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('surface');
-        series.setPlotCategory(new DataSeriesValues('String', 'SurfaceChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'SurfaceChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'SurfaceChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -930,7 +930,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('bar3D');
-        series.setPlotCategory(new DataSeriesValues('String', 'Bar3DChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'Bar3DChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'Bar3DChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -968,7 +968,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('line3D');
-        series.setPlotCategory(new DataSeriesValues('String', 'Line3DChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'Line3DChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'Line3DChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -1006,7 +1006,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('area3D');
-        series.setPlotCategory(new DataSeriesValues('String', 'Area3DChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'Area3DChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'Area3DChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -1044,7 +1044,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('pie3D');
-        series.setPlotCategory(new DataSeriesValues('String', 'Pie3DChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'Pie3DChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'Pie3DChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -1085,7 +1085,7 @@ describe('Chart Round-Trip Tests', () => {
         chart.setTopLeftPosition({ cell: 'D2' });
 
         const series = new DataSeries('surface3D');
-        series.setPlotCategory(new DataSeriesValues('String', 'Surface3DChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'Surface3DChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'Surface3DChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 

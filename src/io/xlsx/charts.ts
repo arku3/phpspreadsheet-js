@@ -620,13 +620,17 @@ function writeDataSeriesElement(
     }
 
     // Write series label (legend entry)
-    if (dataSeries.getPlotLabel()) {
-        writeDataSeriesValues(series, dataSeries.getPlotLabel(), 'c:tx', worksheet);
+    const plotLabels = dataSeries.getPlotLabels();
+    if (plotLabels.length > 0 && plotLabels[0]) {
+        writeDataSeriesValues(series, plotLabels[0], 'c:tx', worksheet);
     }
 
     // Write category axis data
     const categoryTag = plotType === 'scatter' ? 'c:xVal' : 'c:cat';
-    writeDataSeriesValues(series, dataSeries.getPlotCategory(), categoryTag, worksheet);
+    const plotCategories = dataSeries.getPlotCategories();
+    if (plotCategories.length > 0 && plotCategories[0]) {
+        writeDataSeriesValues(series, plotCategories[0], categoryTag, worksheet);
+    }
 
     // Write values data
     const plotValues = dataSeries.getPlotValues();

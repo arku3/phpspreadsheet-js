@@ -29,7 +29,7 @@ describe('Chart markers and line styles', () => {
 
         const chart = new Chart();
         const series = new DataSeries('line');
-        series.setPlotCategory(new DataSeriesValues('Number', 'MarkerData!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('Number', 'MarkerData!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'MarkerData!$B$2:$B$3'));
         series.setMarkerSymbol('diamond');
         series.setMarkerSize(9);
@@ -64,7 +64,7 @@ describe('Chart markers and line styles', () => {
 
         const chart = new Chart();
         const series = new DataSeries('line');
-        series.setPlotCategory(new DataSeriesValues('Number', 'RoundTrip!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('Number', 'RoundTrip!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'RoundTrip!$B$2:$B$3'));
         series.setMarkerSymbol('square');
         series.setMarkerSize(7);

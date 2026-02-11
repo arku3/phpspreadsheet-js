@@ -40,7 +40,7 @@ describe('Chart axis titles and gridlines', () => {
         chart.setYAxisMinorGridlines(true);
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'AxisChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'AxisChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'AxisChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -81,7 +81,7 @@ describe('Chart axis titles and gridlines', () => {
         chart.setYAxisMinorGridlines(true);
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'AxisRoundTrip!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'AxisRoundTrip!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'AxisRoundTrip!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -146,7 +146,7 @@ describe('Chart axis titles and gridlines', () => {
         chart.setYAxisMajorGridlineStyle({ color: 'FF999999', width: 0.5 });
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'StyledAxisChart!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'StyledAxisChart!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'StyledAxisChart!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -206,7 +206,7 @@ describe('Chart axis titles and gridlines', () => {
         chart.setYAxisMajorGridlineStyle({ color: 'FF999999', width: 0.5 });
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'StyledAxisRoundTrip!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'StyledAxisRoundTrip!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'StyledAxisRoundTrip!$B$2:$B$3'));
         chart.addDataSeries(series);
 

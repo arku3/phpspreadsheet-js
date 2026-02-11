@@ -2499,9 +2499,9 @@ export class XlsxReader implements IReader {
                 const idxMatch = serInner.match(/<c:idx\b[^>]*\bval="([^"]*)"/);
                 const orderMatch = serInner.match(/<c:order\b[^>]*\bval="([^"]*)"/);
                 if (idxMatch) {
-                    series.setPlotOrder(Number.parseInt(idxMatch[1]!, 10));
+                    series.addPlotOrder(Number.parseInt(idxMatch[1]!, 10));
                 } else if (orderMatch) {
-                    series.setPlotOrder(Number.parseInt(orderMatch[1]!, 10));
+                    series.addPlotOrder(Number.parseInt(orderMatch[1]!, 10));
                 }
 
                 // Parse marker
@@ -2587,7 +2587,7 @@ export class XlsxReader implements IReader {
                     const fMatch = catContent.match(/<c:f>([^<]*)<\/c:f>/);
                     if (fMatch && fMatch[1]) {
                         const isNum = catContent.includes('<c:numRef') || catContent.includes('<c:numCache');
-                        series.setPlotCategory(new DataSeriesValues(isNum ? 'Number' : 'String', fMatch[1]));
+                        series.addPlotCategory(new DataSeriesValues(isNum ? 'Number' : 'String', fMatch[1]));
                     }
                 }
 

@@ -262,18 +262,16 @@ export class PlotArea {
                 const newSeries = new DataSeries(
                     series.getPlotType(),
                     series.getGrouping(),
-                    series.getDirection(),
                     series.getPlotOrder(),
-                    series.getPlotLabel(),
-                    series.getPlotCategory(),
+                    series.getPlotLabels(),
+                    series.getPlotCategories(),
                     series.getPlotValues(),
+                    series.getDirection(),
+                    series.getSmoothLine(),
+                    series.getLineStyle(),
                 );
                 // Copy additional properties
-                if (series.getLineStyle()) {
-                    newSeries.setLineStyle(series.getLineStyle());
-                }
-                newSeries.setSmoothLine(series.getSmoothLine());
-                if (series.getPlotBubbleSizes()) {
+                if (series.getPlotBubbleSizes().length > 0) {
                     newSeries.setPlotBubbleSizes(series.getPlotBubbleSizes());
                 }
                 const fillColor = series.getFillColor();

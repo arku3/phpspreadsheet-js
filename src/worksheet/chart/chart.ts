@@ -85,7 +85,7 @@ export interface ChartLayout {
  */
 export interface ChartSeriesModel {
     idx?: number;
-    order?: number;
+    order?: number | number[];
     categoryFormula: string | null;
     valuesFormula: string | null;
 }
@@ -469,7 +469,7 @@ export class Chart {
         return this.#plotArea.map((ds, idx) => ({
             idx,
             order: ds.getPlotOrder(),
-            categoryFormula: ds.getPlotCategory()?.getDataSource() ?? null,
+            categoryFormula: ds.getPlotCategories()[0]?.getDataSource() ?? null,
             valuesFormula: ds.getPlotValues()[0]?.getDataSource() ?? null,
         }));
     }

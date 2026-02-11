@@ -143,7 +143,7 @@ describe('Chart Styling', () => {
             const series = new DataSeries('bar');
             series.setFillColor('00FF00'); // Green
             series.setBorderColor('000000'); // Black border
-            series.setPlotCategory(new DataSeriesValues('String', 'Data!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'Data!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'Data!$B$2:$B$3'));
             chart.addDataSeries(series);
             chart.setTopLeftPosition({ cell: 'D5' });
@@ -172,7 +172,7 @@ describe('Chart Styling', () => {
             const chart = new Chart();
             chart.setLegendPosition('bottom');
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'Data!$A$2:$A$2'));
+            series.addPlotCategory(new DataSeriesValues('String', 'Data!$A$2:$A$2'));
             series.addPlotValues(new DataSeriesValues('Number', 'Data!$B$2:$B$2'));
             chart.addDataSeries(series);
             chart.setTopLeftPosition({ cell: 'D5' });
@@ -196,7 +196,7 @@ describe('Chart Styling', () => {
             const chart = new Chart();
             chart.setLegendPosition('none');
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'Data!$A$2:$A$2'));
+            series.addPlotCategory(new DataSeriesValues('String', 'Data!$A$2:$A$2'));
             series.addPlotValues(new DataSeriesValues('Number', 'Data!$B$2:$B$2'));
             chart.addDataSeries(series);
             chart.setTopLeftPosition({ cell: 'D5' });
@@ -230,7 +230,7 @@ describe('Chart Styling', () => {
             const series1 = new DataSeries('bar');
             series1.setFillColor('FF0000');
             series1.setBorderColor('800000');
-            series1.setPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$3'));
+            series1.addPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$3'));
             series1.addPlotValues(new DataSeriesValues('Number', 'MultiSeries!$B$2:$B$3'));
             chart.addDataSeries(series1);
 
@@ -238,7 +238,7 @@ describe('Chart Styling', () => {
             const series2 = new DataSeries('bar');
             series2.setFillColor('0000FF');
             series2.setBorderColor('000080');
-            series2.setPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$3'));
+            series2.addPlotCategory(new DataSeriesValues('String', 'MultiSeries!$A$2:$A$3'));
             series2.addPlotValues(new DataSeriesValues('Number', 'MultiSeries!$C$2:$C$3'));
             chart.addDataSeries(series2);
 
@@ -271,7 +271,7 @@ describe('Chart Styling', () => {
             const series = new DataSeries('line');
             series.setLineWidth(25400); // 2pt line
             series.setFillColor('FF6600'); // Line color
-            series.setPlotCategory(new DataSeriesValues('String', 'LineData!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'LineData!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'LineData!$B$2:$B$3'));
             chart.addDataSeries(series);
             chart.setTopLeftPosition({ cell: 'D2' });
@@ -299,7 +299,7 @@ describe('Chart Styling', () => {
                 const chart = new Chart();
                 chart.setLegendPosition(position);
                 const series = new DataSeries('bar');
-                series.setPlotCategory(new DataSeriesValues('String', `${`Legend_${position}`}!$A$2:$A$2`));
+                series.addPlotCategory(new DataSeriesValues('String', `${`Legend_${position}`}!$A$2:$A$2`));
                 series.addPlotValues(new DataSeriesValues('Number', `${`Legend_${position}`}!$B$2:$B$2`));
                 chart.addDataSeries(series);
                 chart.setTopLeftPosition({ cell: 'D5' });
@@ -332,7 +332,7 @@ describe('Chart Styling', () => {
             chart.setLegendPosition('top');
             chart.setLegendOverlay(true);
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'OverlayTest!$A$2:$A$2'));
+            series.addPlotCategory(new DataSeriesValues('String', 'OverlayTest!$A$2:$A$2'));
             series.addPlotValues(new DataSeriesValues('Number', 'OverlayTest!$B$2:$B$2'));
             chart.addDataSeries(series);
             chart.setTopLeftPosition({ cell: 'D5' });
@@ -362,7 +362,7 @@ describe('Chart Styling', () => {
             const series = new DataSeries('pie');
             series.setFillColor('FFCC00');
             series.setBorderColor('FF9900');
-            series.setPlotCategory(new DataSeriesValues('String', 'PieData!$A$2:$A$3'));
+            series.addPlotCategory(new DataSeriesValues('String', 'PieData!$A$2:$A$3'));
             series.addPlotValues(new DataSeriesValues('Number', 'PieData!$B$2:$B$3'));
             chart.addDataSeries(series);
             chart.setTopLeftPosition({ cell: 'D2' });
@@ -389,7 +389,7 @@ describe('Chart Styling', () => {
             chart.setLegendPosition('right');
             chart.setLegendTitle('Sales Data');
             const series = new DataSeries('bar');
-            series.setPlotCategory(new DataSeriesValues('String', 'LegendTitle!$A$2:$A$2'));
+            series.addPlotCategory(new DataSeriesValues('String', 'LegendTitle!$A$2:$A$2'));
             series.addPlotValues(new DataSeriesValues('Number', 'LegendTitle!$B$2:$B$2'));
             chart.addDataSeries(series);
             chart.setTopLeftPosition({ cell: 'D5' });
@@ -426,7 +426,7 @@ describe('Chart Styling', () => {
             const series = new DataSeries('bar');
             series.setFillColor('00FF00');
             series.setBorderColor('000000');
-            series.setPlotCategory(new DataSeriesValues('String', 'XmlTest!$A$2:$A$2'));
+            series.addPlotCategory(new DataSeriesValues('String', 'XmlTest!$A$2:$A$2'));
             series.addPlotValues(new DataSeriesValues('Number', 'XmlTest!$B$2:$B$2'));
             chart.addDataSeries(series);
 

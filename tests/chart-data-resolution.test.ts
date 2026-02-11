@@ -28,7 +28,7 @@ describe('Chart Data Resolution', () => {
         const plotValues = new DataSeriesValues('Number', 'Sheet1!$B$1:$B$3', 'General', 3);
 
         // Create data series with correct constructor parameters
-        const dataSeries = new DataSeries('bar', 'clustered', 'col', 0, null, categoryValues, [plotValues]);
+        const dataSeries = new DataSeries('bar', 'clustered', [0], [], [categoryValues], [plotValues], 'col');
 
         chart.addDataSeries(dataSeries);
         chart.setTitleText('Test Chart');
@@ -67,7 +67,7 @@ describe('Chart Data Resolution', () => {
 
         const categoryValues = new DataSeriesValues('String', 'Sheet1!$A$1:$A$3', 'General', 3);
         const plotValues = new DataSeriesValues('Number', 'Sheet1!$B$1:$B$3', 'General', 3);
-        const dataSeries = new DataSeries('bar', 'clustered', 'col', 0, null, categoryValues, [plotValues]);
+        const dataSeries = new DataSeries('bar', 'clustered', [0], [], [categoryValues], [plotValues], 'col');
 
         chart.addDataSeries(dataSeries);
         sheet.addChart(chart);
@@ -96,7 +96,7 @@ describe('Chart Data Resolution', () => {
         const chart = new Chart();
         const categoryValues = new DataSeriesValues('String', 'Sheet1!$C$1:$C$2', 'General', 2);
         const plotValues = new DataSeriesValues('Number', 'Sheet1!$D$1:$D$2', 'General', 2);
-        const dataSeries = new DataSeries('bar', 'clustered', 'col', 0, null, categoryValues, [plotValues]);
+        const dataSeries = new DataSeries('bar', 'clustered', [0], [], [categoryValues], [plotValues], 'col');
 
         chart.addDataSeries(dataSeries);
         sheet.addChart(chart);
@@ -122,7 +122,7 @@ describe('Chart Data Resolution', () => {
 
         const chart = new Chart();
         const plotValues = new DataSeriesValues('Number', 'Sheet1!$A$1:$A$3', '0.00', 3);
-        const dataSeries = new DataSeries('bar', 'clustered', 'col', 0, null, null, [plotValues]);
+        const dataSeries = new DataSeries('bar', 'clustered', [0], [], [], [plotValues], 'col');
 
         chart.addDataSeries(dataSeries);
         sheet.addChart(chart);
@@ -149,7 +149,7 @@ describe('Chart Data Resolution', () => {
 
         const chart = new Chart();
         const categoryValues = new DataSeriesValues('String', 'Sheet1!$A$1:$A$4', 'General', 4);
-        const dataSeries = new DataSeries('bar', 'clustered', 'col', 0, null, categoryValues, []);
+        const dataSeries = new DataSeries('bar', 'clustered', [0], [], [categoryValues], [], 'col');
 
         chart.addDataSeries(dataSeries);
         sheet.addChart(chart);
@@ -175,7 +175,7 @@ describe('Chart Data Resolution', () => {
 
         const chart = new Chart();
         const plotValues = new DataSeriesValues('Number', 'Sheet1!$A$1:$A$3', 'General', 3);
-        const dataSeries = new DataSeries('bar', 'clustered', 'col', 0, null, null, [plotValues]);
+        const dataSeries = new DataSeries('bar', 'clustered', [0], [], [], [plotValues], 'col');
 
         chart.addDataSeries(dataSeries);
         sheet.addChart(chart);
@@ -196,7 +196,7 @@ describe('Chart Data Resolution', () => {
 
         const chart = new Chart();
         const plotValues = new DataSeriesValues('String', 'Sheet1!$A$1', 'General', 1);
-        const dataSeries = new DataSeries('bar', 'clustered', 'col', 0, null, null, [plotValues]);
+        const dataSeries = new DataSeries('bar', 'clustered', [0], [], [], [plotValues], 'col');
 
         chart.addDataSeries(dataSeries);
         sheet.addChart(chart);
@@ -219,7 +219,7 @@ describe('Chart Data Resolution', () => {
 
         const chart = new Chart();
         const categoryValues = new DataSeriesValues('String', 'Sheet1!$A$1:$A$3', 'General', 3);
-        const dataSeries = new DataSeries('bar', 'clustered', 'col', 0, null, categoryValues, []);
+        const dataSeries = new DataSeries('bar', 'clustered', [0], [], [categoryValues], [], 'col');
 
         chart.addDataSeries(dataSeries);
         sheet.addChart(chart);
@@ -251,11 +251,11 @@ describe('Chart Data Resolution', () => {
 
         // First series
         const plotValues1 = new DataSeriesValues('Number', 'Sheet1!$B$1:$B$2', 'General', 2);
-        const dataSeries1 = new DataSeries('bar', 'clustered', 'col', 0, null, categoryValues, [plotValues1]);
+        const dataSeries1 = new DataSeries('bar', 'clustered', [0], [], [categoryValues], [plotValues1], 'col');
 
         // Second series
         const plotValues2 = new DataSeriesValues('Number', 'Sheet1!$C$1:$C$2', 'General', 2);
-        const dataSeries2 = new DataSeries('bar', 'clustered', 'col', 1, null, categoryValues, [plotValues2]);
+        const dataSeries2 = new DataSeries('bar', 'clustered', [1], [], [categoryValues], [plotValues2], 'col');
 
         chart.addDataSeries(dataSeries1);
         chart.addDataSeries(dataSeries2);

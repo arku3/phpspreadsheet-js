@@ -42,7 +42,7 @@ describe('Chart plot area layout', () => {
         });
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'LayoutData!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'LayoutData!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'LayoutData!$B$2:$B$3'));
         chart.addDataSeries(series);
 
@@ -90,7 +90,7 @@ describe('Chart plot area layout', () => {
         });
 
         const series = new DataSeries('bar');
-        series.setPlotCategory(new DataSeriesValues('String', 'LayoutRoundTrip!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'LayoutRoundTrip!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'LayoutRoundTrip!$B$2:$B$3'));
         chart.addDataSeries(series);
 

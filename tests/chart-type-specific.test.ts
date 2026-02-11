@@ -28,7 +28,7 @@ describe('Chart type-specific XML', () => {
 
         const chart = new Chart();
         const series = new DataSeries('doughnut');
-        series.setPlotCategory(new DataSeriesValues('String', 'DoughnutData!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'DoughnutData!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'DoughnutData!$B$2:$B$3'));
         chart.addDataSeries(series);
         chart.setTopLeftPosition({ cell: 'D2' });
@@ -58,7 +58,7 @@ describe('Chart type-specific XML', () => {
 
         const chart = new Chart();
         const series = new DataSeries('scatter');
-        series.setPlotCategory(new DataSeriesValues('Number', 'ScatterData!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('Number', 'ScatterData!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'ScatterData!$B$2:$B$3'));
         series.setMarkerSymbol('circle');
         chart.addDataSeries(series);
@@ -92,7 +92,7 @@ describe('Chart type-specific XML', () => {
         const chart = new Chart();
         const series = new DataSeries('bar');
         series.setGrouping('stacked');
-        series.setPlotCategory(new DataSeriesValues('String', 'StackedBar!$A$2:$A$3'));
+        series.addPlotCategory(new DataSeriesValues('String', 'StackedBar!$A$2:$A$3'));
         series.addPlotValues(new DataSeriesValues('Number', 'StackedBar!$B$2:$B$3'));
         chart.addDataSeries(series);
         chart.setTopLeftPosition({ cell: 'D2' });

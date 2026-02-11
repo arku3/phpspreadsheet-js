@@ -1,5 +1,5 @@
 import { DataLabels } from './data-labels';
-import type { DataSeriesValues } from './data-series-values';
+import { DataSeriesValues } from './data-series-values';
 
 /**
  * Chart types supported by the data series.
@@ -74,14 +74,14 @@ export type MarkerSymbol =
 export class DataSeries {
     #plotType: ChartType;
     #grouping: GroupingType | null;
-    #direction: DirectionType | null;
-    #plotOrder: number;
+    #direction: DirectionType;
+    #plotOrder: number[];
     #lineStyle: LineStyle | null;
-    #plotLabel: DataSeriesValues | null;
-    #plotCategory: DataSeriesValues | null;
+    #plotLabel: DataSeriesValues[];
+    #plotCategory: DataSeriesValues[];
     #plotValues: DataSeriesValues[];
     #smoothLine: boolean;
-    #plotBubbleSizes: DataSeriesValues | null;
+    #plotBubbleSizes: DataSeriesValues[];
 
     // Styling properties
     #fillColor: string | null;
@@ -101,31 +101,46 @@ export class DataSeries {
      *
      * @param plotType - The chart type (bar, line, pie, etc.)
      * @param grouping - Grouping type for bar/column charts
-     * @param direction - Direction for bar charts (bar=horizontal, col/column=vertical)
-     * @param plotOrder - The order this series appears in the chart (0 = first)
-     * @param plotLabel - Labels for data points (optional)
-     * @param plotCategory - Category axis values (optional, for charts with categories)
+     * @param plotOrder - Array of plot orders for each series
+     * @param plotLabel - Array of labels for data points
+     * @param plotCategory - Array of category axis values
      * @param plotValues - Array of data values for the series
+     * @param direction - Direction for bar charts (bar=horizontal, col/column=vertical)
+     * @param smoothLine - Whether lines should be smooth
+     * @param lineStyle - Line style for the series
      */
     constructor(
         plotType: ChartType,
         grouping: GroupingType | null = null,
-        direction: DirectionType | null = null,
-        plotOrder: number = 0,
-        plotLabel: DataSeriesValues | null = null,
-        plotCategory: DataSeriesValues | null = null,
+        plotOrder: number[] = [],
+        plotLabel: DataSeriesValues[] = [],
+        plotCategory: DataSeriesValues[] = [],
         plotValues: DataSeriesValues[] = [],
+        direction: DirectionType | null = null,
+        smoothLine: boolean = false,
+        lineStyle: LineStyle | null = null,
     ) {
         this.#plotType = plotType;
         this.#grouping = grouping;
-        this.#direction = direction;
         this.#plotOrder = plotOrder;
-        this.#plotLabel = plotLabel;
-        this.#plotCategory = plotCategory;
         this.#plotValues = plotValues;
-        this.#lineStyle = null;
-        this.#smoothLine = false;
-        this.#plotBubbleSizes = null;
+
+        // Ensure plotLabel and plotCategory have entries for the first plot value key
+        const keys = plotValues.length > 0 ? [0] : [];
+        this.#plotLabel = plotLabel;
+        if (keys.length > 0 && !this.#plotLabel[keys[0]!]) {
+            this.#plotLabel[keys[0]!] = new DataSeriesValues();
+        }
+
+        this.#plotCategory = plotCategory;
+        if (keys.length > 0 && !this.#plotCategory[keys[0]!]) {
+            this.#plotCategory[keys[0]!] = new DataSeriesValues();
+        }
+
+        this.#direction = direction ?? 'col';
+        this.#smoothLine = smoothLine;
+        this.#lineStyle = lineStyle;
+        this.#plotBubbleSizes = [];
 
         // Initialize styling properties
         this.#fillColor = null;
@@ -168,7 +183,7 @@ export class DataSeries {
     /**
      * Get the direction (bar=horizontal, col/column=vertical).
      */
-    getDirection(): DirectionType | null {
+    getDirection(): DirectionType {
         return this.#direction;
     }
 
@@ -176,21 +191,40 @@ export class DataSeries {
      * Set the direction.
      */
     setDirection(direction: DirectionType | null): void {
-        this.#direction = direction;
+        this.#direction = direction ?? 'col';
     }
 
     /**
-     * Get the plot order (position in the chart).
+     * Get the plot orders (positions in the chart).
      */
-    getPlotOrder(): number {
+    getPlotOrder(): number[] {
         return this.#plotOrder;
     }
 
     /**
-     * Set the plot order.
+     * Get a plot order by index.
+     * @param index - The index to look up
+     * @returns The plot order at the index, or undefined if not found
      */
-    setPlotOrder(plotOrder: number): void {
+    getPlotOrderByIndex(index: number): number | undefined {
+        if (index in this.#plotOrder) {
+            return this.#plotOrder[index];
+        }
+        return undefined;
+    }
+
+    /**
+     * Set the plot orders.
+     */
+    setPlotOrder(plotOrder: number[]): void {
         this.#plotOrder = plotOrder;
+    }
+
+    /**
+     * Add a plot order.
+     */
+    addPlotOrder(plotOrder: number): void {
+        this.#plotOrder.push(plotOrder);
     }
 
     /**
@@ -239,29 +273,72 @@ export class DataSeries {
     /**
      * Get the plot labels.
      */
-    getPlotLabel(): DataSeriesValues | null {
+    getPlotLabels(): DataSeriesValues[] {
         return this.#plotLabel;
+    }
+
+    /**
+     * Get a plot label by index.
+     * @param index - The index to look up
+     * @returns The plot label at the index, or undefined if not found
+     */
+    getPlotLabelByIndex(index: number): DataSeriesValues | undefined {
+        if (index in this.#plotLabel) {
+            return this.#plotLabel[index];
+        }
+        return undefined;
     }
 
     /**
      * Set the plot labels.
      */
-    setPlotLabel(plotLabel: DataSeriesValues | null): void {
-        this.#plotLabel = plotLabel;
+    setPlotLabels(plotLabels: DataSeriesValues[]): void {
+        this.#plotLabel = plotLabels;
     }
 
     /**
-     * Get the category data.
+     * Add a plot label.
      */
-    getPlotCategory(): DataSeriesValues | null {
+    addPlotLabel(plotLabel: DataSeriesValues): void {
+        this.#plotLabel.push(plotLabel);
+    }
+
+    /**
+     * Get the plot categories.
+     */
+    getPlotCategories(): DataSeriesValues[] {
         return this.#plotCategory;
     }
 
     /**
-     * Set the category data.
+     * Get a plot category by index.
+     * @param index - The index to look up
+     * @returns The plot category at the index, or undefined if not found
      */
-    setPlotCategory(plotCategory: DataSeriesValues | null): void {
-        this.#plotCategory = plotCategory;
+    getPlotCategoryByIndex(index: number): DataSeriesValues | undefined {
+        if (index in this.#plotCategory) {
+            return this.#plotCategory[index];
+        }
+        // Also check if there's a value at the numeric position in keys
+        const keys = Object.keys(this.#plotCategory).map(Number);
+        if (keys.length > index && index >= 0) {
+            return this.#plotCategory[keys[index]!];
+        }
+        return undefined;
+    }
+
+    /**
+     * Set the plot categories.
+     */
+    setPlotCategories(plotCategories: DataSeriesValues[]): void {
+        this.#plotCategory = plotCategories;
+    }
+
+    /**
+     * Add a plot category.
+     */
+    addPlotCategory(plotCategory: DataSeriesValues): void {
+        this.#plotCategory.push(plotCategory);
     }
 
     /**
@@ -288,22 +365,42 @@ export class DataSeries {
     /**
      * Get the bubble sizes (for bubble charts).
      */
-    getPlotBubbleSizes(): DataSeriesValues | null {
+    getPlotBubbleSizes(): DataSeriesValues[] {
         return this.#plotBubbleSizes;
     }
 
     /**
      * Set the bubble sizes.
      */
-    setPlotBubbleSizes(plotBubbleSizes: DataSeriesValues | null): void {
+    setPlotBubbleSizes(plotBubbleSizes: DataSeriesValues[]): void {
         this.#plotBubbleSizes = plotBubbleSizes;
     }
 
     /**
      * Get the count of data series values.
+     * @deprecated Use getPlotSeriesCount() instead
      */
     getSeriesValueCount(): number {
         return this.#plotValues.length;
+    }
+
+    /**
+     * Get the number of plot series.
+     */
+    getPlotSeriesCount(): number {
+        return this.#plotValues.length;
+    }
+
+    /**
+     * Get plot values by index.
+     * @param index - The index to look up
+     * @returns The plot values at the index, or undefined if not found
+     */
+    getPlotValuesByIndex(index: number): DataSeriesValues | undefined {
+        if (index in this.#plotValues) {
+            return this.#plotValues[index];
+        }
+        return undefined;
     }
 
     /**
