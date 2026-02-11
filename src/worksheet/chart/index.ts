@@ -4,8 +4,17 @@ export { ChartColor } from './chart-color';
 export { DataSeries } from './data-series';
 export { DataSeriesValues } from './data-series-values';
 export { Legend } from './legend';
+export { PlotArea } from './plot-area';
 export { Title } from './title';
-export type { GridLines } from './legend';
+export { TrendLine } from './trend-line';
+export { GridLines } from './grid-lines';
+export type {
+    ShadowProperties,
+    GlowProperties,
+    SoftEdgesProperties,
+    LineStyleProperties as GridLinesLineStyleProperties,
+} from './grid-lines';
+export type { PlotAreaGradientStop } from './plot-area';
 export { Axis, AxisGridLines, AxisText } from './axis';
 export type { ChartType, GroupingType, DirectionType, LineStyle } from './data-series';
 export type {
@@ -34,6 +43,16 @@ export type {
     LineStyleArrow,
     LineStyleProperties,
 } from './axis';
+export type { TrendLineType } from './trend-line';
+export {
+    TRENDLINE_EXPONENTIAL,
+    TRENDLINE_LINEAR,
+    TRENDLINE_LOGARITHMIC,
+    TRENDLINE_POLYNOMIAL,
+    TRENDLINE_POWER,
+    TRENDLINE_MOVING_AVERAGE,
+    TRENDLINE_TYPES,
+} from './trend-line';
 export {
     AXIS_TYPE_CATEGORY,
     AXIS_TYPE_DATE,
