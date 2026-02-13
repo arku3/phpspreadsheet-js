@@ -6,6 +6,7 @@ import type { Chart, ChartGradientStop, ChartLayout, GridlineStyle } from '../..
 import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
 import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
+import type { Axis } from '../../worksheet/chart/index.ts';
 import { TrendLine, TRENDLINE_MOVING_AVERAGE, TRENDLINE_POLYNOMIAL } from '../../worksheet/chart/trend-line.ts';
 
 /**
@@ -394,6 +395,37 @@ function writeGridlines(parent: any, major: boolean, style: GridlineStyle | null
             }
             ln.ele('a:solidFill').ele('a:srgbClr', { val: style.color });
         }
+    }
+}
+
+/**
+ * Write axis scaling properties.
+ */
+function writeAxisScaling(parent: any, axis: Axis | null): void {
+    const scaling = parent.ele('c:scaling');
+
+    if (axis) {
+        const orientation = axis.getOrientation();
+        if (orientation) {
+            scaling.ele('c:orientation', { val: orientation });
+        }
+
+        const logBase = axis.getLogBase();
+        if (logBase !== null && logBase > 0) {
+            scaling.ele('c:logBase', { val: String(logBase) });
+        }
+
+        const min = axis.getMin();
+        if (min !== null) {
+            scaling.ele('c:min', { val: String(min) });
+        }
+
+        const max = axis.getMax();
+        if (max !== null) {
+            scaling.ele('c:max', { val: String(max) });
+        }
+    } else {
+        scaling.ele('c:orientation', { val: 'minMax' });
     }
 }
 
@@ -1017,8 +1049,7 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
             {
                 const xValAx = plotArea.ele('c:valAx');
                 xValAx.ele('c:axId', { val: catAxId });
-                const scaling = xValAx.ele('c:scaling');
-                scaling.ele('c:orientation', { val: 'minMax' });
+                writeAxisScaling(xValAx, chart.getXAxis());
                 xValAx.ele('c:delete', { val: '0' });
                 xValAx.ele('c:axPos', { val: 'b' });
                 xValAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
@@ -1046,8 +1077,7 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
             {
                 const valAx = plotArea.ele('c:valAx');
                 valAx.ele('c:axId', { val: valAxId });
-                const scaling = valAx.ele('c:scaling');
-                scaling.ele('c:orientation', { val: 'minMax' });
+                writeAxisScaling(valAx, chart.getYAxis());
                 valAx.ele('c:delete', { val: '0' });
                 valAx.ele('c:axPos', { val: 'l' });
                 const yAxisTitle = chart.getYAxisTitle();
@@ -1075,8 +1105,7 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
             {
                 const catAx = plotArea.ele('c:catAx');
                 catAx.ele('c:axId', { val: catAxId });
-                const scaling = catAx.ele('c:scaling');
-                scaling.ele('c:orientation', { val: 'minMax' });
+                writeAxisScaling(catAx, chart.getXAxis());
                 catAx.ele('c:delete', { val: '0' });
                 catAx.ele('c:axPos', { val: 'b' });
                 catAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
@@ -1105,8 +1134,7 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
             {
                 const valAx = plotArea.ele('c:valAx');
                 valAx.ele('c:axId', { val: valAxId });
-                const scaling = valAx.ele('c:scaling');
-                scaling.ele('c:orientation', { val: 'minMax' });
+                writeAxisScaling(valAx, chart.getYAxis());
                 valAx.ele('c:delete', { val: '0' });
                 valAx.ele('c:axPos', { val: 'l' });
                 const yAxisTitle = chart.getYAxisTitle();
