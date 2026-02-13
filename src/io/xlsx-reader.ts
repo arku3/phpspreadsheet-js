@@ -10,6 +10,7 @@ import { Font } from '../style/font.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { Column as AutoFilterColumn } from '../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../worksheet/auto-filter/column/rule.ts';
+import { Axis, type AxisType } from '../worksheet/chart/axis.ts';
 import {
     ChartColor,
     EXCEL_COLOR_TYPE_RGB,
@@ -2296,6 +2297,18 @@ export class XlsxReader implements IReader {
             xAxisMinorGridlineStyle: GridlineStyle | null;
             yAxisMajorGridlineStyle: GridlineStyle | null;
             yAxisMinorGridlineStyle: GridlineStyle | null;
+            xAxisLogBase: number | null;
+            yAxisLogBase: number | null;
+            xAxisMin: number | null;
+            yAxisMin: number | null;
+            xAxisMax: number | null;
+            yAxisMax: number | null;
+            xAxisOrientation: string | null;
+            yAxisOrientation: string | null;
+            xAxisOptions: Record<string, string | null> | null;
+            yAxisOptions: Record<string, string | null> | null;
+            xAxisType: string | null;
+            yAxisType: string | null;
         } | null;
         serAxisId: string | null;
         layout: ChartLayout | null;
@@ -2335,6 +2348,10 @@ export class XlsxReader implements IReader {
             yAxisMax: number | null;
             xAxisOrientation: string | null;
             yAxisOrientation: string | null;
+            xAxisOptions: Record<string, string | null> | null;
+            yAxisOptions: Record<string, string | null> | null;
+            xAxisType: string | null;
+            yAxisType: string | null;
         } | null = null;
         let serAxisId: string | null = null;
         let layout: ChartLayout | null = null;
@@ -2469,6 +2486,10 @@ export class XlsxReader implements IReader {
         let yAxisMax: number | null = null;
         let xAxisOrientation: string | null = null;
         let yAxisOrientation: string | null = null;
+        let xAxisOptions: Record<string, string | null> | null = null;
+        let yAxisOptions: Record<string, string | null> | null = null;
+        let xAxisType: string | null = null;
+        let yAxisType: string | null = null;
         for (const axisMatch of axisMatches) {
             const axisType = axisMatch[1] ?? '';
             const axisInner = axisMatch[2] ?? '';
@@ -2493,7 +2514,37 @@ export class XlsxReader implements IReader {
             const orientationMatch = scalingInner.match(/<c:orientation\b[^>]*\bval="([^"]*)"/);
             const orientation = orientationMatch?.[1] ?? null;
 
+            const tickLblPos = axisInner.match(/<c:tickLblPos\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const majorTickMark = axisInner.match(/<c:majorTickMark\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const minorTickMark = axisInner.match(/<c:minorTickMark\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const crosses = axisInner.match(/<c:crosses\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const crossesAt = axisInner.match(/<c:crossesAt\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const majorUnit = axisInner.match(/<c:majorUnit\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const minorUnit = axisInner.match(/<c:minorUnit\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const dispUnitsBuiltIn = axisInner.match(/<c:builtInUnit\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const hidden = axisInner.match(/<c:delete\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const baseTimeUnit = axisInner.match(/<c:baseTimeUnit\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const majorTimeUnit = axisInner.match(/<c:majorTimeUnit\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+            const minorTimeUnit = axisInner.match(/<c:minorTimeUnit\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+
+            const axisOptions = {
+                axis_labels: tickLblPos,
+                major_tick_mark: majorTickMark,
+                minor_tick_mark: minorTickMark,
+                horizontal_crosses: crosses,
+                horizontal_crosses_value: crossesAt,
+                major_unit: majorUnit,
+                minor_unit: minorUnit,
+                dispUnitsBuiltIn,
+                hidden,
+                baseTimeUnit,
+                majorTimeUnit,
+                minorTimeUnit,
+            };
+
             if (axisType === 'catAx' || axisType === 'dateAx') {
+                xAxisType = axisType;
+                xAxisOptions = axisOptions;
                 if (titleText) {
                     xAxisTitle = titleText;
                 }
@@ -2519,6 +2570,13 @@ export class XlsxReader implements IReader {
                 if (orientation !== null) xAxisOrientation = orientation;
             } else if (axisType === 'valAx') {
                 const isXAxis = axPos === 'b' || axPos === 't';
+                if (isXAxis) {
+                    xAxisOptions = axisOptions;
+                    xAxisType = axisType;
+                } else {
+                    yAxisOptions = axisOptions;
+                    yAxisType = axisType;
+                }
                 if (titleText) {
                     if (isXAxis) {
                         xAxisTitle = titleText;
@@ -2596,7 +2654,11 @@ export class XlsxReader implements IReader {
             xAxisMax !== null ||
             yAxisMax !== null ||
             xAxisOrientation !== null ||
-            yAxisOrientation !== null
+            yAxisOrientation !== null ||
+            xAxisOptions !== null ||
+            yAxisOptions !== null ||
+            xAxisType !== null ||
+            yAxisType !== null
         ) {
             axes = {
                 xAxisTitle,
@@ -2619,6 +2681,10 @@ export class XlsxReader implements IReader {
                 yAxisMax,
                 xAxisOrientation,
                 yAxisOrientation,
+                xAxisOptions,
+                yAxisOptions,
+                xAxisType,
+                yAxisType,
             };
         }
 
@@ -3696,6 +3762,102 @@ export class XlsxReader implements IReader {
                             }
                             if (axes.yAxisMinorGridlineStyle !== null) {
                                 chart.setYAxisMinorGridlineStyle(axes.yAxisMinorGridlineStyle);
+                            }
+
+                            if (
+                                axes.xAxisLogBase !== null ||
+                                axes.xAxisMin !== null ||
+                                axes.xAxisMax !== null ||
+                                axes.xAxisOrientation !== null ||
+                                axes.xAxisOptions ||
+                                axes.xAxisType
+                            ) {
+                                const xAxis = chart.getXAxis() ?? new Axis();
+                                if (axes.xAxisType) {
+                                    xAxis.setAxisType(axes.xAxisType as AxisType);
+                                }
+                                if (axes.xAxisLogBase !== null) {
+                                    xAxis.setLogBase(axes.xAxisLogBase);
+                                }
+                                if (axes.xAxisMin !== null) {
+                                    xAxis.setMin(axes.xAxisMin);
+                                }
+                                if (axes.xAxisMax !== null) {
+                                    xAxis.setMax(axes.xAxisMax);
+                                }
+                                if (axes.xAxisOrientation !== null) {
+                                    xAxis.setOrientation(axes.xAxisOrientation as 'minMax' | 'maxMin');
+                                }
+                                if (axes.xAxisOptions) {
+                                    xAxis.setAxisOptionsProperties(
+                                        axes.xAxisOptions.axis_labels ?? 'nextTo',
+                                        axes.xAxisOptions.horizontal_crosses_value ?? null,
+                                        axes.xAxisOptions.horizontal_crosses ?? null,
+                                        axes.xAxisOrientation ?? null,
+                                        axes.xAxisOptions.major_tick_mark ?? null,
+                                        axes.xAxisOptions.minor_tick_mark ?? null,
+                                        axes.xAxisOptions.minimum ?? null,
+                                        axes.xAxisOptions.maximum ?? null,
+                                        axes.xAxisOptions.major_unit ?? null,
+                                        axes.xAxisOptions.minor_unit ?? null,
+                                        axes.xAxisOptions.textRotation ?? null,
+                                        axes.xAxisOptions.hidden ?? null,
+                                        axes.xAxisOptions.baseTimeUnit ?? null,
+                                        axes.xAxisOptions.majorTimeUnit ?? null,
+                                        axes.xAxisOptions.minorTimeUnit ?? null,
+                                        axes.xAxisLogBase ?? null,
+                                        axes.xAxisOptions.dispUnitsBuiltIn ?? null,
+                                    );
+                                }
+                                chart.setXAxis(xAxis);
+                            }
+
+                            if (
+                                axes.yAxisLogBase !== null ||
+                                axes.yAxisMin !== null ||
+                                axes.yAxisMax !== null ||
+                                axes.yAxisOrientation !== null ||
+                                axes.yAxisOptions ||
+                                axes.yAxisType
+                            ) {
+                                const yAxis = chart.getYAxis() ?? new Axis();
+                                if (axes.yAxisType) {
+                                    yAxis.setAxisType(axes.yAxisType as AxisType);
+                                }
+                                if (axes.yAxisLogBase !== null) {
+                                    yAxis.setLogBase(axes.yAxisLogBase);
+                                }
+                                if (axes.yAxisMin !== null) {
+                                    yAxis.setMin(axes.yAxisMin);
+                                }
+                                if (axes.yAxisMax !== null) {
+                                    yAxis.setMax(axes.yAxisMax);
+                                }
+                                if (axes.yAxisOrientation !== null) {
+                                    yAxis.setOrientation(axes.yAxisOrientation as 'minMax' | 'maxMin');
+                                }
+                                if (axes.yAxisOptions) {
+                                    yAxis.setAxisOptionsProperties(
+                                        axes.yAxisOptions.axis_labels ?? 'nextTo',
+                                        axes.yAxisOptions.horizontal_crosses_value ?? null,
+                                        axes.yAxisOptions.horizontal_crosses ?? null,
+                                        axes.yAxisOrientation ?? null,
+                                        axes.yAxisOptions.major_tick_mark ?? null,
+                                        axes.yAxisOptions.minor_tick_mark ?? null,
+                                        axes.yAxisOptions.minimum ?? null,
+                                        axes.yAxisOptions.maximum ?? null,
+                                        axes.yAxisOptions.major_unit ?? null,
+                                        axes.yAxisOptions.minor_unit ?? null,
+                                        axes.yAxisOptions.textRotation ?? null,
+                                        axes.yAxisOptions.hidden ?? null,
+                                        axes.yAxisOptions.baseTimeUnit ?? null,
+                                        axes.yAxisOptions.majorTimeUnit ?? null,
+                                        axes.yAxisOptions.minorTimeUnit ?? null,
+                                        axes.yAxisLogBase ?? null,
+                                        axes.yAxisOptions.dispUnitsBuiltIn ?? null,
+                                    );
+                                }
+                                chart.setYAxis(yAxis);
                             }
                         }
                         if (serAxisId) {

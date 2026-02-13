@@ -4,6 +4,7 @@ import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
 import { Font } from '../src/style/font.ts';
+import { Axis } from '../src/worksheet/chart/axis.ts';
 import { Chart } from '../src/worksheet/chart/chart.ts';
 import { DataSeriesValues } from '../src/worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../src/worksheet/chart/data-series.ts';
@@ -251,5 +252,85 @@ describe('Chart axis titles and gridlines', () => {
         expect(readYGridlineStyle).not.toBeNull();
         expect(readYGridlineStyle!.color).toBe('FF999999');
         expect(readYGridlineStyle!.width).toBe(0.5);
+    });
+
+    test('writer outputs axis options (crosses, units, dispUnits, hidden)', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('AxisOptions');
+
+        worksheet.getCell('A1').setValue('Category');
+        worksheet.getCell('A2').setValue('One');
+        worksheet.getCell('A3').setValue('Two');
+        worksheet.getCell('B1').setValue('Series');
+        worksheet.getCell('B2').setValue(10);
+        worksheet.getCell('B3').setValue(20);
+
+        const chart = new Chart();
+        chart.setName('Axis Options');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const xAxis = new Axis();
+        xAxis.setAxisOptionsProperties(
+            'high',
+            '5',
+            'max',
+            'minMax',
+            'out',
+            'in',
+            null,
+            null,
+            '2',
+            '1',
+            null,
+            '1',
+            null,
+            null,
+            null,
+            null,
+            'hundreds',
+        );
+        chart.setXAxis(xAxis);
+
+        const yAxis = new Axis();
+        yAxis.setAxisOptionsProperties(
+            'nextTo',
+            null,
+            'autoZero',
+            'minMax',
+            'out',
+            'none',
+            null,
+            null,
+            '5',
+            '1',
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+        );
+        chart.setYAxis(yAxis);
+
+        const series = new DataSeries('bar');
+        series.addPlotCategory(new DataSeriesValues('String', 'AxisOptions!$A$2:$A$3'));
+        series.addPlotValues(new DataSeriesValues('Number', 'AxisOptions!$B$2:$B$3'));
+        chart.addDataSeries(series);
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+
+        const chartXml = await getFirstChartXml(buffer);
+        expect(chartXml).toContain('<c:crossesAt val="5"');
+        expect(chartXml).toContain('<c:crosses val="max"');
+        expect(chartXml).toContain('<c:majorUnit val="2"');
+        expect(chartXml).toContain('<c:minorUnit val="1"');
+        expect(chartXml).toContain('<c:dispUnits>');
+        expect(chartXml).toContain('<c:builtInUnit val="hundreds"');
+        expect(chartXml).toContain('<c:delete val="1"');
     });
 });

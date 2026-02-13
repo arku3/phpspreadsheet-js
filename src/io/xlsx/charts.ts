@@ -538,6 +538,41 @@ function writeAxisScaling(parent: any, axis: Axis | null): void {
     }
 }
 
+function writeAxisOptions(parent: any, axis: Axis | null): void {
+    if (!axis) {
+        return;
+    }
+
+    const options = axis.getAxisOptions();
+
+    if (options.major_tick_mark) {
+        parent.ele('c:majorTickMark', { val: options.major_tick_mark });
+    }
+    if (options.minor_tick_mark) {
+        parent.ele('c:minorTickMark', { val: options.minor_tick_mark });
+    }
+    if (options.axis_labels) {
+        parent.ele('c:tickLblPos', { val: options.axis_labels });
+    }
+    if (options.horizontal_crosses) {
+        parent.ele('c:crosses', { val: options.horizontal_crosses });
+    }
+    if (options.horizontal_crosses_value) {
+        parent.ele('c:crossesAt', { val: options.horizontal_crosses_value });
+    }
+    if (options.major_unit) {
+        parent.ele('c:majorUnit', { val: options.major_unit });
+    }
+    if (options.minor_unit) {
+        parent.ele('c:minorUnit', { val: options.minor_unit });
+    }
+    if (options.dispUnitsBuiltIn) {
+        const dispUnits = parent.ele('c:dispUnits');
+        dispUnits.ele('c:builtInUnit', { val: options.dispUnitsBuiltIn });
+        dispUnits.ele('c:dispUnitsLbl');
+    }
+}
+
 /**
  * Write chart area shape properties (<c:spPr>).
  */
@@ -1309,7 +1344,9 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 const xValAx = plotArea.ele('c:valAx');
                 xValAx.ele('c:axId', { val: catAxId });
                 writeAxisScaling(xValAx, chart.getXAxis());
-                xValAx.ele('c:delete', { val: '0' });
+                const xAxisOptions = chart.getXAxis()?.getAxisOptions();
+                const xDelete = xAxisOptions?.hidden === '1' ? '1' : '0';
+                xValAx.ele('c:delete', { val: xDelete });
                 xValAx.ele('c:axPos', { val: 'b' });
                 xValAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
                 const xAxisTitle = chart.getXAxisTitle();
@@ -1324,11 +1361,11 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 if (chart.getXAxisMinorGridlines() === true) {
                     writeGridlines(xValAx, false, chart.getXAxisMinorGridlineStyle());
                 }
-                xValAx.ele('c:majorTickMark', { val: 'out' });
-                xValAx.ele('c:minorTickMark', { val: 'none' });
-                xValAx.ele('c:tickLblPos', { val: 'nextTo' });
+                writeAxisOptions(xValAx, chart.getXAxis());
                 xValAx.ele('c:crossAx', { val: valAxId });
-                xValAx.ele('c:crosses', { val: 'autoZero' });
+                if (!xAxisOptions?.horizontal_crosses) {
+                    xValAx.ele('c:crosses', { val: 'autoZero' });
+                }
                 xValAx.ele('c:crossBetween', { val: 'between' });
             }
 
@@ -1337,7 +1374,9 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 const valAx = plotArea.ele('c:valAx');
                 valAx.ele('c:axId', { val: valAxId });
                 writeAxisScaling(valAx, chart.getYAxis());
-                valAx.ele('c:delete', { val: '0' });
+                const yAxisOptions = chart.getYAxis()?.getAxisOptions();
+                const yDelete = yAxisOptions?.hidden === '1' ? '1' : '0';
+                valAx.ele('c:delete', { val: yDelete });
                 valAx.ele('c:axPos', { val: 'l' });
                 const yAxisTitle = chart.getYAxisTitle();
                 const yAxisTitleFont = chart.getYAxisTitleFont();
@@ -1352,20 +1391,24 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                     writeGridlines(valAx, false, chart.getYAxisMinorGridlineStyle());
                 }
                 valAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
-                valAx.ele('c:majorTickMark', { val: 'out' });
-                valAx.ele('c:minorTickMark', { val: 'none' });
-                valAx.ele('c:tickLblPos', { val: 'nextTo' });
+                writeAxisOptions(valAx, chart.getYAxis());
                 valAx.ele('c:crossAx', { val: catAxId });
-                valAx.ele('c:crosses', { val: 'autoZero' });
+                if (!yAxisOptions?.horizontal_crosses) {
+                    valAx.ele('c:crosses', { val: 'autoZero' });
+                }
                 valAx.ele('c:crossBetween', { val: 'between' });
             }
         } else {
             // Category axis
             {
-                const catAx = plotArea.ele('c:catAx');
+                const xAxis = chart.getXAxis();
+                const axisType = xAxis?.getAxisType() === 'dateAx' ? 'c:dateAx' : 'c:catAx';
+                const catAx = plotArea.ele(axisType);
                 catAx.ele('c:axId', { val: catAxId });
                 writeAxisScaling(catAx, chart.getXAxis());
-                catAx.ele('c:delete', { val: '0' });
+                const xAxisOptions = xAxis?.getAxisOptions();
+                const xDelete = xAxisOptions?.hidden === '1' ? '1' : '0';
+                catAx.ele('c:delete', { val: xDelete });
                 catAx.ele('c:axPos', { val: 'b' });
                 catAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
                 const xAxisTitle = chart.getXAxisTitle();
@@ -1379,14 +1422,26 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 if (chart.getXAxisMinorGridlines() === true) {
                     writeGridlines(catAx, false, chart.getXAxisMinorGridlineStyle());
                 }
-                catAx.ele('c:majorTickMark', { val: 'out' });
-                catAx.ele('c:minorTickMark', { val: 'none' });
-                catAx.ele('c:tickLblPos', { val: 'nextTo' });
+                writeAxisOptions(catAx, chart.getXAxis());
                 catAx.ele('c:crossAx', { val: valAxId });
-                catAx.ele('c:crosses', { val: 'autoZero' });
+                if (!xAxisOptions?.horizontal_crosses) {
+                    catAx.ele('c:crosses', { val: 'autoZero' });
+                }
                 catAx.ele('c:auto', { val: '1' });
                 catAx.ele('c:lblAlgn', { val: 'ctr' });
                 catAx.ele('c:lblOffset', { val: '100' });
+
+                if (axisType === 'c:dateAx' && xAxisOptions) {
+                    if (xAxisOptions.baseTimeUnit) {
+                        catAx.ele('c:baseTimeUnit', { val: xAxisOptions.baseTimeUnit });
+                    }
+                    if (xAxisOptions.majorTimeUnit) {
+                        catAx.ele('c:majorTimeUnit', { val: xAxisOptions.majorTimeUnit });
+                    }
+                    if (xAxisOptions.minorTimeUnit) {
+                        catAx.ele('c:minorTimeUnit', { val: xAxisOptions.minorTimeUnit });
+                    }
+                }
             }
 
             // Value axis
@@ -1394,7 +1449,10 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 const valAx = plotArea.ele('c:valAx');
                 valAx.ele('c:axId', { val: valAxId });
                 writeAxisScaling(valAx, chart.getYAxis());
-                valAx.ele('c:delete', { val: '0' });
+                const yAxis = chart.getYAxis();
+                const yAxisOptions = yAxis?.getAxisOptions();
+                const yDelete = yAxisOptions?.hidden === '1' ? '1' : '0';
+                valAx.ele('c:delete', { val: yDelete });
                 valAx.ele('c:axPos', { val: 'l' });
                 const yAxisTitle = chart.getYAxisTitle();
                 const yAxisTitleFont = chart.getYAxisTitleFont();
@@ -1409,11 +1467,11 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                     writeGridlines(valAx, false, chart.getYAxisMinorGridlineStyle());
                 }
                 valAx.ele('c:numFmt', { formatCode: 'General', sourceLinked: '1' });
-                valAx.ele('c:majorTickMark', { val: 'out' });
-                valAx.ele('c:minorTickMark', { val: 'none' });
-                valAx.ele('c:tickLblPos', { val: 'nextTo' });
+                writeAxisOptions(valAx, yAxis);
                 valAx.ele('c:crossAx', { val: catAxId });
-                valAx.ele('c:crosses', { val: 'autoZero' });
+                if (!yAxisOptions?.horizontal_crosses) {
+                    valAx.ele('c:crosses', { val: 'autoZero' });
+                }
                 valAx.ele('c:crossBetween', { val: 'between' });
             }
 
