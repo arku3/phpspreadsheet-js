@@ -3,6 +3,7 @@ import unzipper from 'unzipper';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
+import { ChartColor } from '../src/worksheet/chart/chart-color.ts';
 import { Chart } from '../src/worksheet/chart/chart.ts';
 import { DataSeriesValues } from '../src/worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../src/worksheet/chart/data-series.ts';
@@ -239,5 +240,93 @@ describe('Chart Trend Line Tests', () => {
         expect(readMovingAvgTrendLine!.getPeriod()).toBe(2);
         expect(readMovingAvgTrendLine!.getName()).toBe('2-Point Moving Avg');
         expect(readMovingAvgTrendLine!.getDisplayRSquared()).toBe(true);
+    });
+
+    test('trend line color falls back to series line color', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('TrendLineFallback');
+
+        worksheet.getCell('A1').setValue('X');
+        worksheet.getCell('A2').setValue(1);
+        worksheet.getCell('A3').setValue(2);
+        worksheet.getCell('B1').setValue('Y');
+        worksheet.getCell('B2').setValue(10);
+        worksheet.getCell('B3').setValue(20);
+
+        const chart = new Chart();
+        chart.setName('TrendLine Fallback');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('scatter');
+        series.setLineColor('FF00FF');
+        const plotValues = new DataSeriesValues('Number', 'TrendLineFallback!$B$2:$B$3');
+
+        const linearTrendLine = new TrendLine('linear');
+        plotValues.addTrendLine(linearTrendLine);
+
+        series.addPlotCategory(new DataSeriesValues('Number', 'TrendLineFallback!$A$2:$A$3'));
+        series.addPlotValues(plotValues);
+        chart.addDataSeries(series);
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+        const chartXml = await getFirstChartXml(buffer);
+
+        expect(chartXml).toContain('<c:trendline>');
+        expect(chartXml).toContain('val="FF00FF"');
+    });
+
+    test('trend line supports scheme colors and width round-trip', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('TrendLineColors');
+
+        worksheet.getCell('A1').setValue('X');
+        worksheet.getCell('A2').setValue(1);
+        worksheet.getCell('A3').setValue(2);
+        worksheet.getCell('B1').setValue('Y');
+        worksheet.getCell('B2').setValue(10);
+        worksheet.getCell('B3').setValue(20);
+
+        const chart = new Chart();
+        chart.setName('TrendLine Colors');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const series = new DataSeries('scatter');
+        const plotValues = new DataSeriesValues('Number', 'TrendLineColors!$B$2:$B$3');
+
+        const linearTrendLine = new TrendLine('linear');
+        linearTrendLine.setLineColor(new ChartColor('*accent2'));
+        linearTrendLine.setLineWidth(2);
+        plotValues.addTrendLine(linearTrendLine);
+
+        series.addPlotCategory(new DataSeriesValues('Number', 'TrendLineColors!$A$2:$A$3'));
+        series.addPlotValues(plotValues);
+        chart.addDataSeries(series);
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+        const chartXml = await getFirstChartXml(buffer);
+
+        expect(chartXml).toContain('<a:schemeClr');
+        expect(chartXml).toContain('val="accent2"');
+
+        const reader = new XlsxReader();
+        reader.setIncludeCharts(true);
+        const readSpreadsheet = await reader.loadFromBuffer(buffer);
+        const readWorksheet = readSpreadsheet.getSheetByName('TrendLineColors');
+        const readChart = readWorksheet!.getChartCollection()[0]!;
+        const readSeries = readChart.getPlotArea()[0]!;
+        const readPlotValues = readSeries.getPlotValues();
+        const readTrendLine = readPlotValues[0]!.getTrendLines()[0]!;
+
+        expect(readTrendLine.getLineColor()?.getType()).toBe('schemeClr');
+        expect(readTrendLine.getLineColor()?.getValue()).toBe('accent2');
+        expect(readTrendLine.getLineWidth()).toBeCloseTo(2);
     });
 });

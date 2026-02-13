@@ -3033,9 +3033,11 @@ export class XlsxReader implements IReader {
                         trendLine.setDisplayRSquared(XlsxReader.#castXsdBoolean(dispRSqrMatch[1]));
                     }
 
-                    // Parse displayEquation (from trendlineLbl structure)
-                    const trendlineLblMatch = trendlineInner.match(/<c:trendlineLbl\b[^>]*>/);
-                    if (trendlineLblMatch) {
+                    // Parse displayEquation
+                    const dispEqMatch = trendlineInner.match(/<c:dispEq\b[^>]*\bval="([^"]*)"/);
+                    if (dispEqMatch?.[1]) {
+                        trendLine.setDisplayEquation(XlsxReader.#castXsdBoolean(dispEqMatch[1]));
+                    } else if (trendlineInner.includes('<c:trendlineLbl')) {
                         trendLine.setDisplayEquation(true);
                     }
 
@@ -3073,13 +3075,21 @@ export class XlsxReader implements IReader {
                             // Parse line width
                             const wMatch = lnMatch[1]?.match(/\bw="([^"]*)"/);
                             if (wMatch?.[1]) {
-                                trendLine.setLineWidth(Number.parseInt(wMatch[1], 10));
+                                const width = Number.parseInt(wMatch[1], 10) / 12700;
+                                if (Number.isFinite(width)) {
+                                    trendLine.setLineWidth(width);
+                                }
                             }
 
                             // Parse line style (dash)
                             const dashMatch = lnMatch[2]?.match(/<a:prstDash\b[^>]*\bval="([^"]*)"/);
                             if (dashMatch?.[1]) {
                                 trendLine.setLineStyle(dashMatch[1]);
+                            }
+
+                            const lineColor = XlsxReader.#parseChartColor(lnMatch[2] ?? '');
+                            if (lineColor) {
+                                trendLine.setLineColor(lineColor);
                             }
                         }
                     }

@@ -244,6 +244,17 @@ const chartColorFromLegendValue = (value: string): ChartColor | null => {
     return new ChartColor(trimmed);
 };
 
+const chartColorFromLineValue = (value: string | null): ChartColor | null => {
+    if (!value) {
+        return null;
+    }
+    const normalized = normalizeHexColor(value);
+    if (normalized) {
+        return new ChartColor(normalized);
+    }
+    return new ChartColor(value);
+};
+
 function writeShapeProperties(
     parent: any,
     fillColor: string | null,
@@ -892,7 +903,12 @@ function groupSeriesByPlotType(dataSeriesList: DataSeries[]): Map<string, DataSe
 /**
  * Write a trend line element (<c:trendline>) to chart XML.
  */
-function writeTrendLine(parent: any, trendLine: TrendLine, plotType: string): void {
+function writeTrendLine(
+    parent: any,
+    trendLine: TrendLine,
+    plotType: string,
+    fallbackLineColor: ChartColor | null,
+): void {
     const trendlineEl = parent.ele('c:trendline');
 
     // Write name if set
@@ -902,7 +918,7 @@ function writeTrendLine(parent: any, trendLine: TrendLine, plotType: string): vo
     }
 
     // Write shape properties with line styling
-    const lineColor = trendLine.getLineColor();
+    const lineColor = trendLine.getLineColor() ?? fallbackLineColor;
     const lineWidth = trendLine.getLineWidth();
     const lineStyle = trendLine.getLineStyle();
 
@@ -910,18 +926,12 @@ function writeTrendLine(parent: any, trendLine: TrendLine, plotType: string): vo
         const spPr = trendlineEl.ele('c:spPr');
         const lineAttrs: Record<string, string> = {};
         if (lineWidth !== null && lineWidth > 0) {
-            lineAttrs.w = String(lineWidth);
+            lineAttrs.w = String(lineWidth * 12700);
         }
         const ln = spPr.ele('a:ln', lineAttrs);
 
         if (lineColor && lineColor.isUsable()) {
-            const colorValue = lineColor.getValue();
-            const colorType = lineColor.getType();
-            if (colorValue) {
-                if (colorType === 'srgbClr' || colorType === '') {
-                    ln.ele('a:solidFill').ele('a:srgbClr', { val: colorValue });
-                }
-            }
+            writeChartColor(ln, lineColor);
         }
 
         if (lineStyle) {
@@ -982,14 +992,19 @@ function writeTrendLine(parent: any, trendLine: TrendLine, plotType: string): vo
 /**
  * Write all trend lines for a data series values object.
  */
-function writeTrendLines(parent: any, plotValues: DataSeriesValues | null, plotType: string): void {
+function writeTrendLines(
+    parent: any,
+    plotValues: DataSeriesValues | null,
+    plotType: string,
+    fallbackLineColor: ChartColor | null,
+): void {
     if (!plotValues) {
         return;
     }
 
     const trendLines = plotValues.getTrendLines();
     for (const trendLine of trendLines) {
-        writeTrendLine(parent, trendLine, plotType);
+        writeTrendLine(parent, trendLine, plotType, fallbackLineColor);
     }
 }
 
@@ -1009,7 +1024,8 @@ function writeDataSeriesElement(
     // Write the data series
     const series = parent.ele('c:ser');
     series.ele('c:idx', { val: seriesIndex.toString() });
-    series.ele('c:order', { val: dataSeries.getPlotOrder().toString() });
+    const plotOrder = dataSeries.getPlotOrderByIndex(seriesIndex) ?? seriesIndex;
+    series.ele('c:order', { val: plotOrder.toString() });
 
     // Write shape properties (fill color, border/line styling)
     const fillColor = dataSeries.getFillColor();
@@ -1057,7 +1073,7 @@ function writeDataSeriesElement(
         writeDataSeriesValues(series, plotValues[0], valueTag, worksheet);
 
         // Write trend lines for this series
-        writeTrendLines(series, plotValues[0], plotType);
+        writeTrendLines(series, plotValues[0], plotType, chartColorFromLineValue(dataSeries.getLineColor()));
     }
 }
 
