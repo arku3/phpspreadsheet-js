@@ -24,6 +24,7 @@ export type { PlotAreaGradientStop } from './plot-area';
 export { Axis, AxisGridLines, AxisText } from './axis';
 export type { ChartType, GroupingType, DirectionType, LineStyle } from './data-series';
 export type {
+    Effects,
     ChartLayout,
     ChartLayoutMode,
     ChartLayoutTarget,

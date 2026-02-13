@@ -7,6 +7,15 @@ import type { DataSeries } from './data-series.ts';
 import type { GlowProperties, ShadowProperties, SoftEdgesProperties } from './effects.ts';
 
 /**
+ * Effects for chart elements (shadow, glow, soft edges).
+ */
+export interface Effects {
+    shadow?: ShadowProperties | null;
+    glow?: GlowProperties | null;
+    softEdges?: SoftEdgesProperties | null;
+}
+
+/**
  * A cell anchor position for a chart.
  */
 export interface ChartPosition {
