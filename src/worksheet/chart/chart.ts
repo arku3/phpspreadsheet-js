@@ -140,6 +140,7 @@ export class Chart {
     #chartAreaBorderStyle: ChartBorderStyle | null = null;
 
     // Chart area effects
+    #chartAreaEffects: Effects | null = null;
     #chartAreaShadow: ShadowProperties | null = null;
     #chartAreaGlow: GlowProperties | null = null;
     #chartAreaSoftEdges: SoftEdgesProperties | null = null;
@@ -589,6 +590,21 @@ export class Chart {
      */
     public setChartAreaBorderStyle(style: ChartBorderStyle | null): this {
         this.#chartAreaBorderStyle = style;
+        return this;
+    }
+
+    /**
+     * Get chart area effects.
+     */
+    public getChartAreaEffects(): Effects | null {
+        return this.#chartAreaEffects;
+    }
+
+    /**
+     * Set chart area effects.
+     */
+    public setChartAreaEffects(effects: Effects | null): this {
+        this.#chartAreaEffects = effects;
         return this;
     }
 

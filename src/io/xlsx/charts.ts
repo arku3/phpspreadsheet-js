@@ -2,7 +2,7 @@ import { create } from 'xmlbuilder2';
 import type { Worksheet } from '../../core/worksheet.ts';
 import { Font } from '../../style/font.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
-import type { Chart, ChartGradientStop, ChartLayout, GridlineStyle } from '../../worksheet/chart/chart.ts';
+import type { Chart, ChartGradientStop, ChartLayout, Effects, GridlineStyle } from '../../worksheet/chart/chart.ts';
 import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
 import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
@@ -432,13 +432,98 @@ function writeAxisScaling(parent: any, axis: Axis | null): void {
 /**
  * Write chart area shape properties (<c:spPr>).
  */
+/**
+ * Write effects (shadow, glow, soft edges) to spPr
+ */
+function writeEffects(spPr: any, effects: import('../../worksheet/chart/effects').Effects | null | undefined): void {
+    if (!effects) {
+        return;
+    }
+
+    const effectLst = spPr.ele('a:effectLst');
+
+    // Write shadow if present
+    if (effects.shadow) {
+        const shdw = effects.shadow;
+        const shadowAttrs: Record<string, string> = {};
+
+        if (shdw.blur !== null && shdw.blur !== undefined) {
+            shadowAttrs.blurRad = String(Math.round(shdw.blur * 12700));
+        }
+        if (shdw.direction !== null && shdw.direction !== undefined) {
+            shadowAttrs.dir = String(Math.round(shdw.direction * 60000));
+        }
+        if (shdw.distance !== null && shdw.distance !== undefined) {
+            shadowAttrs.dist = String(Math.round(shdw.distance * 12700));
+        }
+        if (shdw.algn) {
+            shadowAttrs.algn = shdw.algn;
+        }
+        if (shdw.rotWithShape) {
+            shadowAttrs.rotWithShape = shdw.rotWithShape;
+        }
+
+        const shadowType = shdw.effect === 'innerShdw' ? 'a:innerShdw' : 'a:outerShdw';
+        const shadowEl = effectLst.ele(shadowType, shadowAttrs);
+
+        // Shadow color
+        if (shdw.color) {
+            const colorValue = shdw.color.getValue();
+            if (colorValue) {
+                shadowEl.ele('a:srgbClr', { val: colorValue });
+            }
+        }
+
+        // Transform size (sx, sy, kx, ky)
+        if (shdw.size?.sx !== null && shdw.size?.sx !== undefined) {
+            shadowEl.att('sx', String(Math.round(shdw.size.sx * 1000)));
+        }
+        if (shdw.size?.sy !== null && shdw.size?.sy !== undefined) {
+            shadowEl.att('sy', String(Math.round(shdw.size.sy * 1000)));
+        }
+        if (shdw.size?.kx !== null && shdw.size?.kx !== undefined) {
+            shadowEl.att('kx', String(Math.round(shdw.size.kx * 1000)));
+        }
+        if (shdw.size?.ky !== null && shdw.size?.ky !== undefined) {
+            shadowEl.att('ky', String(Math.round(shdw.size.ky * 1000)));
+        }
+    }
+
+    // Write glow if present
+    if (effects.glow) {
+        const glow = effects.glow;
+        const glowAttrs: Record<string, string> = {};
+
+        if (glow.size !== null && glow.size !== undefined) {
+            glowAttrs.rad = String(Math.round(glow.size * 12700));
+        }
+
+        const glowEl = effectLst.ele('a:glow', glowAttrs);
+        if (glow.color) {
+            const colorValue = glow.color.getValue();
+            if (colorValue) {
+                glowEl.ele('a:srgbClr', { val: colorValue });
+            }
+        }
+    }
+
+    // Write soft edges if present
+    if (effects.softEdges) {
+        const softEdges = effects.softEdges;
+        if (softEdges.size !== null && softEdges.size !== undefined) {
+            effectLst.ele('a:softEdge', { rad: String(Math.round(softEdges.size * 12700)) });
+        }
+    }
+}
+
 function writeChartAreaProperties(parent: any, chart: Chart): void {
     const noFill = chart.getChartAreaNoFill();
     const fillColor = chart.getChartAreaFillColor();
     const borderStyle = chart.getChartAreaBorderStyle();
     const noBorder = chart.getChartAreaNoBorder();
+    const effects = chart.getChartAreaEffects();
 
-    if (!noFill && !fillColor && !borderStyle && !noBorder) {
+    if (!noFill && !fillColor && !borderStyle && !noBorder && !effects) {
         return;
     }
 
@@ -470,6 +555,9 @@ function writeChartAreaProperties(parent: any, chart: Chart): void {
             }
         }
     }
+
+    // Write effects
+    writeEffects(spPr, effects);
 }
 
 const writeGradientStops = (gradFill: any, stops: ChartGradientStop[]): void => {

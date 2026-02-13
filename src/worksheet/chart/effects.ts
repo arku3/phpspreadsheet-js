@@ -11,6 +11,7 @@ import { ChartColor } from './chart-color';
 export interface ShadowProperties {
     presets?: number | null;
     effect?: 'outerShdw' | 'innerShdw' | null;
+    color?: ChartColor | null;
     size?: {
         sx?: number | null;
         sy?: number | null;
@@ -37,6 +38,15 @@ export interface GlowProperties {
  */
 export interface SoftEdgesProperties {
     size?: number | null;
+}
+
+/**
+ * Combined effects for chart elements
+ */
+export interface Effects {
+    shadow?: ShadowProperties | null;
+    glow?: GlowProperties | null;
+    softEdges?: SoftEdgesProperties | null;
 }
 
 /**
