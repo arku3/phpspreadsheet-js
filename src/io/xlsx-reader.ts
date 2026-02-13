@@ -2230,6 +2230,14 @@ export class XlsxReader implements IReader {
             xAxisMinorGridlineStyle: GridlineStyle | null;
             yAxisMajorGridlineStyle: GridlineStyle | null;
             yAxisMinorGridlineStyle: GridlineStyle | null;
+            xAxisLogBase: number | null;
+            yAxisLogBase: number | null;
+            xAxisMin: number | null;
+            yAxisMin: number | null;
+            xAxisMax: number | null;
+            yAxisMax: number | null;
+            xAxisOrientation: string | null;
+            yAxisOrientation: string | null;
         } | null = null;
         let serAxisId: string | null = null;
         let layout: ChartLayout | null = null;
@@ -2304,6 +2312,15 @@ export class XlsxReader implements IReader {
         let xAxisMinorGridlineStyle: GridlineStyle | null = null;
         let yAxisMajorGridlineStyle: GridlineStyle | null = null;
         let yAxisMinorGridlineStyle: GridlineStyle | null = null;
+        // Axis scaling properties
+        let xAxisLogBase: number | null = null;
+        let yAxisLogBase: number | null = null;
+        let xAxisMin: number | null = null;
+        let yAxisMin: number | null = null;
+        let xAxisMax: number | null = null;
+        let yAxisMax: number | null = null;
+        let xAxisOrientation: string | null = null;
+        let yAxisOrientation: string | null = null;
         for (const axisMatch of axisMatches) {
             const axisType = axisMatch[1] ?? '';
             const axisInner = axisMatch[2] ?? '';
@@ -2315,6 +2332,18 @@ export class XlsxReader implements IReader {
             const hasMinorGridlines = /<c:minorGridlines\b[^>]*>/.test(axisInner);
             const majorGridlineStyle = hasMajorGridlines ? XlsxReader.#parseGridlineStyle(axisInner, 'major') : null;
             const minorGridlineStyle = hasMinorGridlines ? XlsxReader.#parseGridlineStyle(axisInner, 'minor') : null;
+
+            // Parse axis scaling
+            const scalingMatch = axisInner.match(/<c:scaling\b[^>]*>([\s\S]*?)<\/c:scaling>/);
+            const scalingInner = scalingMatch?.[1] ?? '';
+            const logBaseMatch = scalingInner.match(/<c:logBase\b[^>]*\bval="([^"]*)"/);
+            const logBase = logBaseMatch?.[1] ? Number(logBaseMatch[1]) : null;
+            const minMatch = scalingInner.match(/<c:min\b[^>]*\bval="([^"]*)"/);
+            const minVal = minMatch?.[1] ? Number(minMatch[1]) : null;
+            const maxMatch = scalingInner.match(/<c:max\b[^>]*\bval="([^"]*)"/);
+            const maxVal = maxMatch?.[1] ? Number(maxMatch[1]) : null;
+            const orientationMatch = scalingInner.match(/<c:orientation\b[^>]*\bval="([^"]*)"/);
+            const orientation = orientationMatch?.[1] ?? null;
 
             if (axisType === 'catAx' || axisType === 'dateAx') {
                 if (titleText) {
@@ -2335,6 +2364,11 @@ export class XlsxReader implements IReader {
                 if (minorGridlineStyle) {
                     xAxisMinorGridlineStyle = minorGridlineStyle;
                 }
+                // Assign scaling values for X axis
+                if (logBase !== null) xAxisLogBase = logBase;
+                if (minVal !== null) xAxisMin = minVal;
+                if (maxVal !== null) xAxisMax = maxVal;
+                if (orientation !== null) xAxisOrientation = orientation;
             } else if (axisType === 'valAx') {
                 const isXAxis = axPos === 'b' || axPos === 't';
                 if (titleText) {
@@ -2379,6 +2413,18 @@ export class XlsxReader implements IReader {
                         yAxisMinorGridlineStyle = minorGridlineStyle;
                     }
                 }
+                // Assign scaling values for Y axis (or X if valAx is positioned horizontally)
+                if (isXAxis) {
+                    if (logBase !== null) xAxisLogBase = logBase;
+                    if (minVal !== null) xAxisMin = minVal;
+                    if (maxVal !== null) xAxisMax = maxVal;
+                    if (orientation !== null) xAxisOrientation = orientation;
+                } else {
+                    if (logBase !== null) yAxisLogBase = logBase;
+                    if (minVal !== null) yAxisMin = minVal;
+                    if (maxVal !== null) yAxisMax = maxVal;
+                    if (orientation !== null) yAxisOrientation = orientation;
+                }
             }
         }
 
@@ -2394,7 +2440,15 @@ export class XlsxReader implements IReader {
             xAxisMajorGridlineStyle !== null ||
             xAxisMinorGridlineStyle !== null ||
             yAxisMajorGridlineStyle !== null ||
-            yAxisMinorGridlineStyle !== null
+            yAxisMinorGridlineStyle !== null ||
+            xAxisLogBase !== null ||
+            yAxisLogBase !== null ||
+            xAxisMin !== null ||
+            yAxisMin !== null ||
+            xAxisMax !== null ||
+            yAxisMax !== null ||
+            xAxisOrientation !== null ||
+            yAxisOrientation !== null
         ) {
             axes = {
                 xAxisTitle,
@@ -2409,6 +2463,14 @@ export class XlsxReader implements IReader {
                 xAxisMinorGridlineStyle,
                 yAxisMajorGridlineStyle,
                 yAxisMinorGridlineStyle,
+                xAxisLogBase,
+                yAxisLogBase,
+                xAxisMin,
+                yAxisMin,
+                xAxisMax,
+                yAxisMax,
+                xAxisOrientation,
+                yAxisOrientation,
             };
         }
 
