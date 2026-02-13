@@ -5,6 +5,8 @@ import { Coordinate } from '../../utils/coordinate.ts';
 import { Axis } from './axis.ts';
 import type { DataSeries } from './data-series.ts';
 import type { GlowProperties, ShadowProperties, SoftEdgesProperties } from './effects.ts';
+import { Legend } from './legend.ts';
+import { Title } from './title.ts';
 
 /**
  * Effects for chart elements (shadow, glow, soft edges).
@@ -130,6 +132,7 @@ export class Chart {
 
     #titleText: string | null = null;
     #titleFont: Font | null = null;
+    #title: Title | null = null;
     #plotArea: DataSeries[] = [];
     #plotAreaLayout: ChartLayout | null = null;
 
@@ -187,6 +190,7 @@ export class Chart {
     #legendPosition: LegendPosition | null = 'right';
     #legendTitle: string | null = null;
     #legendOverlay: boolean = false;
+    #legend: Legend | null = null;
 
     // Ownership tracking (set by Worksheet.addChart/removeChart).
     #worksheet: Worksheet | null = null;
@@ -284,6 +288,21 @@ export class Chart {
 
     public setTitleText(titleText: string | null): this {
         this.#titleText = titleText;
+        return this;
+    }
+
+    /**
+     * Get the chart title object.
+     */
+    public getTitle(): Title | null {
+        return this.#title;
+    }
+
+    /**
+     * Set the chart title object.
+     */
+    public setTitle(title: Title | null): this {
+        this.#title = title;
         return this;
     }
 
@@ -781,6 +800,20 @@ export class Chart {
      */
     public setLegendOverlay(overlay: boolean): void {
         this.#legendOverlay = overlay;
+    }
+
+    /**
+     * Get the Legend object.
+     */
+    public getLegend(): Legend | null {
+        return this.#legend;
+    }
+
+    /**
+     * Set the Legend object.
+     */
+    public setLegendObject(legend: Legend | null): void {
+        this.#legend = legend;
     }
 
     /**

@@ -35,6 +35,8 @@ import {
     type ShadowProperties,
     type SoftEdgesProperties,
 } from '../worksheet/chart/grid-lines.ts';
+import { Legend } from '../worksheet/chart/legend.ts';
+import { Title } from '../worksheet/chart/title.ts';
 import { TrendLine, type TrendLineType } from '../worksheet/chart/trend-line.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
 import { Pane } from '../worksheet/pane.ts';
@@ -1450,6 +1452,34 @@ export class XlsxReader implements IReader {
         return null;
     }
 
+    static #parseChartTitleCellReference(chartXml: string): string | null {
+        const titleMatch = chartXml.match(/<c:title\b[^>]*>([\s\S]*?)<\/c:title>/);
+        if (!titleMatch || !titleMatch[1]) {
+            return null;
+        }
+
+        const titleInner = titleMatch[1];
+        const txMatch = titleInner.match(/<c:tx\b[^>]*>([\s\S]*?)<\/c:tx>/);
+        if (!txMatch || !txMatch[1]) {
+            return null;
+        }
+
+        const txInner = txMatch[1];
+        const strRefMatch = txInner.match(/<c:strRef\b[^>]*>([\s\S]*?)<\/c:strRef>/);
+        if (!strRefMatch || !strRefMatch[1]) {
+            return null;
+        }
+
+        const strRefInner = strRefMatch[1];
+        const fMatch = strRefInner.match(/<c:f\b[^>]*>([\s\S]*?)<\/c:f>/);
+        if (!fMatch || fMatch[1] === undefined) {
+            return null;
+        }
+
+        const value = XlsxReader.decodeXmlEntities((fMatch[1] ?? '').trim());
+        return value !== '' ? value : null;
+    }
+
     static #parseView3D(chartXml: string): {
         rotX: number | null;
         rotY: number | null;
@@ -2239,6 +2269,7 @@ export class XlsxReader implements IReader {
     static #parseChartDataWithStyling(chartXml: string): {
         dataSeries: DataSeries[];
         legend: { position: LegendPosition; title?: string; overlay: boolean } | null;
+        legendObject: Legend | null;
         axes: {
             xAxisTitle: string | null;
             yAxisTitle: string | null;
@@ -2269,6 +2300,7 @@ export class XlsxReader implements IReader {
     } {
         const dataSeries: DataSeries[] = [];
         let legend: { position: LegendPosition; title?: string; overlay: boolean } | null = null;
+        let legendObject: Legend | null = null;
         let axes: {
             xAxisTitle: string | null;
             yAxisTitle: string | null;
@@ -2321,6 +2353,10 @@ export class XlsxReader implements IReader {
 
             legend = { position, overlay };
 
+            const legendPositionCode = legendPosMatch?.[1] ?? 'r';
+            legendObject = new Legend(legendPositionCode);
+            legendObject.setOverlay(overlay);
+
             // Parse legend title if present
             const titleMatch = legendInner.match(/<c:tx\b[^>]*>([\s\S]*?)<\/c:tx>/);
             if (titleMatch && titleMatch[1]) {
@@ -2329,12 +2365,59 @@ export class XlsxReader implements IReader {
                     legend.title = titleText;
                 }
             }
+
+            const spPrMatch = legendInner.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
+            if (spPrMatch && spPrMatch[1]) {
+                const spPrInner = spPrMatch[1];
+                const fillMatch = spPrInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+                if (fillMatch && fillMatch[1]) {
+                    const fillColor = XlsxReader.#parseChartColor(fillMatch[1]);
+                    if (fillColor) {
+                        legendObject.setFillColor(fillColor);
+                    }
+                }
+
+                const lineMatch = spPrInner.match(/<a:ln\b([^>]*)>([\s\S]*?)<\/a:ln>/);
+                if (lineMatch) {
+                    const lineAttrs = lineMatch[1] ?? '';
+                    const lineInner = lineMatch[2] ?? '';
+                    const borderLines = legendObject.getBorderLines();
+                    const widthAttr = XlsxReader.#extractXmlAttribute(lineAttrs, 'w');
+                    if (widthAttr) {
+                        const width = Number(widthAttr) / 12700;
+                        if (!Number.isNaN(width)) {
+                            borderLines.width = width;
+                        }
+                    }
+
+                    const prstDashMatch = lineInner.match(/<a:prstDash\b[^>]*\bval="([^"]*)"/);
+                    if (prstDashMatch && prstDashMatch[1]) {
+                        borderLines.style = prstDashMatch[1];
+                    }
+
+                    const lineColor = XlsxReader.#parseChartColor(lineInner);
+                    if (lineColor) {
+                        const colorValue = lineColor.getValue();
+                        const colorType = lineColor.getType();
+                        if (colorValue) {
+                            if (colorType === EXCEL_COLOR_TYPE_SCHEME) {
+                                borderLines.color = `*${colorValue}`;
+                            } else if (colorType === EXCEL_COLOR_TYPE_STANDARD) {
+                                borderLines.color = `/${colorValue}`;
+                            } else {
+                                borderLines.color = colorValue;
+                            }
+                        }
+                    }
+                    legendObject.setBorderLines(borderLines);
+                }
+            }
         }
 
         // Determine chart type from plot area
         const plotAreaMatch = chartXml.match(/<c:plotArea\b[^>]*>([\s\S]*?)<\/c:plotArea>/);
         if (!plotAreaMatch || !plotAreaMatch[1]) {
-            return { dataSeries, legend, axes, serAxisId, layout, chartAreaStyle, plotAreaStyle };
+            return { dataSeries, legend, legendObject, axes, serAxisId, layout, chartAreaStyle, plotAreaStyle };
         }
 
         const plotAreaInner = plotAreaMatch[1];
@@ -3067,7 +3150,7 @@ export class XlsxReader implements IReader {
             }
         }
 
-        return { dataSeries, legend, axes, serAxisId, layout, chartAreaStyle, plotAreaStyle };
+        return { dataSeries, legend, legendObject, axes, serAxisId, layout, chartAreaStyle, plotAreaStyle };
     }
 
     static #parseChartPlotAreaLayout(plotAreaInner: string): ChartLayout | null {
@@ -3500,7 +3583,14 @@ export class XlsxReader implements IReader {
                     }
 
                     if (chartXml) {
-                        chart.setTitleText(XlsxReader.#parseChartTitleText(chartXml));
+                        const titleText = XlsxReader.#parseChartTitleText(chartXml);
+                        chart.setTitleText(titleText);
+                        const titleCellReference = XlsxReader.#parseChartTitleCellReference(chartXml);
+                        if (titleCellReference) {
+                            const chartTitle = new Title(titleText ?? '');
+                            chartTitle.setCellReference(titleCellReference);
+                            chart.setTitle(chartTitle);
+                        }
                         const titleFont = XlsxReader.#parseChartTitleFontFromChart(chartXml);
                         if (titleFont) {
                             chart.setTitleFont(titleFont);
@@ -3518,8 +3608,16 @@ export class XlsxReader implements IReader {
                         }
                         chart.setSeries(XlsxReader.#parseChartSeries(chartXml));
                         // Parse new-style chart data with styling
-                        const { dataSeries, legend, axes, serAxisId, layout, chartAreaStyle, plotAreaStyle } =
-                            XlsxReader.#parseChartDataWithStyling(chartXml);
+                        const {
+                            dataSeries,
+                            legend,
+                            legendObject,
+                            axes,
+                            serAxisId,
+                            layout,
+                            chartAreaStyle,
+                            plotAreaStyle,
+                        } = XlsxReader.#parseChartDataWithStyling(chartXml);
                         if (dataSeries.length > 0) {
                             chart.setPlotArea(dataSeries);
                         }
@@ -3543,6 +3641,9 @@ export class XlsxReader implements IReader {
                                 chart.setLegendTitle(legend.title);
                             }
                             chart.setLegendOverlay(legend.overlay);
+                        }
+                        if (legendObject) {
+                            chart.setLegendObject(legendObject);
                         }
                         if (axes) {
                             if (axes.xAxisTitle !== null) {

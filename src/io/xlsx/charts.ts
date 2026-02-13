@@ -8,6 +8,7 @@ import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
 import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
 import type { Axis } from '../../worksheet/chart/index.ts';
+import { Title } from '../../worksheet/chart/title.ts';
 import { TrendLine, TRENDLINE_MOVING_AVERAGE, TRENDLINE_POLYNOMIAL } from '../../worksheet/chart/trend-line.ts';
 
 /**
@@ -212,6 +213,29 @@ function writeChartColor(parent: any, chartColor: ChartColor, solidFill: boolean
         color.ele('a:lumOff', { val: lumOff });
     }
 }
+
+const normalizeHexColor = (value: string): string | null => {
+    const trimmed = value.trim().replace(/^#/, '');
+    if (/^[0-9A-Fa-f]{6}$/.test(trimmed)) {
+        return trimmed.toUpperCase();
+    }
+    if (/^[0-9A-Fa-f]{8}$/.test(trimmed)) {
+        return trimmed.substring(2).toUpperCase();
+    }
+    return null;
+};
+
+const chartColorFromLegendValue = (value: string): ChartColor | null => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+    const normalized = normalizeHexColor(trimmed);
+    if (normalized) {
+        return new ChartColor(normalized);
+    }
+    return new ChartColor(trimmed);
+};
 
 function writeShapeProperties(
     parent: any,
@@ -701,6 +725,99 @@ function writePlotAreaLayout(parent: any, layout: ChartLayout | null): void {
     }
 }
 
+const resolveCellReferenceValue = (
+    cellReference: string,
+    worksheet: Worksheet | null,
+): { sheetName: string | null; value: string | null } => {
+    if (!worksheet) {
+        return { sheetName: null, value: null };
+    }
+
+    const match = cellReference.match(/^\s*(?:'([^']+)'|([^'!]+))?!?\$?([A-Z]+)\$?(\d+)\s*$/);
+    if (!match) {
+        return { sheetName: null, value: null };
+    }
+
+    const sheetName = (match[1] ?? match[2] ?? null) as string | null;
+    if (sheetName && sheetName !== worksheet.getTitle()) {
+        return { sheetName, value: null };
+    }
+
+    const column = match[3];
+    const row = Number(match[4]);
+    if (!column || Number.isNaN(row)) {
+        return { sheetName, value: null };
+    }
+
+    const cellValue = worksheet.getCell(`${column}${row}`).getValue();
+    return { sheetName, value: cellValue !== null && cellValue !== undefined ? String(cellValue) : '' };
+};
+
+function writeChartTitle(chartElement: any, chart: Chart, worksheet: Worksheet | null): void {
+    const title = chart.getTitle();
+    const titleText = chart.getTitleText();
+
+    if (!title && !titleText) {
+        return;
+    }
+
+    const titleElement = chartElement.ele('c:title');
+
+    if (title && title.isFormulaBased()) {
+        const tx = titleElement.ele('c:tx');
+        const strRef = tx.ele('c:strRef');
+        const cellReference = title.getCellReference();
+        if (cellReference) {
+            strRef.ele('c:f').txt(cellReference);
+            const { value } = resolveCellReferenceValue(cellReference, worksheet);
+            if (value !== null) {
+                const strCache = strRef.ele('c:strCache');
+                strCache.ele('c:ptCount', { val: '1' });
+                strCache.ele('c:pt', { idx: '0' }).ele('c:v').txt(value);
+            }
+        }
+    } else {
+        const text = title ? title.getCaptionText() : titleText;
+        const tx = titleElement.ele('c:tx');
+        const rich = tx.ele('c:rich');
+        rich.ele('a:bodyPr');
+        rich.ele('a:lstStyle');
+        const p = rich.ele('a:p');
+        const r = p.ele('a:r');
+
+        const titleFont = chart.getTitleFont();
+        if (titleFont) {
+            const rPr = r.ele('a:rPr');
+            const fontName = titleFont.getName();
+            if (fontName) {
+                rPr.ele('a:rFont', { val: fontName });
+            }
+            const fontSize = titleFont.getSize();
+            if (fontSize) {
+                rPr.ele('a:sz', { val: String(fontSize * 100) });
+            }
+            if (titleFont.getBold()) {
+                rPr.ele('a:b');
+            }
+            if (titleFont.getItalic()) {
+                rPr.ele('a:i');
+            }
+            const fontColor = titleFont.getColor().getARGB();
+            if (fontColor) {
+                const solidFill = rPr.ele('a:solidFill');
+                solidFill.ele('a:srgbClr', { val: fontColor.substring(2) });
+            }
+        }
+
+        if (text) {
+            r.ele('a:t').txt(text);
+        }
+    }
+
+    titleElement.ele('c:layout');
+    titleElement.ele('c:overlay', { val: title?.getOverlay() ? '1' : '0' });
+}
+
 /**
  * Get chart type element name from plot type.
  */
@@ -1069,45 +1186,7 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
     const chartElement = root.ele('c:chart');
 
     // Chart title (if set)
-    const titleText = chart.getTitleText();
-    if (titleText) {
-        const title = chartElement.ele('c:title');
-        const tx = title.ele('c:tx');
-        const rich = tx.ele('c:rich');
-        rich.ele('a:bodyPr');
-        rich.ele('a:lstStyle');
-        const p = rich.ele('a:p');
-        const r = p.ele('a:r');
-
-        // Write font properties if provided
-        const titleFont = chart.getTitleFont();
-        if (titleFont) {
-            const rPr = r.ele('a:rPr');
-            const fontName = titleFont.getName();
-            if (fontName) {
-                rPr.ele('a:rFont', { val: fontName });
-            }
-            const fontSize = titleFont.getSize();
-            if (fontSize) {
-                rPr.ele('a:sz', { val: String(fontSize * 100) });
-            }
-            if (titleFont.getBold()) {
-                rPr.ele('a:b');
-            }
-            if (titleFont.getItalic()) {
-                rPr.ele('a:i');
-            }
-            const fontColor = titleFont.getColor().getARGB();
-            if (fontColor) {
-                const solidFill = rPr.ele('a:solidFill');
-                solidFill.ele('a:srgbClr', { val: fontColor.substring(2) });
-            }
-        }
-
-        r.ele('a:t').txt(titleText);
-        title.ele('c:layout');
-        title.ele('c:overlay', { val: '0' });
-    }
+    writeChartTitle(chartElement, chart, chartWorksheet);
 
     // Chart area styling
     writeChartAreaProperties(chartElement, chart);
@@ -1354,10 +1433,41 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
             left: 'l',
             right: 'r',
         };
-        legend.ele('c:legendPos', { val: positionMap[legendPosition] ?? 'r' });
+        const legendObject = chart.getLegend();
+        const legendPos = legendObject ? legendObject.getPosition() : (positionMap[legendPosition] ?? 'r');
+        legend.ele('c:legendPos', { val: legendPos });
 
         // Write layout element
         legend.ele('c:layout');
+
+        // Legend styling
+        if (legendObject) {
+            const fillColor = legendObject.getFillColor();
+            const borderLines = legendObject.getBorderLines();
+            const borderColor = borderLines.color ? chartColorFromLegendValue(borderLines.color) : null;
+            const hasBorder = borderColor || borderLines.width || borderLines.style;
+            if (fillColor || hasBorder) {
+                const spPr = legend.ele('c:spPr');
+                if (fillColor && fillColor.isUsable()) {
+                    const solidFill = spPr.ele('a:solidFill');
+                    writeChartColor(solidFill, fillColor, false);
+                }
+                if (hasBorder) {
+                    const lineAttrs: Record<string, string> = {};
+                    if (borderLines.width !== null && borderLines.width !== undefined && borderLines.width > 0) {
+                        lineAttrs.w = String(borderLines.width * 12700);
+                    }
+                    const ln = spPr.ele('a:ln', lineAttrs);
+                    if (borderColor && borderColor.isUsable()) {
+                        const solidFill = ln.ele('a:solidFill');
+                        writeChartColor(solidFill, borderColor, false);
+                    }
+                    if (borderLines.style) {
+                        ln.ele('a:prstDash', { val: borderLines.style });
+                    }
+                }
+            }
+        }
 
         // Write overlay
         const overlay = chart.getLegendOverlay() ? '1' : '0';

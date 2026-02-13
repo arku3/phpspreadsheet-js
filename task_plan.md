@@ -93,7 +93,7 @@ Formula parser, tokenizer, 100+ functions, and Cell.getCalculatedValue().
   - [x] Fix DataSeries architecture (arrays vs single values)
   - [x] Add trend lines, date axis, axis scaling
   - [x] Add effects (shadow/glow/soft edges), per-data-point colors
-  - [ ] Add cell-referenced titles, legend styling
+  - [x] Add cell-referenced titles, legend styling
   - [ ] Support schemeClr/sysClr color types
 - [ ] Conditional formatting enhancements
 - [ ] Pivot table support (Phase 21)
