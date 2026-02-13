@@ -4,6 +4,7 @@ import { Font } from '../../style/font.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
 import { Axis } from './axis.ts';
 import type { DataSeries } from './data-series.ts';
+import type { GlowProperties, ShadowProperties, SoftEdgesProperties } from './effects.ts';
 
 /**
  * A cell anchor position for a chart.
@@ -128,6 +129,11 @@ export class Chart {
     #chartAreaNoBorder: boolean | null = null;
     #chartAreaFillColor: Color | null = null;
     #chartAreaBorderStyle: ChartBorderStyle | null = null;
+
+    // Chart area effects
+    #chartAreaShadow: ShadowProperties | null = null;
+    #chartAreaGlow: GlowProperties | null = null;
+    #chartAreaSoftEdges: SoftEdgesProperties | null = null;
 
     // Plot area styling
     #plotAreaNoFill: boolean | null = null;
