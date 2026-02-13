@@ -8,12 +8,18 @@ export { PlotArea } from './plot-area';
 export { Title } from './title';
 export { TrendLine } from './trend-line';
 export { GridLines } from './grid-lines';
+export { EffectProperties } from './effects';
 export type {
     ShadowProperties,
     GlowProperties,
     SoftEdgesProperties,
     LineStyleProperties as GridLinesLineStyleProperties,
 } from './grid-lines';
+export type {
+    ShadowProperties as EffectShadowProperties,
+    GlowProperties as EffectGlowProperties,
+    SoftEdgesProperties as EffectSoftEdgesProperties,
+} from './effects';
 export type { PlotAreaGradientStop } from './plot-area';
 export { Axis, AxisGridLines, AxisText } from './axis';
 export type { ChartType, GroupingType, DirectionType, LineStyle } from './data-series';

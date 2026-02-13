@@ -11,6 +11,12 @@ import { Coordinate } from '../utils/coordinate.ts';
 import { Column as AutoFilterColumn } from '../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../worksheet/auto-filter/column/rule.ts';
 import {
+    ChartColor,
+    EXCEL_COLOR_TYPE_RGB,
+    EXCEL_COLOR_TYPE_SCHEME,
+    EXCEL_COLOR_TYPE_STANDARD,
+} from '../worksheet/chart/chart-color.ts';
+import {
     Chart,
     type ChartBorderStyle,
     type ChartGradientStop,
@@ -22,6 +28,12 @@ import {
 import { DataLabels, type DataLabelPosition } from '../worksheet/chart/data-labels.ts';
 import { DataSeriesValues } from '../worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../worksheet/chart/data-series.ts';
+import {
+    GridLines,
+    type GlowProperties,
+    type ShadowProperties,
+    type SoftEdgesProperties,
+} from '../worksheet/chart/grid-lines.ts';
 import { TrendLine, type TrendLineType } from '../worksheet/chart/trend-line.ts';
 import { Drawing } from '../worksheet/drawing/drawing.ts';
 import { Pane } from '../worksheet/pane.ts';
@@ -1995,6 +2007,178 @@ export class XlsxReader implements IReader {
         }
 
         return { noFill, gradientStops, gradientAngle };
+    }
+
+    /**
+     * Parse color from effect XML element
+     */
+    static #parseEffectColor(colorXml: string): { type: string; value: string; alpha: number | null } | null {
+        const srgbMatch = colorXml.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+        if (srgbMatch && srgbMatch[1]) {
+            const alphaMatch = colorXml.match(/<a:alpha\b[^>]*\bval="([^"]*)"/);
+            let alpha: number | null = null;
+            if (alphaMatch && alphaMatch[1]) {
+                const alphaVal = Number(alphaMatch[1]);
+                if (!Number.isNaN(alphaVal)) {
+                    alpha = 100 - Math.floor(alphaVal / 1000);
+                }
+            }
+            return { type: EXCEL_COLOR_TYPE_RGB, value: srgbMatch[1], alpha };
+        }
+
+        const schemeMatch = colorXml.match(/<a:schemeClr\b[^>]*\bval="([^"]*)"/);
+        if (schemeMatch && schemeMatch[1]) {
+            const alphaMatch = colorXml.match(/<a:alpha\b[^>]*\bval="([^"]*)"/);
+            let alpha: number | null = null;
+            if (alphaMatch && alphaMatch[1]) {
+                const alphaVal = Number(alphaMatch[1]);
+                if (!Number.isNaN(alphaVal)) {
+                    alpha = 100 - Math.floor(alphaVal / 1000);
+                }
+            }
+            return { type: EXCEL_COLOR_TYPE_SCHEME, value: schemeMatch[1], alpha };
+        }
+
+        const prstMatch = colorXml.match(/<a:prstClr\b[^>]*\bval="([^"]*)"/);
+        if (prstMatch && prstMatch[1]) {
+            return { type: EXCEL_COLOR_TYPE_STANDARD, value: prstMatch[1], alpha: null };
+        }
+
+        return null;
+    }
+
+    /**
+     * Parse effects (shadow, glow, soft edges) from spPr XML
+     */
+    static #parseEffects(
+        spPrInner: string,
+    ): { shadow: ShadowProperties | null; glow: GlowProperties | null; softEdges: SoftEdgesProperties | null } | null {
+        const effectLstMatch = spPrInner.match(/<a:effectLst\b[^>]*>([\s\S]*?)<\/a:effectLst>/);
+        if (!effectLstMatch || !effectLstMatch[1]) {
+            return null;
+        }
+
+        const effectInner = effectLstMatch[1];
+        let shadow: ShadowProperties | null = null;
+        let glow: GlowProperties | null = null;
+        let softEdges: SoftEdgesProperties | null = null;
+
+        // Parse glow
+        const glowMatch = effectInner.match(/<a:glow\b([^>]*)>([\s\S]*?)<\/a:glow>/);
+        if (glowMatch) {
+            const glowAttrs = glowMatch[1] ?? '';
+            const glowInner = glowMatch[2] ?? '';
+            const radAttr = XlsxReader.#extractXmlAttribute(glowAttrs, 'rad');
+            if (radAttr) {
+                const size = Number(radAttr) / 12700;
+                if (!Number.isNaN(size) && size > 0) {
+                    glow = { size };
+                    const color = XlsxReader.#parseEffectColor(glowInner);
+                    if (color) {
+                        glow.color = new ChartColor(color.value, color.alpha, color.type as any);
+                    }
+                }
+            }
+        }
+
+        // Parse soft edges
+        const softEdgeMatch = effectInner.match(/<a:softEdge\b([^>]*)\/>/);
+        if (softEdgeMatch && softEdgeMatch[1]) {
+            const radAttr = XlsxReader.#extractXmlAttribute(softEdgeMatch[1], 'rad');
+            if (radAttr) {
+                const size = Number(radAttr) / 12700;
+                if (!Number.isNaN(size) && size > 0) {
+                    softEdges = { size };
+                }
+            }
+        }
+
+        // Parse shadow (outerShdw or innerShdw)
+        const shadowTypes = ['outerShdw', 'innerShdw'] as const;
+        for (const shadowType of shadowTypes) {
+            const shadowMatch = effectInner.match(
+                new RegExp(`<a:${shadowType}\\b([^>]*)>([\\s\\S]*?)<\\/a:${shadowType}>`),
+            );
+            if (shadowMatch) {
+                const shadowAttrs = shadowMatch[1] ?? '';
+                const shadowInner = shadowMatch[2] ?? '';
+
+                shadow = { effect: shadowType };
+
+                const blurAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'blurRad');
+                if (blurAttr) {
+                    const blur = Number(blurAttr) / 12700;
+                    if (!Number.isNaN(blur)) {
+                        shadow.blur = blur;
+                    }
+                }
+
+                const distAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'dist');
+                if (distAttr) {
+                    const distance = Number(distAttr) / 12700;
+                    if (!Number.isNaN(distance)) {
+                        shadow.distance = distance;
+                    }
+                }
+
+                const dirAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'dir');
+                if (dirAttr) {
+                    const direction = Number(dirAttr) / 60000;
+                    if (!Number.isNaN(direction)) {
+                        shadow.direction = direction;
+                    }
+                }
+
+                const algnAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'algn');
+                if (algnAttr) {
+                    shadow.algn = algnAttr;
+                }
+
+                const rotAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'rotWithShape');
+                if (rotAttr) {
+                    shadow.rotWithShape = rotAttr;
+                }
+
+                const sxAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'sx');
+                const syAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'sy');
+                const kxAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'kx');
+                const kyAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'ky');
+
+                shadow.size = {};
+                if (sxAttr) {
+                    const sx = Number(sxAttr) / 100000;
+                    if (!Number.isNaN(sx)) {
+                        shadow.size.sx = sx;
+                    }
+                }
+                if (syAttr) {
+                    const sy = Number(syAttr) / 100000;
+                    if (!Number.isNaN(sy)) {
+                        shadow.size.sy = sy;
+                    }
+                }
+                if (kxAttr) {
+                    const kx = Number(kxAttr) / 60000;
+                    if (!Number.isNaN(kx)) {
+                        shadow.size.kx = kx;
+                    }
+                }
+                if (kyAttr) {
+                    const ky = Number(kyAttr) / 60000;
+                    if (!Number.isNaN(ky)) {
+                        shadow.size.ky = ky;
+                    }
+                }
+
+                break;
+            }
+        }
+
+        if (!shadow && !glow && !softEdges) {
+            return null;
+        }
+
+        return { shadow, glow, softEdges };
     }
 
     /**

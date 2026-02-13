@@ -2,6 +2,7 @@ import type { Worksheet } from '../../core/worksheet.ts';
 import { Color } from '../../style/color.ts';
 import { Font } from '../../style/font.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
+import { Axis } from './axis.ts';
 import type { DataSeries } from './data-series.ts';
 
 /**
@@ -141,6 +142,10 @@ export class Chart {
 
     // Surface chart series axis ID (read-only from XLSX)
     #serAxisId: string | null = null;
+
+    // Axis objects for X and Y axes (used for date axis and other axis properties)
+    #xAxis: Axis | null = null;
+    #yAxis: Axis | null = null;
 
     // Axis titles
     #xAxisTitle: string | null = null;
@@ -799,6 +804,36 @@ export class Chart {
      */
     public detach(): void {
         this.#worksheet = null;
+    }
+
+    /**
+     * Get the X-axis object (for date axis and other axis properties).
+     */
+    public getXAxis(): Axis | null {
+        return this.#xAxis;
+    }
+
+    /**
+     * Set the X-axis object.
+     */
+    public setXAxis(axis: Axis | null): this {
+        this.#xAxis = axis;
+        return this;
+    }
+
+    /**
+     * Get the Y-axis object (for date axis and other axis properties).
+     */
+    public getYAxis(): Axis | null {
+        return this.#yAxis;
+    }
+
+    /**
+     * Set the Y-axis object.
+     */
+    public setYAxis(axis: Axis | null): this {
+        this.#yAxis = axis;
+        return this;
     }
 
     static #normalizePosition(position: ChartPosition): Required<ChartPosition> {

@@ -35,10 +35,10 @@ export interface AxisOptions {
 }
 
 export interface ScalingProperties {
-    logBase: string | null;
-    min: string | null;
-    max: string | null;
-    orientation: string;
+    logBase: number | null;
+    min: number | null;
+    max: number | null;
+    orientation: 'minMax' | 'maxMin';
 }
 
 export interface LineStyleArrow {
@@ -200,6 +200,12 @@ export class Axis {
     #dispUnitsTitle: Title | null = null;
     #crossBetween: string = '';
     #noFill: boolean = false;
+
+    // Axis scaling properties (separate from axisOptions for better type safety)
+    #scalingLogBase: number | null = null;
+    #scalingMin: number | null = null;
+    #scalingMax: number | null = null;
+    #scalingOrientation: 'minMax' | 'maxMin' = 'minMax';
 
     constructor() {
         this.#fillColor = new ChartColor();
@@ -450,20 +456,91 @@ export class Axis {
         return this;
     }
 
+    // Axis Scaling Properties
+    /**
+     * Get the logarithmic base for the axis.
+     * @returns The logarithmic base (typically 10), or null if linear scale.
+     */
+    public getLogBase(): number | null {
+        return this.#scalingLogBase;
+    }
+
+    /**
+     * Set the logarithmic base for the axis.
+     * @param logBase - The logarithmic base (typically 10), or null for linear scale.
+     */
+    public setLogBase(logBase: number | null): this {
+        this.#scalingLogBase = logBase;
+        return this;
+    }
+
+    /**
+     * Get the minimum axis value.
+     * @returns The minimum value, or null for automatic.
+     */
+    public getMin(): number | null {
+        return this.#scalingMin;
+    }
+
+    /**
+     * Set the minimum axis value.
+     * @param min - The minimum value, or null for automatic.
+     */
+    public setMin(min: number | null): this {
+        this.#scalingMin = min;
+        return this;
+    }
+
+    /**
+     * Get the maximum axis value.
+     * @returns The maximum value, or null for automatic.
+     */
+    public getMax(): number | null {
+        return this.#scalingMax;
+    }
+
+    /**
+     * Set the maximum axis value.
+     * @param max - The maximum value, or null for automatic.
+     */
+    public setMax(max: number | null): this {
+        this.#scalingMax = max;
+        return this;
+    }
+
+    /**
+     * Get the axis orientation.
+     * @returns 'minMax' for normal orientation, 'maxMin' for reversed.
+     */
+    public getOrientation(): 'minMax' | 'maxMin' {
+        return this.#scalingOrientation;
+    }
+
+    /**
+     * Set the axis orientation.
+     * @param orientation - 'minMax' for normal, 'maxMin' for reversed.
+     */
+    public setOrientation(orientation: 'minMax' | 'maxMin'): this {
+        this.#scalingOrientation = orientation;
+        this.#axisOptions.orientation = orientation;
+        return this;
+    }
+
     // Scaling (convenience method for axis options)
     public getScaling(): ScalingProperties {
         return {
-            logBase: this.#axisOptions.logBase,
-            min: this.#axisOptions.minimum,
-            max: this.#axisOptions.maximum,
-            orientation: this.#axisOptions.orientation,
+            logBase: this.#scalingLogBase,
+            min: this.#scalingMin,
+            max: this.#scalingMax,
+            orientation: this.#scalingOrientation,
         };
     }
 
     public setScaling(scaling: ScalingProperties): this {
-        this.#axisOptions.logBase = scaling.logBase;
-        this.#axisOptions.minimum = scaling.min;
-        this.#axisOptions.maximum = scaling.max;
+        this.#scalingLogBase = scaling.logBase;
+        this.#scalingMin = scaling.min;
+        this.#scalingMax = scaling.max;
+        this.#scalingOrientation = scaling.orientation;
         this.#axisOptions.orientation = scaling.orientation;
         return this;
     }
@@ -517,6 +594,10 @@ export class Axis {
         }
         cloned.#crossBetween = this.#crossBetween;
         cloned.#noFill = this.#noFill;
+        cloned.#scalingLogBase = this.#scalingLogBase;
+        cloned.#scalingMin = this.#scalingMin;
+        cloned.#scalingMax = this.#scalingMax;
+        cloned.#scalingOrientation = this.#scalingOrientation;
         return cloned;
     }
 }
