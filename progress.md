@@ -64,4 +64,4 @@ Cell/CellCollection architecture refactor, circular dependency resolution.
 Workbook Security (passwords, hashing), UI settings, Spreadsheet.garbageCollect(), constants aligned with PHP.
 
 ## Phase 20: Advanced Features (IN PROGRESS)
-Chart PHP Parity - Created ChartColor, Title, Legend, Axis, PlotArea, GridLines, TrendLine classes. Fixed DataSeries architecture. Added trend lines read/write support. Added axis scaling (logarithmic, min/max) read/write support. Reader supports date axis.
+Chart PHP Parity - Created ChartColor, Title, Legend, Axis, PlotArea, GridLines, TrendLine classes. Fixed DataSeries architecture. Added trend lines read/write support. Added axis scaling (logarithmic, min/max) read/write support. Reader supports date axis. Added effects (shadow/glow/soft edges) write support.
