@@ -198,7 +198,14 @@ function writeChartColor(parent: any, chartColor: ChartColor, solidFill: boolean
     }
 
     const container = solidFill ? parent.ele('a:solidFill') : parent;
-    const color = container.ele(`a:${type}`, { val: value });
+    const colorAttrs: Record<string, string> = { val: value };
+    if (type === 'sysClr') {
+        const lastClr = chartColor.getLastClr();
+        if (lastClr) {
+            colorAttrs.lastClr = lastClr;
+        }
+    }
+    const color = container.ele(`a:${type}`, colorAttrs);
 
     const alpha = chartColor.getAlpha();
     if (alpha !== null && Number.isFinite(alpha)) {

@@ -7,9 +7,15 @@
 
 export const EXCEL_COLOR_TYPE_STANDARD = 'prstClr';
 export const EXCEL_COLOR_TYPE_SCHEME = 'schemeClr';
+export const EXCEL_COLOR_TYPE_SYSTEM = 'sysClr';
 export const EXCEL_COLOR_TYPE_RGB = 'srgbClr';
 
-export const EXCEL_COLOR_TYPES = [EXCEL_COLOR_TYPE_RGB, EXCEL_COLOR_TYPE_SCHEME, EXCEL_COLOR_TYPE_STANDARD] as const;
+export const EXCEL_COLOR_TYPES = [
+    EXCEL_COLOR_TYPE_RGB,
+    EXCEL_COLOR_TYPE_SCHEME,
+    EXCEL_COLOR_TYPE_STANDARD,
+    EXCEL_COLOR_TYPE_SYSTEM,
+] as const;
 
 export type ExcelColorType = (typeof EXCEL_COLOR_TYPES)[number];
 
@@ -18,6 +24,7 @@ export interface ChartColorProperties {
     type?: ExcelColorType;
     alpha?: number | null;
     brightness?: number | null;
+    lastClr?: string | null;
 }
 
 export class ChartColor {
@@ -25,17 +32,19 @@ export class ChartColor {
     #type: ExcelColorType | '' = '';
     #alpha: number | null = null;
     #brightness: number | null = null;
+    #lastClr: string | null = null;
 
     constructor(
         value: string | ChartColorProperties = '',
         alpha: number | null = null,
         type: ExcelColorType | null = null,
         brightness: number | null = null,
+        lastClr: string | null = null,
     ) {
         if (typeof value === 'object' && value !== null) {
             this.setColorPropertiesArray(value);
         } else {
-            this.setColorProperties(value as string, alpha, type, brightness);
+            this.setColorProperties(value as string, alpha, type, brightness, lastClr);
         }
     }
 
@@ -75,11 +84,21 @@ export class ChartColor {
         return this;
     }
 
+    public getLastClr(): string | null {
+        return this.#lastClr;
+    }
+
+    public setLastClr(lastClr: string | null): this {
+        this.#lastClr = lastClr;
+        return this;
+    }
+
     public setColorProperties(
         color: string | null | undefined,
         alpha: number | string | null | undefined = null,
         type: ExcelColorType | null | undefined = null,
         brightness: number | string | null | undefined = null,
+        lastClr: string | null | undefined = null,
     ): this {
         if (!type && color) {
             if (color.startsWith('*')) {
@@ -87,6 +106,9 @@ export class ChartColor {
                 color = color.slice(1);
             } else if (color.startsWith('/')) {
                 type = EXCEL_COLOR_TYPE_STANDARD;
+                color = color.slice(1);
+            } else if (color.startsWith('!')) {
+                type = EXCEL_COLOR_TYPE_SYSTEM;
                 color = color.slice(1);
             } else if (/^[0-9A-Fa-f]{6}$/.test(color)) {
                 type = EXCEL_COLOR_TYPE_RGB;
@@ -121,18 +143,32 @@ export class ChartColor {
             }
         }
 
+        if (lastClr === null || lastClr === undefined) {
+            this.setLastClr(null);
+        } else {
+            this.setLastClr(lastClr);
+        }
+
         return this;
     }
 
     public setColorPropertiesArray(color: ChartColorProperties): this {
-        return this.setColorProperties(color.value, color.alpha ?? null, color.type ?? null, color.brightness ?? null);
+        return this.setColorProperties(
+            color.value,
+            color.alpha ?? null,
+            color.type ?? null,
+            color.brightness ?? null,
+            color.lastClr ?? null,
+        );
     }
 
     public isUsable(): boolean {
         return this.#type !== '' && this.#value !== '';
     }
 
-    public getColorProperty(propertyName: 'value' | 'type' | 'alpha' | 'brightness'): string | number | null {
+    public getColorProperty(
+        propertyName: 'value' | 'type' | 'alpha' | 'brightness' | 'lastClr',
+    ): string | number | null {
         switch (propertyName) {
             case 'value':
                 return this.#value;
@@ -142,6 +178,8 @@ export class ChartColor {
                 return this.#alpha;
             case 'brightness':
                 return this.#brightness;
+            case 'lastClr':
+                return this.#lastClr;
             default:
                 return null;
         }

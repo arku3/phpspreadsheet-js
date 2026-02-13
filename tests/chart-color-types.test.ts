@@ -1,0 +1,55 @@
+import { describe, expect, test } from 'bun:test';
+import unzipper from 'unzipper';
+import { Spreadsheet } from '../src/core/spreadsheet.ts';
+import { XlsxWriter } from '../src/io/xlsx-writer.ts';
+import { ChartColor } from '../src/worksheet/chart/chart-color.ts';
+import { Chart } from '../src/worksheet/chart/chart.ts';
+import { DataSeriesValues } from '../src/worksheet/chart/data-series-values.ts';
+import { DataSeries } from '../src/worksheet/chart/data-series.ts';
+import { Legend } from '../src/worksheet/chart/legend.ts';
+
+const getFirstChartXml = async (buffer: Uint8Array | ArrayBuffer): Promise<string> => {
+    const zipBuffer = buffer instanceof ArrayBuffer ? Buffer.from(new Uint8Array(buffer)) : Buffer.from(buffer);
+    const zip = await unzipper.Open.buffer(zipBuffer);
+    const chartFile = zip.files.find((file) => file.path.startsWith('xl/charts/chart') && file.path.endsWith('.xml'));
+    expect(chartFile).toBeDefined();
+    return (await chartFile!.buffer()).toString('utf-8');
+};
+
+describe('ChartColor types', () => {
+    test('supports scheme and system colors in legend styling', async () => {
+        const spreadsheet = new Spreadsheet();
+        const worksheet = spreadsheet.getActiveSheet();
+        worksheet.setTitle('ChartColorTypes');
+
+        worksheet.getCell('A1').setValue('Category');
+        worksheet.getCell('A2').setValue('One');
+        worksheet.getCell('B1').setValue('Series');
+        worksheet.getCell('B2').setValue(10);
+
+        const chart = new Chart();
+        chart.setName('ChartColor Types');
+        chart.setTopLeftPosition({ cell: 'D2' });
+
+        const legend = new Legend();
+        legend.setFillColor(new ChartColor('*accent1'));
+        legend.setBorderLines({ color: '!windowText', width: 1, style: 'solid' });
+        chart.setLegendObject(legend);
+
+        const series = new DataSeries('bar');
+        series.setPlotCategories([new DataSeriesValues('String', 'ChartColorTypes!$A$2')]);
+        series.addPlotValues(new DataSeriesValues('Number', 'ChartColorTypes!$B$2'));
+        chart.addDataSeries(series);
+        worksheet.addChart(chart);
+
+        const writer = new XlsxWriter(spreadsheet);
+        writer.setIncludeCharts(true);
+        const buffer = await writer.writeBuffer();
+        const chartXml = await getFirstChartXml(buffer);
+
+        expect(chartXml).toContain('<a:schemeClr');
+        expect(chartXml).toContain('val="accent1"');
+        expect(chartXml).toContain('<a:sysClr');
+        expect(chartXml).toContain('val="windowText"');
+    });
+});

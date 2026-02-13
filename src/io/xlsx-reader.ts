@@ -15,6 +15,7 @@ import {
     EXCEL_COLOR_TYPE_RGB,
     EXCEL_COLOR_TYPE_SCHEME,
     EXCEL_COLOR_TYPE_STANDARD,
+    EXCEL_COLOR_TYPE_SYSTEM,
 } from '../worksheet/chart/chart-color.ts';
 import {
     Chart,
@@ -2075,6 +2076,11 @@ export class XlsxReader implements IReader {
             return { type: EXCEL_COLOR_TYPE_STANDARD, value: prstMatch[1], alpha: null };
         }
 
+        const sysMatch = colorXml.match(/<a:sysClr\b[^>]*\bval="([^"]*)"/);
+        if (sysMatch && sysMatch[1]) {
+            return { type: EXCEL_COLOR_TYPE_SYSTEM, value: sysMatch[1], alpha: null };
+        }
+
         return null;
     }
 
@@ -2124,6 +2130,13 @@ export class XlsxReader implements IReader {
         const prstMatch = colorXml.match(/<a:prstClr\b[^>]*\bval="([^"]*)"/);
         if (prstMatch && prstMatch[1]) {
             return new ChartColor(prstMatch[1], null, EXCEL_COLOR_TYPE_STANDARD, null);
+        }
+
+        const sysMatch = colorXml.match(/<a:sysClr\b[^>]*\bval="([^"]*)"/);
+        if (sysMatch && sysMatch[1]) {
+            const lastClrMatch = colorXml.match(/<a:sysClr\b[^>]*\blastClr="([^"]*)"/);
+            const lastClr = lastClrMatch?.[1] ?? null;
+            return new ChartColor(sysMatch[1], null, EXCEL_COLOR_TYPE_SYSTEM, null, lastClr);
         }
 
         return null;

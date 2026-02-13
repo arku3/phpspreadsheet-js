@@ -94,7 +94,7 @@ Formula parser, tokenizer, 100+ functions, and Cell.getCalculatedValue().
   - [x] Add trend lines, date axis, axis scaling
   - [x] Add effects (shadow/glow/soft edges), per-data-point colors
   - [x] Add cell-referenced titles, legend styling
-  - [ ] Support schemeClr/sysClr color types
+  - [x] Support schemeClr/sysClr color types
 - [ ] Conditional formatting enhancements
 - [ ] Pivot table support (Phase 21)
 - [ ] Advanced chart features (error bars)
