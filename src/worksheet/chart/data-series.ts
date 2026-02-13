@@ -1,4 +1,5 @@
 import { DataLabels } from './data-labels';
+import { DataPoint } from './data-point';
 import { DataSeriesValues } from './data-series-values';
 
 /**
@@ -83,6 +84,9 @@ export class DataSeries {
     #smoothLine: boolean;
     #plotBubbleSizes: DataSeriesValues[];
 
+    // Per-data-point styling
+    #plotPoints: DataPoint[];
+
     // Styling properties
     #fillColor: string | null;
     #lineColor: string | null;
@@ -141,6 +145,7 @@ export class DataSeries {
         this.#smoothLine = smoothLine;
         this.#lineStyle = lineStyle;
         this.#plotBubbleSizes = [];
+        this.#plotPoints = [];
 
         // Initialize styling properties
         this.#fillColor = null;
@@ -506,5 +511,60 @@ export class DataSeries {
      */
     setMarkerSize(size: number): void {
         this.#markerSize = size;
+    }
+
+    // ===== Per-Data-Point Styling Methods =====
+
+    /**
+     * Get all plot points with custom styling.
+     */
+    getPlotPoints(): DataPoint[] {
+        return this.#plotPoints;
+    }
+
+    /**
+     * Set all plot points with custom styling.
+     * @param plotPoints - Array of DataPoint objects
+     */
+    setPlotPoints(plotPoints: DataPoint[]): void {
+        this.#plotPoints = plotPoints;
+    }
+
+    /**
+     * Add a plot point with custom styling.
+     * @param plotPoint - The DataPoint to add
+     */
+    addPlotPoint(plotPoint: DataPoint): void {
+        this.#plotPoints.push(plotPoint);
+    }
+
+    /**
+     * Get a plot point by its index.
+     * @param idx - The point index to look up
+     * @returns The DataPoint at the index, or undefined if not found
+     */
+    getPlotPointByIndex(idx: number): DataPoint | undefined {
+        return this.#plotPoints.find((point) => point.getIdx() === idx);
+    }
+
+    /**
+     * Remove a plot point by its index.
+     * @param idx - The point index to remove
+     * @returns True if the point was found and removed, false otherwise
+     */
+    removePlotPoint(idx: number): boolean {
+        const index = this.#plotPoints.findIndex((point) => point.getIdx() === idx);
+        if (index >= 0) {
+            this.#plotPoints.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Clear all plot points.
+     */
+    clearPlotPoints(): void {
+        this.#plotPoints = [];
     }
 }

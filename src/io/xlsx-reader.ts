@@ -26,6 +26,7 @@ import {
     type LegendPosition,
 } from '../worksheet/chart/chart.ts';
 import { DataLabels, type DataLabelPosition } from '../worksheet/chart/data-labels.ts';
+import { DataPoint } from '../worksheet/chart/data-point.ts';
 import { DataSeriesValues } from '../worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../worksheet/chart/data-series.ts';
 import {
@@ -2047,6 +2048,57 @@ export class XlsxReader implements IReader {
         return null;
     }
 
+    static #parseChartColor(colorXml: string): ChartColor | null {
+        const srgbMatch = colorXml.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+        if (srgbMatch && srgbMatch[1]) {
+            const alphaMatch = colorXml.match(/<a:alpha\b[^>]*\bval="([^"]*)"/);
+            let alpha: number | null = null;
+            if (alphaMatch && alphaMatch[1]) {
+                const alphaVal = Number(alphaMatch[1]);
+                if (!Number.isNaN(alphaVal)) {
+                    alpha = 100 - Math.floor(alphaVal / 1000);
+                }
+            }
+            const brightnessMatch = colorXml.match(/<a:lumMod\b[^>]*\bval="([^"]*)"/);
+            let brightness: number | null = null;
+            if (brightnessMatch && brightnessMatch[1]) {
+                const brightnessVal = Number(brightnessMatch[1]);
+                if (!Number.isNaN(brightnessVal)) {
+                    brightness = 100 - Math.floor(brightnessVal / 1000);
+                }
+            }
+            return new ChartColor(srgbMatch[1], alpha, EXCEL_COLOR_TYPE_RGB, brightness);
+        }
+
+        const schemeMatch = colorXml.match(/<a:schemeClr\b[^>]*\bval="([^"]*)"/);
+        if (schemeMatch && schemeMatch[1]) {
+            const alphaMatch = colorXml.match(/<a:alpha\b[^>]*\bval="([^"]*)"/);
+            let alpha: number | null = null;
+            if (alphaMatch && alphaMatch[1]) {
+                const alphaVal = Number(alphaMatch[1]);
+                if (!Number.isNaN(alphaVal)) {
+                    alpha = 100 - Math.floor(alphaVal / 1000);
+                }
+            }
+            const brightnessMatch = colorXml.match(/<a:lumMod\b[^>]*\bval="([^"]*)"/);
+            let brightness: number | null = null;
+            if (brightnessMatch && brightnessMatch[1]) {
+                const brightnessVal = Number(brightnessMatch[1]);
+                if (!Number.isNaN(brightnessVal)) {
+                    brightness = 100 - Math.floor(brightnessVal / 1000);
+                }
+            }
+            return new ChartColor(schemeMatch[1], alpha, EXCEL_COLOR_TYPE_SCHEME, brightness);
+        }
+
+        const prstMatch = colorXml.match(/<a:prstClr\b[^>]*\bval="([^"]*)"/);
+        if (prstMatch && prstMatch[1]) {
+            return new ChartColor(prstMatch[1], null, EXCEL_COLOR_TYPE_STANDARD, null);
+        }
+
+        return null;
+    }
+
     /**
      * Parse effects (shadow, glow, soft edges) from spPr XML
      */
@@ -2770,6 +2822,66 @@ export class XlsxReader implements IReader {
                             series.setMarkerSize(size);
                         }
                     }
+                }
+
+                // Parse data points (per-point styling)
+                const dPtMatches = serInner.matchAll(/<c:dPt\b[^>]*>([\s\S]*?)<\/c:dPt>/g);
+                for (const dPtMatch of dPtMatches) {
+                    const dPtInner = dPtMatch[1] ?? '';
+                    const idxMatch = dPtInner.match(/<c:idx\b[^>]*\bval="([^"]*)"/);
+                    if (!idxMatch || !idxMatch[1]) {
+                        continue;
+                    }
+                    const idx = Number.parseInt(idxMatch[1], 10);
+                    if (!Number.isFinite(idx)) {
+                        continue;
+                    }
+
+                    const dataPoint = new DataPoint(idx);
+
+                    const explosionMatch = dPtInner.match(/<c:explosion\b[^>]*\bval="([^"]*)"/);
+                    if (explosionMatch && explosionMatch[1]) {
+                        const explosion = Number.parseInt(explosionMatch[1], 10);
+                        if (Number.isFinite(explosion)) {
+                            dataPoint.setExplosion(explosion);
+                        }
+                    }
+
+                    const spPrMatch = dPtInner.match(/<c:spPr\b[^>]*>([\s\S]*?)<\/c:spPr>/);
+                    if (spPrMatch && spPrMatch[1]) {
+                        const spPrInner = spPrMatch[1];
+
+                        const noFillMatch = spPrInner.match(/<a:noFill\b[^>]*\/>/);
+                        if (noFillMatch) {
+                            dataPoint.setNoFill(true);
+                        }
+
+                        const solidFillMatch = spPrInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+                        if (solidFillMatch && solidFillMatch[1]) {
+                            const fillColor = XlsxReader.#parseChartColor(solidFillMatch[1]);
+                            if (fillColor) {
+                                dataPoint.setFillColor(fillColor);
+                            }
+                        }
+
+                        const lnMatch = spPrInner.match(/<a:ln\b[^>]*>([\s\S]*?)<\/a:ln>/);
+                        if (lnMatch && lnMatch[1]) {
+                            const lnInner = lnMatch[1];
+                            const lnNoFillMatch = lnInner.match(/<a:noFill\b[^>]*\/>/);
+                            if (lnNoFillMatch) {
+                                dataPoint.setNoBorder(true);
+                            }
+                            const lnSolidMatch = lnInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+                            if (lnSolidMatch && lnSolidMatch[1]) {
+                                const borderColor = XlsxReader.#parseChartColor(lnSolidMatch[1]);
+                                if (borderColor) {
+                                    dataPoint.setBorderColor(borderColor);
+                                }
+                            }
+                        }
+                    }
+
+                    series.addPlotPoint(dataPoint);
                 }
 
                 // Parse smooth line for scatter charts (series-level)

@@ -2,6 +2,7 @@ import { create } from 'xmlbuilder2';
 import type { Worksheet } from '../../core/worksheet.ts';
 import { Font } from '../../style/font.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
+import { ChartColor } from '../../worksheet/chart/chart-color.ts';
 import type { Chart, ChartGradientStop, ChartLayout, Effects, GridlineStyle } from '../../worksheet/chart/chart.ts';
 import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
@@ -185,6 +186,33 @@ const ANGLE_MULTIPLIER = 60000;
 
 const formatColor = (argb: string): string => argb.substring(2);
 
+function writeChartColor(parent: any, chartColor: ChartColor, solidFill: boolean = true): void {
+    if (!chartColor.isUsable()) {
+        return;
+    }
+    const type = chartColor.getType();
+    const value = chartColor.getValue();
+    if (!type || !value) {
+        return;
+    }
+
+    const container = solidFill ? parent.ele('a:solidFill') : parent;
+    const color = container.ele(`a:${type}`, { val: value });
+
+    const alpha = chartColor.getAlpha();
+    if (alpha !== null && Number.isFinite(alpha)) {
+        color.ele('a:alpha', { val: ChartColor.alphaToXml(alpha) });
+    }
+
+    const brightness = chartColor.getBrightness();
+    if (brightness !== null && Number.isFinite(brightness)) {
+        const lumMod = ChartColor.alphaToXml(brightness);
+        const lumOff = ChartColor.alphaToXml(100 - brightness);
+        color.ele('a:lumMod', { val: lumMod });
+        color.ele('a:lumOff', { val: lumOff });
+    }
+}
+
 function writeShapeProperties(
     parent: any,
     fillColor: string | null,
@@ -227,6 +255,45 @@ function writeShapeProperties(
 
         if (lineDash) {
             ln.ele('a:prstDash', { val: lineDash });
+        }
+    }
+}
+
+function writeDataPoints(parent: any, dataSeries: DataSeries): void {
+    const plotPoints = dataSeries.getPlotPoints();
+    for (const plotPoint of plotPoints) {
+        if (!plotPoint.hasCustomStyling()) {
+            continue;
+        }
+
+        const dPt = parent.ele('c:dPt');
+        dPt.ele('c:idx', { val: plotPoint.getIdx().toString() });
+
+        const explosion = plotPoint.getExplosion();
+        if (explosion !== null && explosion !== undefined) {
+            dPt.ele('c:explosion', { val: String(explosion) });
+        }
+
+        const noFill = plotPoint.getNoFill();
+        const noBorder = plotPoint.getNoBorder();
+        const fillColor = plotPoint.getFillColor();
+        const borderColor = plotPoint.getBorderColor();
+
+        if (noFill || noBorder || fillColor || borderColor) {
+            const spPr = dPt.ele('c:spPr');
+            if (noFill === true) {
+                spPr.ele('a:noFill');
+            } else if (fillColor && fillColor.isUsable()) {
+                writeChartColor(spPr, fillColor);
+            }
+
+            if (noBorder === true) {
+                const ln = spPr.ele('a:ln');
+                ln.ele('a:noFill');
+            } else if (borderColor && borderColor.isUsable()) {
+                const ln = spPr.ele('a:ln');
+                writeChartColor(ln, borderColor);
+            }
         }
     }
 }
@@ -825,6 +892,8 @@ function writeDataSeriesElement(
     const borderColor = dataSeries.getBorderColor();
     const lineWidth = dataSeries.getLineWidth();
     writeShapeProperties(series, fillColor, borderColor, lineWidth, plotType, lineStyle);
+
+    writeDataPoints(series, dataSeries);
 
     if (plotType === 'line' || plotType === 'line3D' || plotType === 'scatter') {
         const markerSymbol = dataSeries.getMarkerSymbol();

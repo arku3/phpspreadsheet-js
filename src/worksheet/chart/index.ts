@@ -1,6 +1,7 @@
 // Chart Module - Public Exports
 export { Chart } from './chart';
 export { ChartColor } from './chart-color';
+export { DataPoint } from './data-point';
 export { DataSeries } from './data-series';
 export { DataSeriesValues } from './data-series-values';
 export { Legend } from './legend';
