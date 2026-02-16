@@ -2266,9 +2266,8 @@ export class XlsxReader implements IReader {
     }
 
     static #parseChartColor(colorXml: string): ChartColor | null {
-        const srgbMatch = colorXml.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
-        if (srgbMatch && srgbMatch[1]) {
-            const alphaMatch = colorXml.match(/<a:alpha\b[^>]*\bval="([^"]*)"/);
+        const parseAlphaBrightness = (xml: string): { alpha: number | null; brightness: number | null } => {
+            const alphaMatch = xml.match(/<a:alpha\b[^>]*\bval="([^"]*)"/);
             let alpha: number | null = null;
             if (alphaMatch && alphaMatch[1]) {
                 const alphaVal = Number(alphaMatch[1]);
@@ -2276,7 +2275,7 @@ export class XlsxReader implements IReader {
                     alpha = 100 - Math.floor(alphaVal / 1000);
                 }
             }
-            const brightnessMatch = colorXml.match(/<a:lumMod\b[^>]*\bval="([^"]*)"/);
+            const brightnessMatch = xml.match(/<a:lumMod\b[^>]*\bval="([^"]*)"/);
             let brightness: number | null = null;
             if (brightnessMatch && brightnessMatch[1]) {
                 const brightnessVal = Number(brightnessMatch[1]);
@@ -2284,40 +2283,33 @@ export class XlsxReader implements IReader {
                     brightness = 100 - Math.floor(brightnessVal / 1000);
                 }
             }
+            return { alpha, brightness };
+        };
+
+        const srgbMatch = colorXml.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+        if (srgbMatch && srgbMatch[1]) {
+            const { alpha, brightness } = parseAlphaBrightness(colorXml);
             return new ChartColor(srgbMatch[1], alpha, EXCEL_COLOR_TYPE_RGB, brightness);
         }
 
         const schemeMatch = colorXml.match(/<a:schemeClr\b[^>]*\bval="([^"]*)"/);
         if (schemeMatch && schemeMatch[1]) {
-            const alphaMatch = colorXml.match(/<a:alpha\b[^>]*\bval="([^"]*)"/);
-            let alpha: number | null = null;
-            if (alphaMatch && alphaMatch[1]) {
-                const alphaVal = Number(alphaMatch[1]);
-                if (!Number.isNaN(alphaVal)) {
-                    alpha = 100 - Math.floor(alphaVal / 1000);
-                }
-            }
-            const brightnessMatch = colorXml.match(/<a:lumMod\b[^>]*\bval="([^"]*)"/);
-            let brightness: number | null = null;
-            if (brightnessMatch && brightnessMatch[1]) {
-                const brightnessVal = Number(brightnessMatch[1]);
-                if (!Number.isNaN(brightnessVal)) {
-                    brightness = 100 - Math.floor(brightnessVal / 1000);
-                }
-            }
+            const { alpha, brightness } = parseAlphaBrightness(colorXml);
             return new ChartColor(schemeMatch[1], alpha, EXCEL_COLOR_TYPE_SCHEME, brightness);
         }
 
         const prstMatch = colorXml.match(/<a:prstClr\b[^>]*\bval="([^"]*)"/);
         if (prstMatch && prstMatch[1]) {
-            return new ChartColor(prstMatch[1], null, EXCEL_COLOR_TYPE_STANDARD, null);
+            const { alpha, brightness } = parseAlphaBrightness(colorXml);
+            return new ChartColor(prstMatch[1], alpha, EXCEL_COLOR_TYPE_STANDARD, brightness);
         }
 
         const sysMatch = colorXml.match(/<a:sysClr\b[^>]*\bval="([^"]*)"/);
         if (sysMatch && sysMatch[1]) {
             const lastClrMatch = colorXml.match(/<a:sysClr\b[^>]*\blastClr="([^"]*)"/);
             const lastClr = lastClrMatch?.[1] ?? null;
-            return new ChartColor(sysMatch[1], null, EXCEL_COLOR_TYPE_SYSTEM, null, lastClr);
+            const { alpha, brightness } = parseAlphaBrightness(colorXml);
+            return new ChartColor(sysMatch[1], alpha, EXCEL_COLOR_TYPE_SYSTEM, brightness, lastClr);
         }
 
         return null;

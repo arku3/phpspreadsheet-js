@@ -100,7 +100,7 @@ Formula parser, tokenizer, 100+ functions, and Cell.getCalculatedValue().
     - [x] Axis options parity (crosses/crossesAt, major/minor units, label positions, dispUnits)
     - [x] Legend text styling (txPr) + overlay/layout parity
     - [x] Title font/layout parity (txPr for formula titles, layout usage)
-    - [ ] Color parsing parity (alpha/brightness in all reader paths)
+    - [x] Color parsing parity (alpha/brightness in all reader paths)
 - [ ] Conditional formatting enhancements
 - [ ] Pivot table support (Phase 21)
 - [ ] Advanced chart features (error bars)
