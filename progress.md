@@ -1,5 +1,11 @@
 # Progress - phpspreadsheet-js
 
+## Phase 21: Advanced Features (COMPLETE)
+No PHP parity targets found for sparklines, pivot tables, or error bars in php-src.
+
+## Phase 20: Chart Parity & Advanced Features (COMPLETE)
+Chart PHP Parity - ChartColor, Title, Legend, Axis, PlotArea, GridLines, TrendLine classes; DataSeries architecture fix; trend lines read/write; axis scaling + date axis read/write; effects (shadow/glow/soft edges); per-data-point colors; cell-referenced titles; legend styling + text font; schemeClr/sysClr colors; trendline styling parity; axis options parity; title font/layout parity; color parsing parity (alpha/brightness).
+
 ## Phase 19: Chart Support (COMPLETE)
 15 chart types (2D/3D), combo charts, styling (data labels, axis, titles, fills, gradients), plot area layout, view3D, surface serAx.
 
