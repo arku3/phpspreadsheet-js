@@ -4,6 +4,7 @@
  * Ported from PhpSpreadsheet Chart/Legend.php
  */
 
+import { Font } from '../../style/font.ts';
 import type { ChartLayout, LegendPosition } from './chart';
 import type { ChartColor } from './chart-color';
 
@@ -65,6 +66,7 @@ export class Legend {
     #overlay: boolean = false;
     #borderLines: GridLines = {};
     #fillColor: ChartColor | null = null;
+    #textFont: Font | null = null;
 
     /**
      * Create a new Legend.
@@ -150,6 +152,21 @@ export class Legend {
      */
     public setFillColor(fillColor: ChartColor | null): this {
         this.#fillColor = fillColor;
+        return this;
+    }
+
+    /**
+     * Get legend text font.
+     */
+    public getTextFont(): Font | null {
+        return this.#textFont;
+    }
+
+    /**
+     * Set legend text font.
+     */
+    public setTextFont(font: Font | null): this {
+        this.#textFont = font;
         return this;
     }
 }

@@ -3,6 +3,7 @@ import unzipper from 'unzipper';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
+import { Font } from '../src/style/font.ts';
 import { ChartColor } from '../src/worksheet/chart/chart-color.ts';
 import { Chart } from '../src/worksheet/chart/chart.ts';
 import { DataSeriesValues } from '../src/worksheet/chart/data-series-values.ts';
@@ -77,6 +78,11 @@ describe('Chart legend styling', () => {
         const legend = new Legend();
         legend.setFillColor(new ChartColor('FF0000'));
         legend.setBorderLines({ color: '#00FF00', width: 1.5, style: 'dash' });
+        const legendFont = new Font();
+        legendFont.setName('Calibri');
+        legendFont.setSize(11);
+        legendFont.setBold(true);
+        legend.setTextFont(legendFont);
         chart.setLegendObject(legend);
 
         const series = new DataSeries('bar');
@@ -103,5 +109,8 @@ describe('Chart legend styling', () => {
         expect(borderLines?.color).toBe('00FF00');
         expect(borderLines?.width).toBeCloseTo(1.5);
         expect(borderLines?.style).toBe('dash');
+        expect(readLegend?.getTextFont()?.getName()).toBe('Calibri');
+        expect(readLegend?.getTextFont()?.getSize()).toBe(11);
+        expect(readLegend?.getTextFont()?.getBold()).toBe(true);
     });
 });

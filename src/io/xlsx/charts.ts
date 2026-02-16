@@ -1548,6 +1548,35 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                     }
                 }
             }
+
+            const legendFont = legendObject.getTextFont();
+            if (legendFont) {
+                const txPr = legend.ele('c:txPr');
+                txPr.ele('a:bodyPr');
+                txPr.ele('a:lstStyle');
+                const p = txPr.ele('a:p');
+                const pPr = p.ele('a:pPr');
+                const defRPr = pPr.ele('a:defRPr');
+                const fontName = legendFont.getName();
+                if (fontName) {
+                    defRPr.ele('a:rFont', { val: fontName });
+                }
+                const fontSize = legendFont.getSize();
+                if (fontSize) {
+                    defRPr.ele('a:sz', { val: String(fontSize * 100) });
+                }
+                if (legendFont.getBold()) {
+                    defRPr.ele('a:b');
+                }
+                if (legendFont.getItalic()) {
+                    defRPr.ele('a:i');
+                }
+                const fontColor = legendFont.getColor().getARGB();
+                if (fontColor) {
+                    const solidFill = defRPr.ele('a:solidFill');
+                    solidFill.ele('a:srgbClr', { val: fontColor.substring(2) });
+                }
+            }
         }
 
         // Write overlay

@@ -1747,6 +1747,64 @@ export class XlsxReader implements IReader {
         return font;
     }
 
+    static #parseLegendTextFont(legendInner: string): Font | null {
+        const txPrMatch = legendInner.match(/<c:txPr\b[^>]*>([\s\S]*?)<\/c:txPr>/);
+        if (!txPrMatch || !txPrMatch[1]) {
+            return null;
+        }
+
+        const txPrInner = txPrMatch[1];
+        const defRPrMatch = txPrInner.match(/<a:defRPr\b([^>]*)>([\s\S]*?)<\/a:defRPr>/);
+        if (!defRPrMatch || defRPrMatch[2] === undefined) {
+            return null;
+        }
+
+        const rPrAttrs = defRPrMatch[1] ?? '';
+        const rPrInner = defRPrMatch[2];
+        const font = new Font();
+
+        const rFontMatch = rPrInner.match(/<a:rFont\b[^>]*\bval="([^"]*)"/);
+        const latinMatch = rPrInner.match(/<a:latin\b[^>]*\btypeface="([^"]*)"/);
+        const fontName = rFontMatch?.[1] ?? latinMatch?.[1];
+        if (fontName) {
+            font.setName(XlsxReader.decodeXmlEntities(fontName));
+        }
+
+        const szAttr = XlsxReader.#extractXmlAttribute(rPrAttrs, 'sz');
+        const szElement = rPrInner.match(/<a:sz\b[^>]*\bval="([^"]*)"/);
+        const szRaw = szAttr ?? szElement?.[1] ?? null;
+        if (szRaw !== null) {
+            const szValue = Number.parseInt(szRaw, 10);
+            if (Number.isFinite(szValue) && szValue > 0) {
+                font.setSize(szValue / 100);
+            }
+        }
+
+        if (/<a:b\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'b') === '1') {
+            font.setBold(true);
+        }
+
+        if (/<a:i\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'i') === '1') {
+            font.setItalic(true);
+        }
+
+        const solidFillMatch = rPrInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+        if (solidFillMatch && solidFillMatch[1]) {
+            const solidFillInner = solidFillMatch[1];
+            const srgbClrMatch = solidFillInner.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+            if (srgbClrMatch && srgbClrMatch[1]) {
+                const colorValue = srgbClrMatch[1];
+                if (colorValue.length === 6) {
+                    font.getColor().setARGB(`FF${colorValue.toUpperCase()}`);
+                } else if (colorValue.length === 8) {
+                    font.getColor().setARGB(colorValue.toUpperCase());
+                }
+            }
+        }
+
+        return font;
+    }
+
     static #parsePlotAreaLayout(chartXml: string): ChartLayout | null {
         const plotAreaMatch = chartXml.match(/<c:plotArea\b[^>]*>([\s\S]*?)<\/c:plotArea>/);
         if (!plotAreaMatch || !plotAreaMatch[1]) {
@@ -2441,6 +2499,11 @@ export class XlsxReader implements IReader {
                     }
                     legendObject.setBorderLines(borderLines);
                 }
+            }
+
+            const legendFont = XlsxReader.#parseLegendTextFont(legendInner);
+            if (legendFont) {
+                legendObject.setTextFont(legendFont);
             }
         }
 

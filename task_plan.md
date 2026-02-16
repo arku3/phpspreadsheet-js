@@ -98,7 +98,7 @@ Formula parser, tokenizer, 100+ functions, and Cell.getCalculatedValue().
   - [ ] **Parity Plan (in progress)**
     - [x] Trendline styling parity (color types + series fallback + width scaling)
     - [x] Axis options parity (crosses/crossesAt, major/minor units, label positions, dispUnits)
-    - [ ] Legend text styling (txPr) + overlay/layout parity
+    - [x] Legend text styling (txPr) + overlay/layout parity
     - [ ] Title font/layout parity (txPr for formula titles, layout usage)
     - [ ] Color parsing parity (alpha/brightness in all reader paths)
 - [ ] Conditional formatting enhancements
