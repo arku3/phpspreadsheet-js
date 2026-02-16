@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { AdvancedValueBinder } from '../../src/core/advanced-value-binder.ts';
 import { DataType } from '../../src/core/cell.ts';
+import { DefaultValueBinder } from '../../src/core/default-value-binder.ts';
 import { Spreadsheet } from '../../src/core/spreadsheet.ts';
+import { convertIsoDate } from '../../src/shared/date.ts';
 
 describe('Value Binding', () => {
     let spreadsheet: Spreadsheet;
@@ -53,5 +55,34 @@ describe('Value Binding', () => {
         sheet.setCellValue('A3', '$100.50');
         expect(sheet.getCell('A3').getDataType()).toBe(DataType.TYPE_NUMERIC);
         expect(sheet.getCell('A3').getValue()).toBe(100.5);
+    });
+
+    test('Explicit data types follow PHP normalization rules', () => {
+        const sheet = spreadsheet.getActiveSheet();
+
+        sheet.setCellValueExplicit('A1', 'Text', DataType.TYPE_STRING2);
+        expect(sheet.getCell('A1').getDataType()).toBe(DataType.TYPE_STRING);
+        expect(sheet.getCell('A1').getValue()).toBe('Text');
+
+        sheet.setCellValueExplicit('A2', '2020-01-02', DataType.TYPE_ISO_DATE);
+        expect(sheet.getCell('A2').getDataType()).toBe(DataType.TYPE_NUMERIC);
+        expect(sheet.getCell('A2').getValue()).toBe(convertIsoDate('2020-01-02'));
+
+        sheet.setCellValueExplicit('A3', 'not-an-error', DataType.TYPE_ERROR);
+        expect(sheet.getCell('A3').getValue()).toBe('#NULL!');
+    });
+
+    test('Preserve CR flag controls newline normalization', () => {
+        const binder = new DefaultValueBinder();
+        binder.setPreserveCr(false);
+        spreadsheet.setValueBinder(binder);
+        const sheet = spreadsheet.getActiveSheet();
+
+        sheet.setCellValue('A1', 'Line1\r\nLine2');
+        expect(sheet.getCell('A1').getValue()).toBe('Line1\nLine2');
+
+        binder.setPreserveCr(true);
+        sheet.setCellValue('A2', 'Line1\r\nLine2');
+        expect(sheet.getCell('A2').getValue()).toBe('Line1\r\nLine2');
     });
 });

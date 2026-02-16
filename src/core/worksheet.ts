@@ -15,9 +15,10 @@ import { RowDimension } from '../worksheet/row-dimension.ts';
 import { SheetView } from '../worksheet/sheet-view.ts';
 import { Table } from '../worksheet/table.ts';
 import { CellCollection } from './cell-collection.ts';
-import { Cell, DataType } from './cell.ts';
+import { Cell, DataType, type TDataType } from './cell.ts';
 import { Comment } from './comment.ts';
 import { DataValidation } from './data-validation.ts';
+import type { IValueBinder } from './i-value-binder.ts';
 import { Spreadsheet } from './spreadsheet.ts';
 
 /**
@@ -44,7 +45,7 @@ export class Worksheet {
 
     static readonly #VALID_FROZEN_STATE = [Worksheet.PANE_FROZEN, Worksheet.PANE_FROZENSPLIT];
 
-    #parent: Spreadsheet;
+    #parent: Spreadsheet | null;
     #title: string;
     #cellCollection: CellCollection;
     #selectedCells: string = 'A1';
@@ -292,6 +293,51 @@ export class Worksheet {
         return `${col}${row}`;
     }
 
+    static #normalizeCellCoordinateInput(coordinate: string | [string | number, number]): string {
+        if (Array.isArray(coordinate)) {
+            const [column, row] = coordinate;
+            if (!Number.isFinite(row) || row < 1) {
+                throw new Error('Cell coordinate array is not a valid A1 reference.');
+            }
+            if (typeof column === 'number' && (!Number.isFinite(column) || column < 1)) {
+                throw new Error('Cell coordinate array is not a valid A1 reference.');
+            }
+            const columnLetters =
+                typeof column === 'number' ? Coordinate.stringFromColumnIndex(column) : String(column).toUpperCase();
+            if (!/^[A-Z]+$/.test(columnLetters)) {
+                throw new Error('Cell coordinate array is not a valid A1 reference.');
+            }
+            return `${columnLetters}${row}`;
+        }
+
+        let normalized = coordinate.trim();
+        if (normalized.includes('!')) {
+            const parts = normalized.split('!');
+            normalized = parts[parts.length - 1] ?? '';
+        }
+        if (normalized.includes(':') || normalized.includes(',')) {
+            throw new Error('Cell coordinate string is not a valid A1 reference.');
+        }
+        normalized = normalized.replace(/\$/g, '').toUpperCase();
+        const match = normalized.match(/^([A-Z]+)([1-9]\d*)$/);
+        if (!match) {
+            throw new Error('Cell coordinate string is not a valid A1 reference.');
+        }
+        const colLetters = match[1]!;
+        const rowValue = Number.parseInt(match[2]!, 10);
+        const colIndex = Coordinate.columnIndexFromString(colLetters);
+        if (
+            !Number.isFinite(rowValue) ||
+            rowValue < 1 ||
+            rowValue > Worksheet.#MAX_ROW_INDEX ||
+            colIndex < 1 ||
+            colIndex > Worksheet.#MAX_COLUMN_INDEX
+        ) {
+            throw new Error('Cell coordinate string is not a valid A1 reference.');
+        }
+        return normalized;
+    }
+
     /**
      * Get a readonly view of all drawings on this worksheet.
      */
@@ -485,8 +531,36 @@ export class Worksheet {
     /**
      * Get parent spreadsheet.
      */
-    public getParent(): Spreadsheet {
+    public getParent(): Spreadsheet | null {
         return this.#parent;
+    }
+
+    /**
+     * Set parent spreadsheet.
+     */
+    public setParent(parent: Spreadsheet): this {
+        this.#parent = parent;
+        return this;
+    }
+
+    /**
+     * Rebind worksheet to a new parent spreadsheet.
+     */
+    public rebindParent(parent: Spreadsheet): this {
+        if (this.#parent) {
+            const definedNames = this.#parent.getDefinedNames();
+            for (const definedName of definedNames) {
+                parent.addDefinedName(definedName);
+            }
+
+            const index = this.#parent.getIndex(this);
+            if (index >= 0) {
+                this.#parent.removeSheetByIndex(index);
+            }
+        }
+
+        this.#parent = parent;
+        return this;
     }
 
     /**
@@ -499,8 +573,9 @@ export class Worksheet {
     /**
      * Set title.
      */
-    public setTitle(title: string): void {
+    public setTitle(title: string, _updateFormulaCellReferences: boolean = true, _validate: boolean = true): this {
         this.#title = title;
+        return this;
     }
 
     /**
@@ -555,12 +630,57 @@ export class Worksheet {
     /**
      * Get cell by coordinate.
      */
-    public getCell(coordinate: string): Cell {
-        let cell = this.#cellCollection.get(coordinate);
+    public getCell(coordinate: string | [string | number, number]): Cell {
+        if (typeof coordinate === 'string') {
+            let trimmed = coordinate.trim();
+            if (trimmed.includes('!')) {
+                if (!this.#parent) {
+                    throw new Error('Worksheet has no parent spreadsheet.');
+                }
+                const parts = trimmed.split('!');
+                const cellRef = parts.pop() ?? '';
+                const sheetNameRaw = parts.join('!');
+                const sheetName = sheetNameRaw.replace(/^'+|'+$/g, '');
+                const sheet = this.#parent.getSheetByName(sheetName);
+                if (!sheet) {
+                    throw new Error(`Sheet "${sheetName}" does not exist.`);
+                }
+                return sheet.getCell(cellRef);
+            }
+
+            if (this.#parent) {
+                const namedRange = this.#parent.getNamedRange(trimmed, this);
+                if (namedRange) {
+                    let rangeRef = namedRange.getRange();
+                    if (rangeRef.includes('!')) {
+                        const rangeParts = rangeRef.split('!');
+                        rangeRef = rangeParts.pop() ?? '';
+                    }
+                    const topLeft = rangeRef.split(':')[0] ?? rangeRef;
+                    const rangeSheet = namedRange.getWorksheet();
+                    if (rangeSheet && rangeSheet !== this) {
+                        return rangeSheet.getCell(topLeft);
+                    }
+                    trimmed = topLeft;
+                }
+            }
+
+            const normalized = Worksheet.#normalizeCellCoordinateInput(trimmed);
+            let cell = this.#cellCollection.get(normalized);
+            if (!cell) {
+                const [colIndex, rowIndex] = Coordinate.indexesFromString(normalized);
+                cell = new Cell(null, DataType.TYPE_NULL, this, Coordinate.stringFromColumnIndex(colIndex), rowIndex);
+                this.#cellCollection.add(normalized, cell);
+            }
+            return cell;
+        }
+
+        const normalized = Worksheet.#normalizeCellCoordinateInput(coordinate);
+        let cell = this.#cellCollection.get(normalized);
         if (!cell) {
-            const [colIndex, rowIndex] = Coordinate.indexesFromString(coordinate);
+            const [colIndex, rowIndex] = Coordinate.indexesFromString(normalized);
             cell = new Cell(null, DataType.TYPE_NULL, this, Coordinate.stringFromColumnIndex(colIndex), rowIndex);
-            this.#cellCollection.add(coordinate, cell);
+            this.#cellCollection.add(normalized, cell);
         }
         return cell;
     }
@@ -568,9 +688,33 @@ export class Worksheet {
     /**
      * Set cell value.
      */
-    public setCellValue(coordinate: string, value: any): Worksheet {
+    public setCellValue(
+        coordinate: string | [string | number, number],
+        value: any,
+        binder: IValueBinder | null = null,
+    ): Worksheet {
+        if (!this.#parent) {
+            throw new Error('Worksheet has no parent spreadsheet.');
+        }
         const cell = this.getCell(coordinate);
-        cell.setValue(value);
+        cell.setValue(value, binder);
+        this.#parent.clearCalculationCache();
+        return this;
+    }
+
+    /**
+     * Set cell value explicitly.
+     */
+    public setCellValueExplicit(
+        coordinate: string | [string | number, number],
+        value: any,
+        dataType: TDataType = DataType.TYPE_STRING,
+    ): Worksheet {
+        if (!this.#parent) {
+            throw new Error('Worksheet has no parent spreadsheet.');
+        }
+        const cell = this.getCell(coordinate);
+        cell.setValueExplicit(value, dataType);
         this.#parent.clearCalculationCache();
         return this;
     }
@@ -579,6 +723,9 @@ export class Worksheet {
      * Get style for cell at coordinate.
      */
     public getStyle(coordinate: string): Style {
+        if (!this.#parent) {
+            throw new Error('Worksheet has no parent spreadsheet.');
+        }
         this.setSelectedCells(coordinate);
         return this.#parent.getCellXfSupervisor();
     }

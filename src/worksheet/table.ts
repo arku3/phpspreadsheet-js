@@ -17,6 +17,10 @@ export class TableColumn {
         return this.#name;
     }
 
+    public setName(name: string): void {
+        this.#name = name;
+    }
+
     public getIndex(): number {
         return this.#index;
     }
@@ -61,6 +65,17 @@ export class Table {
 
     public getColumn(name: string): TableColumn | undefined {
         return this.#columns.find((col) => col.getName() === name);
+    }
+
+    public updateColumnName(oldName: string, newName: string): boolean {
+        const oldValue = oldName.toLowerCase();
+        for (const column of this.#columns) {
+            if (column.getName().toLowerCase() === oldValue) {
+                column.setName(newName);
+                return true;
+            }
+        }
+        return false;
     }
 
     public showTotals(show: boolean): void {

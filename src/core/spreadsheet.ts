@@ -26,7 +26,7 @@ export class Spreadsheet {
     #cellXfSupervisor: Style | null = null;
     #calculationEngine: Calculation;
     #definedNames: DefinedName[] = [];
-    #valueBinder: IValueBinder;
+    #valueBinder: IValueBinder | null;
     #properties: Properties;
     #security: Security;
     #theme: Theme;
@@ -62,15 +62,16 @@ export class Spreadsheet {
     /**
      * Get value binder.
      */
-    public getValueBinder(): IValueBinder {
+    public getValueBinder(): IValueBinder | null {
         return this.#valueBinder;
     }
 
     /**
      * Set value binder.
      */
-    public setValueBinder(binder: IValueBinder): void {
+    public setValueBinder(binder: IValueBinder | null): this {
         this.#valueBinder = binder;
+        return this;
     }
 
     /**
@@ -191,20 +192,53 @@ export class Spreadsheet {
      * Get sheet by name.
      */
     public getSheetByName(name: string): Worksheet | undefined {
-        return this.#workSheetCollection.find((sheet) => sheet.getTitle() === name);
+        const trimmedName = name
+            .trim()
+            .replace(/^'+|'+$/g, '')
+            .toUpperCase();
+        return this.#workSheetCollection.find((sheet) => sheet.getTitle().toUpperCase() === trimmedName);
     }
 
     /**
      * Add a worksheet.
      */
-    public addSheet(worksheet: Worksheet, index?: number): Worksheet {
+    public addSheet(worksheet: Worksheet, index?: number, retitleIfNeeded: boolean = false): Worksheet {
+        if (retitleIfNeeded) {
+            let title = worksheet.getTitle();
+            if (this.sheetNameExists(title)) {
+                let counter = 1;
+                let newTitle = `${title} ${counter}`;
+                while (this.sheetNameExists(newTitle)) {
+                    counter += 1;
+                    newTitle = `${title} ${counter}`;
+                }
+                worksheet.setTitle(newTitle, true, true);
+            }
+        }
+
+        if (this.sheetNameExists(worksheet.getTitle())) {
+            throw new Error(
+                `Workbook already contains a worksheet named '${worksheet.getTitle()}'. Rename this worksheet first.`,
+            );
+        }
+
         if (index === undefined) {
+            if (this.#activeSheetIndex < 0) {
+                this.#activeSheetIndex = 0;
+            }
             this.#workSheetCollection.push(worksheet);
         } else {
             this.#workSheetCollection.splice(index, 0, worksheet);
             if (this.#activeSheetIndex >= index) {
                 this.#activeSheetIndex++;
             }
+            if (this.#activeSheetIndex < 0) {
+                this.#activeSheetIndex = 0;
+            }
+        }
+
+        if (!worksheet.getParent()) {
+            worksheet.rebindParent(this);
         }
         return worksheet;
     }
@@ -212,13 +246,13 @@ export class Spreadsheet {
     /**
      * Create a new sheet and add it to the workbook.
      */
-    public createSheet(title?: string, index?: number): Worksheet {
-        const newSheet = new Worksheet(this, title);
+    public createSheet(index?: number | null): Worksheet {
+        const newSheet = new Worksheet(this);
         // Apply default cache strategy if set
         if (this.#defaultCacheStrategy) {
             newSheet.setCacheStrategy(this.#defaultCacheStrategy);
         }
-        this.addSheet(newSheet, index);
+        this.addSheet(newSheet, index ?? undefined, true);
         return newSheet;
     }
 
@@ -522,6 +556,9 @@ export class Spreadsheet {
      * Set first sheet index.
      */
     public setFirstSheetIndex(value: number): void {
+        if (value < 0) {
+            throw new Error('First sheet index must be a positive integer.');
+        }
         this.#firstSheetIndex = value;
     }
 
@@ -592,6 +629,9 @@ export class Spreadsheet {
      * Set tab ratio.
      */
     public setTabRatio(value: number): void {
+        if (value < 0 || value > 1000) {
+            throw new Error('Tab ratio must be between 0 and 1000.');
+        }
         this.#tabRatio = value;
     }
 
@@ -605,8 +645,16 @@ export class Spreadsheet {
     /**
      * Set visibility.
      */
-    public setVisibility(value: string): void {
-        this.#visibility = value;
+    public setVisibility(value: string | null): void {
+        const visibilityValue = value ?? Spreadsheet.VISIBILITY_VISIBLE;
+        if (
+            visibilityValue !== Spreadsheet.VISIBILITY_VISIBLE &&
+            visibilityValue !== Spreadsheet.VISIBILITY_HIDDEN &&
+            visibilityValue !== Spreadsheet.VISIBILITY_VERY_HIDDEN
+        ) {
+            throw new Error('Invalid visibility value.');
+        }
+        this.#visibility = visibilityValue;
     }
 
     /**
@@ -645,27 +693,17 @@ export class Spreadsheet {
      * @param index The index of the sheet to remove
      * @returns This spreadsheet for chaining
      */
-    public removeSheetByIndex(index: number): this {
+    public removeSheetByIndex(index: number): void {
         if (index < 0 || index >= this.#workSheetCollection.length) {
             throw new Error(`Sheet index ${index} is out of bounds.`);
         }
 
-        // Remove the sheet
+        const numSheets = this.#workSheetCollection.length;
         this.#workSheetCollection.splice(index, 1);
 
-        // Adjust active sheet index
-        if (this.#activeSheetIndex >= index && this.#activeSheetIndex > 0) {
+        if (this.#activeSheetIndex >= index && (this.#activeSheetIndex > 0 || numSheets <= 1)) {
             this.#activeSheetIndex--;
         }
-
-        // Ensure we always have at least one sheet
-        if (this.#workSheetCollection.length === 0) {
-            const newSheet = new Worksheet(this, 'Worksheet 1');
-            this.#workSheetCollection.push(newSheet);
-            this.#activeSheetIndex = 0;
-        }
-
-        return this;
     }
 
     /**
@@ -735,12 +773,12 @@ export class Spreadsheet {
      * @param index The index to set as active
      * @returns This spreadsheet for chaining
      */
-    public setActiveSheetIndex(index: number): this {
+    public setActiveSheetIndex(index: number): Worksheet {
         if (index < 0 || index >= this.#workSheetCollection.length) {
             throw new Error(`Sheet index ${index} is out of bounds.`);
         }
         this.#activeSheetIndex = index;
-        return this;
+        return this.getActiveSheet();
     }
 
     /**
@@ -749,7 +787,7 @@ export class Spreadsheet {
      * @param sheetName The name of the sheet to activate
      * @returns This spreadsheet for chaining
      */
-    public setActiveSheetIndexByName(sheetName: string): this {
+    public setActiveSheetIndexByName(sheetName: string): Worksheet {
         const sheet = this.getSheetByName(sheetName);
         if (!sheet) {
             throw new Error(`Sheet "${sheetName}" does not exist.`);
@@ -757,6 +795,6 @@ export class Spreadsheet {
 
         const index = this.#workSheetCollection.indexOf(sheet);
         this.#activeSheetIndex = index;
-        return this;
+        return sheet;
     }
 }

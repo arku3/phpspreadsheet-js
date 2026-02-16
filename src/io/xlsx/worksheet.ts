@@ -143,10 +143,13 @@ export class Worksheet extends WriterPart {
      * Write SheetViews.
      */
     private writeSheetViews(root: any, worksheet: CoreWorksheet): void {
+        const parent = worksheet.getParent();
+        if (!parent) {
+            throw new Error('Worksheet has no parent spreadsheet.');
+        }
         const sheetViews = root.ele('sheetViews');
         const sheetView = sheetViews.ele('sheetView', {
-            tabSelected:
-                worksheet.getParent().getActiveSheetIndex() === worksheet.getParent().getIndex(worksheet) ? '1' : '0',
+            tabSelected: parent.getActiveSheetIndex() === parent.getIndex(worksheet) ? '1' : '0',
             workbookViewId: '0',
         });
 

@@ -1,14 +1,19 @@
+import { isError } from '../calculation/calculation-errors.ts';
+import { convertIsoDate } from '../shared/date.ts';
 import { Protection } from '../style/protection.ts';
 import { Style } from '../style/style.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import type { Comment } from './comment.ts';
+import { DefaultValueBinder } from './default-value-binder.ts';
 import { Hyperlink } from './hyperlink.ts';
+import type { IValueBinder } from './i-value-binder.ts';
 import { Worksheet } from './worksheet.ts';
 
 /**
  * Cell data types.
  */
 export const DataType = {
+    TYPE_STRING2: 'str',
     TYPE_STRING: 's',
     TYPE_FORMULA: 'f',
     TYPE_NUMERIC: 'n',
@@ -16,6 +21,8 @@ export const DataType = {
     TYPE_NULL: 'null',
     TYPE_INLINE: 'inlineStr',
     TYPE_ERROR: 'e',
+    TYPE_ISO_DATE: 'd',
+    TYPE_DRAWING_IN_CELL: 'drawingCell',
 } as const;
 
 export type TDataType = (typeof DataType)[keyof typeof DataType];
@@ -24,6 +31,8 @@ export type TDataType = (typeof DataType)[keyof typeof DataType];
  * Cell in a Worksheet.
  */
 export class Cell {
+    static #valueBinder: IValueBinder | null = null;
+    static #valueBinderInitialized: boolean = false;
     #value: any;
     #calculatedValue: any;
     #dataType: TDataType;
@@ -35,6 +44,19 @@ export class Cell {
     #isDetached: boolean = false;
 
     #hyperlink: Hyperlink | null = null;
+
+    public static getValueBinder(): IValueBinder | null {
+        if (!Cell.#valueBinderInitialized) {
+            Cell.#valueBinder = new DefaultValueBinder();
+            Cell.#valueBinderInitialized = true;
+        }
+        return Cell.#valueBinder;
+    }
+
+    public static setValueBinder(binder: IValueBinder | null): void {
+        Cell.#valueBinder = binder;
+        Cell.#valueBinderInitialized = true;
+    }
 
     constructor(value: any, dataType: TDataType, worksheet: Worksheet, column: string | number, row: number) {
         this.#value = value;
@@ -66,7 +88,11 @@ export class Cell {
                 if (!worksheet) {
                     this.#throwDetached('getCalculatedValue');
                 }
-                const calculation = worksheet.getParent().getCalculationEngine();
+                const parent = worksheet.getParent();
+                if (!parent) {
+                    this.#throwDetached('getCalculatedValue');
+                }
+                const calculation = parent.getCalculationEngine();
                 this.#calculatedValue = calculation.calculateFormula(this.#value, worksheet, this.getCoordinate());
             }
             return this.#calculatedValue;
@@ -84,23 +110,156 @@ export class Cell {
     /**
      * Set value.
      */
-    public setValue(value: any): void {
+    public setValue(value: any, binder: IValueBinder | null = null): this {
         this.#assertAttached('setValue');
+        if (this.hasHyperlink()) {
+            this.#hyperlink = null;
+        }
         const worksheet = this.#worksheet;
         if (!worksheet) {
             this.#throwDetached('setValue');
         }
-        const binder = worksheet.getParent().getValueBinder();
-        binder.bindValue(this, value);
+        const activeBinder = binder ?? worksheet.getParent()?.getValueBinder() ?? Cell.getValueBinder();
+        if (!activeBinder) {
+            throw new Error('Value Binder is not set.');
+        }
+        if (!activeBinder.bindValue(this, value)) {
+            throw new Error('Value could not be bound to cell.');
+        }
+        return this;
     }
 
     /**
      * Set value explicit.
      */
-    public setValueExplicit(value: any, dataType: TDataType): void {
-        this.#value = value;
-        this.#dataType = dataType;
+    public setValueExplicit(value: any, dataType: TDataType = DataType.TYPE_STRING): this {
+        if (this.hasHyperlink()) {
+            this.#hyperlink = null;
+        }
+        const oldValue = this.#value;
+        let normalizedValue = value;
+        let normalizedType: TDataType = dataType;
+        const binder = this.#worksheet?.getParent()?.getValueBinder() ?? Cell.getValueBinder();
+        const preserveCr = binder?.getPreserveCr() ?? false;
+
+        const switchType = dataType === DataType.TYPE_STRING2 ? DataType.TYPE_STRING : dataType;
+
+        switch (switchType) {
+            case DataType.TYPE_NULL:
+                normalizedValue = null;
+                break;
+            case DataType.TYPE_STRING:
+                if (dataType === DataType.TYPE_STRING2) {
+                    normalizedType = DataType.TYPE_STRING;
+                }
+                if (typeof normalizedValue === 'string' && normalizedValue.startsWith('=')) {
+                    this.getStyle().setQuotePrefix(true);
+                }
+                if (typeof normalizedValue === 'string' && normalizedValue.startsWith("'")) {
+                    this.getStyle().setQuotePrefix(true);
+                    normalizedValue = normalizedValue.slice(1);
+                }
+                normalizedValue = Cell.#checkString(normalizedValue, preserveCr);
+                break;
+            case DataType.TYPE_INLINE:
+                normalizedValue = Cell.#checkString(normalizedValue, preserveCr);
+                break;
+            case DataType.TYPE_NUMERIC:
+                if (normalizedValue === null) {
+                    normalizedValue = 0;
+                    break;
+                }
+                if (typeof normalizedValue === 'boolean') {
+                    normalizedValue = normalizedValue ? 1 : 0;
+                    break;
+                }
+                if (typeof normalizedValue !== 'number' && typeof normalizedValue !== 'string') {
+                    throw new Error('Value is not numeric.');
+                }
+                if (typeof normalizedValue === 'string' && normalizedValue.trim() === '') {
+                    throw new Error('Value is not numeric.');
+                }
+                const numericValue = Number(normalizedValue);
+                if (!Number.isFinite(numericValue)) {
+                    throw new Error('Value is not numeric.');
+                }
+                normalizedValue = numericValue;
+                break;
+            case DataType.TYPE_FORMULA:
+                normalizedValue = normalizedValue === null ? '' : String(normalizedValue);
+                break;
+            case DataType.TYPE_BOOL:
+                normalizedValue = Boolean(normalizedValue);
+                break;
+            case DataType.TYPE_ISO_DATE:
+                normalizedValue = convertIsoDate(normalizedValue);
+                normalizedType = DataType.TYPE_NUMERIC;
+                break;
+            case DataType.TYPE_DRAWING_IN_CELL:
+                if (!Cell.#isDrawingInCell(normalizedValue)) {
+                    throw new Error('Value is not a valid drawing for a cell.');
+                }
+                break;
+            case DataType.TYPE_ERROR:
+                normalizedValue = Cell.#checkErrorCode(normalizedValue);
+                break;
+            default:
+                throw new Error(`Invalid data type '${dataType}'.`);
+        }
+
+        this.#value = normalizedValue;
+        this.#dataType = normalizedType;
         this.#calculatedValue = undefined;
+
+        const worksheet = this.#worksheet;
+        if (worksheet) {
+            const oldText = oldValue === null || oldValue === undefined ? '' : String(oldValue);
+            const newText = normalizedValue === null || normalizedValue === undefined ? '' : String(normalizedValue);
+            if (oldText.toLowerCase() !== newText.toLowerCase()) {
+                const tables = worksheet.getTables();
+                const [cellCol, cellRow] = Coordinate.indexesFromString(this.getCoordinate());
+                for (const table of tables) {
+                    const boundaries = table.getRangeBoundaries();
+                    const [[minCol, minRow], [maxCol, maxRow]] = boundaries;
+                    if (cellCol >= minCol && cellCol <= maxCol && cellRow >= minRow && cellRow <= maxRow) {
+                        if (cellRow === minRow) {
+                            table.updateColumnName(oldText, newText);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        return this;
+    }
+
+    static #checkString(value: unknown, preserveCr: boolean = false): string {
+        let stringValue = value === null || value === undefined ? '' : String(value);
+        if (!preserveCr) {
+            stringValue = stringValue.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        }
+        if (stringValue.length > 32767) {
+            stringValue = stringValue.slice(0, 32767);
+        }
+        return stringValue;
+    }
+
+    static #checkErrorCode(value: unknown): string {
+        if (isError(value)) {
+            return String(value);
+        }
+        if (typeof value === 'string' && value.toUpperCase() === '#CALC!') {
+            return '#CALC!';
+        }
+        return '#NULL!';
+    }
+
+    static #isDrawingInCell(value: unknown): value is { getImageIndex: () => number; getCoordinates: () => string } {
+        if (!value || typeof value !== 'object') {
+            return false;
+        }
+        const candidate = value as { getImageIndex?: unknown; getCoordinates?: unknown };
+        return typeof candidate.getImageIndex === 'function' && typeof candidate.getCoordinates === 'function';
     }
 
     /**

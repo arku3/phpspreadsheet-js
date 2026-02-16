@@ -11,4 +11,14 @@ export interface IValueBinder {
      * @param value Value to bind in cell
      */
     bindValue(cell: Cell, value: any): boolean;
+
+    /**
+     * Get preserve CR flag.
+     */
+    getPreserveCr(): boolean;
+
+    /**
+     * Set preserve CR flag.
+     */
+    setPreserveCr(preserveCr: boolean): void;
 }

@@ -7,6 +7,15 @@ import type { IValueBinder } from './i-value-binder.ts';
  */
 export class DefaultValueBinder implements IValueBinder {
     private static readonly FIFTEEN_NINES = 999_999_999_999_999;
+    #preserveCr: boolean = false;
+
+    public getPreserveCr(): boolean {
+        return this.#preserveCr;
+    }
+
+    public setPreserveCr(preserveCr: boolean): void {
+        this.#preserveCr = preserveCr;
+    }
 
     /**
      * Bind value to a cell.
