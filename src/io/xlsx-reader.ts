@@ -1747,6 +1747,128 @@ export class XlsxReader implements IReader {
         return font;
     }
 
+    static #parseTitleLayout(chartXml: string): ChartLayout | null {
+        const titleMatch = chartXml.match(/<c:title\b[^>]*>([\s\S]*?)<\/c:title>/);
+        if (!titleMatch || !titleMatch[1]) {
+            return null;
+        }
+
+        const titleInner = titleMatch[1];
+        const layoutMatch = XlsxReader.#matchFirstXmlElement(titleInner, 'c:layout');
+        if (!layoutMatch) {
+            return null;
+        }
+
+        const manualLayoutMatch = XlsxReader.#matchFirstXmlElement(layoutMatch.inner, 'c:manualLayout');
+        if (!manualLayoutMatch) {
+            return null;
+        }
+
+        const manualLayoutInner = manualLayoutMatch.inner;
+        const layoutTargetRaw = manualLayoutInner.match(/<c:layoutTarget\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const xModeRaw = manualLayoutInner.match(/<c:xMode\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const yModeRaw = manualLayoutInner.match(/<c:yMode\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const xRaw = manualLayoutInner.match(/<c:x\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const yRaw = manualLayoutInner.match(/<c:y\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const wRaw = manualLayoutInner.match(/<c:w\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+        const hRaw = manualLayoutInner.match(/<c:h\b[^>]*\bval="([^"]*)"/)?.[1] ?? null;
+
+        const layout: ChartLayout = {};
+
+        if (layoutTargetRaw !== null) {
+            layout.layoutTarget = XlsxReader.decodeXmlEntities(layoutTargetRaw) as ChartLayout['layoutTarget'];
+        }
+        if (xModeRaw !== null) {
+            layout.xMode = XlsxReader.decodeXmlEntities(xModeRaw) as ChartLayout['xMode'];
+        }
+        if (yModeRaw !== null) {
+            layout.yMode = XlsxReader.decodeXmlEntities(yModeRaw) as ChartLayout['yMode'];
+        }
+
+        const x = XlsxReader.#parseXsdFloat(xRaw);
+        if (x !== null) {
+            layout.x = x;
+        }
+        const y = XlsxReader.#parseXsdFloat(yRaw);
+        if (y !== null) {
+            layout.y = y;
+        }
+        const w = XlsxReader.#parseXsdFloat(wRaw);
+        if (w !== null) {
+            layout.w = w;
+        }
+        const h = XlsxReader.#parseXsdFloat(hRaw);
+        if (h !== null) {
+            layout.h = h;
+        }
+
+        return layout;
+    }
+
+    static #parseChartTitleFontFromTxPr(chartXml: string): Font | null {
+        const titleMatch = chartXml.match(/<c:title\b[^>]*>([\s\S]*?)<\/c:title>/);
+        if (!titleMatch || !titleMatch[1]) {
+            return null;
+        }
+
+        const titleInner = titleMatch[1];
+        const txPrMatch = titleInner.match(/<c:txPr\b[^>]*>([\s\S]*?)<\/c:txPr>/);
+        if (!txPrMatch || !txPrMatch[1]) {
+            return null;
+        }
+
+        const txPrInner = txPrMatch[1];
+        const defRPrMatch = txPrInner.match(/<a:defRPr\b([^>]*)>([\s\S]*?)<\/a:defRPr>/);
+        if (!defRPrMatch || defRPrMatch[2] === undefined) {
+            return null;
+        }
+
+        const rPrAttrs = defRPrMatch[1] ?? '';
+        const rPrInner = defRPrMatch[2];
+        const font = new Font();
+
+        const rFontMatch = rPrInner.match(/<a:rFont\b[^>]*\bval="([^"]*)"/);
+        const latinMatch = rPrInner.match(/<a:latin\b[^>]*\btypeface="([^"]*)"/);
+        const fontName = rFontMatch?.[1] ?? latinMatch?.[1];
+        if (fontName) {
+            font.setName(XlsxReader.decodeXmlEntities(fontName));
+        }
+
+        const szAttr = XlsxReader.#extractXmlAttribute(rPrAttrs, 'sz');
+        const szElement = rPrInner.match(/<a:sz\b[^>]*\bval="([^"]*)"/);
+        const szRaw = szAttr ?? szElement?.[1] ?? null;
+        if (szRaw !== null) {
+            const szValue = Number.parseInt(szRaw, 10);
+            if (Number.isFinite(szValue) && szValue > 0) {
+                font.setSize(szValue / 100);
+            }
+        }
+
+        if (/<a:b\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'b') === '1') {
+            font.setBold(true);
+        }
+
+        if (/<a:i\b[^>]*>/.test(rPrInner) || XlsxReader.#extractXmlAttribute(rPrAttrs, 'i') === '1') {
+            font.setItalic(true);
+        }
+
+        const solidFillMatch = rPrInner.match(/<a:solidFill\b[^>]*>([\s\S]*?)<\/a:solidFill>/);
+        if (solidFillMatch && solidFillMatch[1]) {
+            const solidFillInner = solidFillMatch[1];
+            const srgbClrMatch = solidFillInner.match(/<a:srgbClr\b[^>]*\bval="([^"]*)"/);
+            if (srgbClrMatch && srgbClrMatch[1]) {
+                const colorValue = srgbClrMatch[1];
+                if (colorValue.length === 6) {
+                    font.getColor().setARGB(`FF${colorValue.toUpperCase()}`);
+                } else if (colorValue.length === 8) {
+                    font.getColor().setARGB(colorValue.toUpperCase());
+                }
+            }
+        }
+
+        return font;
+    }
+
     static #parseLegendTextFont(legendInner: string): Font | null {
         const txPrMatch = legendInner.match(/<c:txPr\b[^>]*>([\s\S]*?)<\/c:txPr>/);
         if (!txPrMatch || !txPrMatch[1]) {
@@ -3741,6 +3863,14 @@ export class XlsxReader implements IReader {
                         if (titleCellReference) {
                             const chartTitle = new Title(titleText ?? '');
                             chartTitle.setCellReference(titleCellReference);
+                            const titleFont = XlsxReader.#parseChartTitleFontFromTxPr(chartXml);
+                            if (titleFont) {
+                                chartTitle.setFont(titleFont);
+                            }
+                            const titleLayout = XlsxReader.#parseTitleLayout(chartXml);
+                            if (titleLayout) {
+                                chartTitle.setLayout(titleLayout);
+                            }
                             chart.setTitle(chartTitle);
                         }
                         const titleFont = XlsxReader.#parseChartTitleFontFromChart(chartXml);

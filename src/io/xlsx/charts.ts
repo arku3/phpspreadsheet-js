@@ -778,6 +778,38 @@ function writePlotAreaLayout(parent: any, layout: ChartLayout | null): void {
     }
 }
 
+function writeTitleLayout(parent: any, layout: ChartLayout | null): void {
+    if (!layout) {
+        parent.ele('c:layout');
+        return;
+    }
+
+    const layoutElement = parent.ele('c:layout');
+    const manualLayout = layoutElement.ele('c:manualLayout');
+
+    if (layout.layoutTarget) {
+        manualLayout.ele('c:layoutTarget', { val: layout.layoutTarget });
+    }
+    if (layout.xMode) {
+        manualLayout.ele('c:xMode', { val: layout.xMode });
+    }
+    if (layout.yMode) {
+        manualLayout.ele('c:yMode', { val: layout.yMode });
+    }
+    if (layout.x !== null && layout.x !== undefined) {
+        manualLayout.ele('c:x', { val: String(layout.x) });
+    }
+    if (layout.y !== null && layout.y !== undefined) {
+        manualLayout.ele('c:y', { val: String(layout.y) });
+    }
+    if (layout.w !== null && layout.w !== undefined) {
+        manualLayout.ele('c:w', { val: String(layout.w) });
+    }
+    if (layout.h !== null && layout.h !== undefined) {
+        manualLayout.ele('c:h', { val: String(layout.h) });
+    }
+}
+
 const resolveCellReferenceValue = (
     cellReference: string,
     worksheet: Worksheet | null,
@@ -816,6 +848,8 @@ function writeChartTitle(chartElement: any, chart: Chart, worksheet: Worksheet |
 
     const titleElement = chartElement.ele('c:title');
 
+    const titleFont = title?.getFont() ?? chart.getTitleFont();
+
     if (title && title.isFormulaBased()) {
         const tx = titleElement.ele('c:tx');
         const strRef = tx.ele('c:strRef');
@@ -829,6 +863,34 @@ function writeChartTitle(chartElement: any, chart: Chart, worksheet: Worksheet |
                 strCache.ele('c:pt', { idx: '0' }).ele('c:v').txt(value);
             }
         }
+
+        if (titleFont) {
+            const txPr = titleElement.ele('c:txPr');
+            txPr.ele('a:bodyPr');
+            txPr.ele('a:lstStyle');
+            const p = txPr.ele('a:p');
+            const pPr = p.ele('a:pPr');
+            const defRPr = pPr.ele('a:defRPr');
+            const fontName = titleFont.getName();
+            if (fontName) {
+                defRPr.ele('a:rFont', { val: fontName });
+            }
+            const fontSize = titleFont.getSize();
+            if (fontSize) {
+                defRPr.ele('a:sz', { val: String(fontSize * 100) });
+            }
+            if (titleFont.getBold()) {
+                defRPr.ele('a:b');
+            }
+            if (titleFont.getItalic()) {
+                defRPr.ele('a:i');
+            }
+            const fontColor = titleFont.getColor().getARGB();
+            if (fontColor) {
+                const solidFill = defRPr.ele('a:solidFill');
+                solidFill.ele('a:srgbClr', { val: fontColor.substring(2) });
+            }
+        }
     } else {
         const text = title ? title.getCaptionText() : titleText;
         const tx = titleElement.ele('c:tx');
@@ -838,7 +900,6 @@ function writeChartTitle(chartElement: any, chart: Chart, worksheet: Worksheet |
         const p = rich.ele('a:p');
         const r = p.ele('a:r');
 
-        const titleFont = chart.getTitleFont();
         if (titleFont) {
             const rPr = r.ele('a:rPr');
             const fontName = titleFont.getName();
@@ -867,7 +928,7 @@ function writeChartTitle(chartElement: any, chart: Chart, worksheet: Worksheet |
         }
     }
 
-    titleElement.ele('c:layout');
+    writeTitleLayout(titleElement, title?.getLayout() ?? null);
     titleElement.ele('c:overlay', { val: title?.getOverlay() ? '1' : '0' });
 }
 

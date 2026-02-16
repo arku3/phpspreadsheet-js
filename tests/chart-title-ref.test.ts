@@ -3,6 +3,7 @@ import unzipper from 'unzipper';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
+import { Font } from '../src/style/font.ts';
 import { Chart } from '../src/worksheet/chart/chart.ts';
 import { DataSeriesValues } from '../src/worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../src/worksheet/chart/data-series.ts';
@@ -34,6 +35,11 @@ describe('Chart title cell reference', () => {
 
         const title = new Title('Chart Title Value');
         title.setCellReference("'Sheet1'!$A$1");
+        const titleFont = new Font();
+        titleFont.setName('Calibri');
+        titleFont.setSize(12);
+        titleFont.setBold(true);
+        title.setFont(titleFont);
         chart.setTitle(title);
 
         const series = new DataSeries('bar');
@@ -58,5 +64,8 @@ describe('Chart title cell reference', () => {
         const readChart = readWorksheet!.getChartCollection()[0];
         expect(readChart).toBeDefined();
         expect(readChart!.getTitle()?.getCellReference()).toBe("'Sheet1'!$A$1");
+        expect(readChart!.getTitle()?.getFont()?.getName()).toBe('Calibri');
+        expect(readChart!.getTitle()?.getFont()?.getSize()).toBe(12);
+        expect(readChart!.getTitle()?.getFont()?.getBold()).toBe(true);
     });
 });

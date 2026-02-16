@@ -1,4 +1,5 @@
 import { RichText } from '../../rich-text/rich-text.ts';
+import { Font } from '../../style/font.ts';
 import type { ChartLayout } from './chart.ts';
 
 /**
@@ -20,6 +21,11 @@ export class Title {
      * Title layout configuration.
      */
     #layout: ChartLayout | null = null;
+
+    /**
+     * Title font styling.
+     */
+    #font: Font | null = null;
 
     /**
      * Allow overlay of other elements.
@@ -149,6 +155,21 @@ export class Title {
      */
     public setLayout(layout: ChartLayout | null): this {
         this.#layout = layout;
+        return this;
+    }
+
+    /**
+     * Get title font.
+     */
+    public getFont(): Font | null {
+        return this.#font;
+    }
+
+    /**
+     * Set title font.
+     */
+    public setFont(font: Font | null): this {
+        this.#font = font;
         return this;
     }
 
