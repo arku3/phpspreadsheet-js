@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { NamedFormula } from '../../src/core/named-formula.ts';
 import { NamedRange } from '../../src/core/named-range.ts';
 import { Spreadsheet } from '../../src/core/spreadsheet.ts';
+import { Chart } from '../../src/worksheet/chart/chart.ts';
+import { Drawing } from '../../src/worksheet/drawing/drawing.ts';
 
 describe('Spreadsheet core parity', () => {
     test('getSheet bounds errors match PHP messages', () => {
@@ -79,6 +81,32 @@ describe('Spreadsheet core parity', () => {
         expect(() => spreadsheet.setIndexByName('Worksheet 1', 99)).toThrow('Position is out of bounds.');
     });
 
+    test('macro and ribbon APIs behave like PHP', () => {
+        const spreadsheet = new Spreadsheet();
+
+        expect(spreadsheet.hasMacros()).toBe(false);
+        spreadsheet.setMacrosCode('macro');
+        expect(spreadsheet.hasMacros()).toBe(true);
+        expect(spreadsheet.getMacrosCode()).toBe('macro');
+
+        spreadsheet.setMacrosCertificate('cert');
+        expect(spreadsheet.hasMacrosCertificate()).toBe(true);
+        expect(spreadsheet.getMacrosCertificate()).toBe('cert');
+
+        spreadsheet.discardMacros();
+        expect(spreadsheet.hasMacros()).toBe(false);
+        expect(spreadsheet.getMacrosCode()).toBeNull();
+
+        spreadsheet.setRibbonXMLData('customUI.xml', '<customUI/>');
+        expect(spreadsheet.hasRibbon()).toBe(true);
+        expect(spreadsheet.getRibbonXMLData('target')).toBe('customUI.xml');
+        expect(spreadsheet.getRibbonXMLData('data')).toBe('<customUI/>');
+
+        spreadsheet.setRibbonBinObjects(['foo.bin'], { 'foo.bin': new Uint8Array() });
+        expect(spreadsheet.hasRibbonBinObjects()).toBe(true);
+        expect(spreadsheet.getRibbonBinObjects('types')).toEqual(['bin']);
+    });
+
     test('addExternalSheet rebinds worksheet parent', () => {
         const source = new Spreadsheet();
         const sheet = source.getActiveSheet();
@@ -126,5 +154,28 @@ describe('Spreadsheet core parity', () => {
         expect(Object.keys(cloneSheet.getMergeCells())).toContain('B2:C3');
         expect(cloneSheet.getRowDimension(2).getRowHeight()).toBe(20);
         expect(cloneSheet.getColumnDimension('B').getWidth()).toBe(12);
+    });
+
+    test('copy clones drawings and charts', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        const drawing = new Drawing();
+        drawing.setName('Logo').setCoordinates('A1');
+        sheet.addDrawing(drawing);
+
+        const chart = new Chart();
+        chart.setName('Chart1').setTopLeftPosition({ cell: 'B2' });
+        sheet.addChart(chart);
+
+        const clone = spreadsheet.copy();
+        const cloneSheet = clone.getActiveSheet();
+
+        const drawings = cloneSheet.getDrawingCollection();
+        const charts = cloneSheet.getChartCollection();
+        expect(drawings.length).toBe(1);
+        expect(drawings[0]!.getName()).toBe('Logo');
+        expect(charts.length).toBe(1);
+        expect(charts[0]!.getName()).toBe('Chart1');
     });
 });

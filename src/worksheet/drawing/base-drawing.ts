@@ -232,6 +232,32 @@ export class BaseDrawing {
         return this;
     }
 
+    public clone(): BaseDrawing {
+        const drawing = new BaseDrawing();
+        drawing
+            .setName(this.getName())
+            .setDescription(this.getDescription())
+            .setCoordinates(this.getCoordinates())
+            .setOffsetX(this.getOffsetX())
+            .setOffsetY(this.getOffsetY())
+            .setWidth(this.getWidth())
+            .setHeight(this.getHeight());
+
+        if (this.getCoordinates2()) {
+            drawing
+                .setCoordinates2(this.getCoordinates2())
+                .setOffsetX2(this.getOffsetX2())
+                .setOffsetY2(this.getOffsetY2());
+        }
+
+        const hyperlink = this.getHyperlink();
+        if (hyperlink) {
+            drawing.setHyperlink(new Hyperlink(hyperlink.getUrl(), hyperlink.getLocation(), hyperlink.getTooltip()));
+        }
+
+        return drawing;
+    }
+
     static #normalizeCoordinate(cellCoordinate: string): string {
         const coordinate = cellCoordinate.toUpperCase();
         if (Coordinate.coordinateIsRange(coordinate)) {

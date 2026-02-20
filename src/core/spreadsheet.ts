@@ -32,6 +32,12 @@ export class Spreadsheet {
     #security: Security;
     #theme: Theme;
     #defaultCacheStrategy: CellCache | null = null;
+    #hasMacros: boolean = false;
+    #macrosCode: string | null = null;
+    #macrosCertificate: string | null = null;
+    #ribbonXMLData: { target: string; data: string } | null = null;
+    #ribbonBinObjects: { names: unknown; data: Record<string, unknown> } | null = null;
+    #unparsedLoadedData: unknown[] = [];
 
     // Workbook view properties
     #autoFilterDateGrouping: boolean = true;
@@ -58,6 +64,113 @@ export class Spreadsheet {
         // Create the default style
         this.addCellXf(new Style());
         this.addCellStyleXf(new Style());
+    }
+
+    public hasMacros(): boolean {
+        return this.#hasMacros;
+    }
+
+    public setHasMacros(hasMacros: boolean): void {
+        this.#hasMacros = Boolean(hasMacros);
+    }
+
+    public setMacrosCode(macroCode: string | null): void {
+        this.#macrosCode = macroCode;
+        this.setHasMacros(macroCode !== null);
+    }
+
+    public getMacrosCode(): string | null {
+        return this.#macrosCode;
+    }
+
+    public setMacrosCertificate(certificate: string | null): void {
+        this.#macrosCertificate = certificate;
+    }
+
+    public hasMacrosCertificate(): boolean {
+        return this.#macrosCertificate !== null;
+    }
+
+    public getMacrosCertificate(): string | null {
+        return this.#macrosCertificate;
+    }
+
+    public discardMacros(): void {
+        this.#hasMacros = false;
+        this.#macrosCode = null;
+        this.#macrosCertificate = null;
+    }
+
+    public setRibbonXMLData(target: string | null, xmlData: string | null): void {
+        if (target !== null && xmlData !== null) {
+            this.#ribbonXMLData = { target, data: xmlData };
+        } else {
+            this.#ribbonXMLData = null;
+        }
+    }
+
+    public getRibbonXMLData(what: 'all' | 'target' | 'data' = 'all'): null | { target: string; data: string } | string {
+        const normalized = what.toLowerCase();
+        if (normalized === 'all') {
+            return this.#ribbonXMLData;
+        }
+        if ((normalized === 'target' || normalized === 'data') && this.#ribbonXMLData) {
+            return this.#ribbonXMLData[normalized];
+        }
+        return null;
+    }
+
+    public setRibbonBinObjects(binObjectsNames: unknown, binObjectsData: Record<string, unknown> | null): void {
+        if (binObjectsNames !== null && binObjectsData !== null) {
+            this.#ribbonBinObjects = { names: binObjectsNames, data: binObjectsData };
+        } else {
+            this.#ribbonBinObjects = null;
+        }
+    }
+
+    public getRibbonBinObjects(what: 'all' | 'names' | 'data' | 'types' = 'all'): unknown {
+        const normalized = what.toLowerCase();
+        if (normalized === 'all') {
+            return this.#ribbonBinObjects;
+        }
+        if (normalized === 'names' || normalized === 'data') {
+            return this.#ribbonBinObjects?.[normalized] ?? null;
+        }
+        if (normalized === 'types') {
+            if (!this.#ribbonBinObjects?.data) {
+                return [];
+            }
+            const keys = Object.keys(this.#ribbonBinObjects.data);
+            const types = new Set(keys.map((key) => key.split('.').pop() ?? ''));
+            types.delete('');
+            return Array.from(types);
+        }
+        return null;
+    }
+
+    public hasRibbon(): boolean {
+        return this.#ribbonXMLData !== null;
+    }
+
+    public hasRibbonBinObjects(): boolean {
+        return this.#ribbonBinObjects !== null;
+    }
+
+    public hasInCellDrawings(): boolean {
+        for (const sheet of this.#workSheetCollection) {
+            if (sheet.getDrawingCollection().length > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public getUnparsedLoadedData(): unknown[] {
+        return this.#unparsedLoadedData;
+    }
+
+    public setUnparsedLoadedData(unparsedLoadedData: unknown[]): void {
+        this.#unparsedLoadedData = unparsedLoadedData;
     }
 
     /**
@@ -594,6 +707,14 @@ export class Spreadsheet {
         clone.#tabRatio = this.#tabRatio;
         clone.#visibility = this.#visibility;
         clone.#defaultCacheStrategy = this.#defaultCacheStrategy;
+        clone.#hasMacros = this.#hasMacros;
+        clone.#macrosCode = this.#macrosCode;
+        clone.#macrosCertificate = this.#macrosCertificate;
+        clone.#ribbonXMLData = this.#ribbonXMLData ? { ...this.#ribbonXMLData } : null;
+        clone.#ribbonBinObjects = this.#ribbonBinObjects
+            ? { names: this.#ribbonBinObjects.names, data: { ...this.#ribbonBinObjects.data } }
+            : null;
+        clone.#unparsedLoadedData = [...this.#unparsedLoadedData];
 
         clone.#workSheetCollection = [];
         for (const worksheet of this.#workSheetCollection) {
@@ -611,6 +732,10 @@ export class Spreadsheet {
             newSheet.setShowGridlines(worksheet.getShowGridlines());
             newSheet.setShowRowColHeaders(worksheet.getShowRowColHeaders());
             newSheet.setRightToLeft(worksheet.getRightToLeft());
+            newSheet.setPageSetup(worksheet.getPageSetup());
+            newSheet.setPageMargins(worksheet.getPageMargins());
+            newSheet.setHeaderFooter(worksheet.getHeaderFooter());
+            newSheet.setSheetView(worksheet.getSheetView());
 
             for (const cell of worksheet.getCellCollection().getCells()) {
                 newSheet.setCellValueExplicit(cell.getCoordinate(), cell.getValue(), cell.getDataType());
@@ -646,6 +771,14 @@ export class Spreadsheet {
                 if (xfIndex !== null) {
                     dimension.setXfIndex(xfIndex);
                 }
+            }
+
+            for (const drawing of worksheet.getDrawingCollection()) {
+                newSheet.addDrawing(drawing.clone());
+            }
+
+            for (const chart of worksheet.getChartCollection()) {
+                newSheet.addChart(chart.clone());
             }
 
             clone.#workSheetCollection.push(newSheet);
@@ -1097,7 +1230,7 @@ export class Spreadsheet {
      */
     public removeSheetByIndex(index: number): void {
         const numSheets = this.#workSheetCollection.length;
-        if (index > numSheets - 1) {
+        if (index < 0 || index > numSheets - 1) {
             throw new Error(
                 `You tried to remove a sheet by the out of bounds index: ${index}. The actual number of sheets is ${numSheets}.`,
             );

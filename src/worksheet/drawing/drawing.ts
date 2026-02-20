@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { Hyperlink } from '../../core/hyperlink.ts';
 import { BaseDrawing } from './base-drawing.ts';
 
 /**
@@ -86,6 +87,39 @@ export class Drawing extends BaseDrawing {
     public setExtension(extension: string): this {
         this.#extension = extension;
         return this;
+    }
+
+    public override clone(): Drawing {
+        const drawing = new Drawing();
+        drawing
+            .setName(this.getName())
+            .setDescription(this.getDescription())
+            .setCoordinates(this.getCoordinates())
+            .setOffsetX(this.getOffsetX())
+            .setOffsetY(this.getOffsetY())
+            .setWidth(this.getWidth())
+            .setHeight(this.getHeight());
+
+        if (this.getCoordinates2()) {
+            drawing
+                .setCoordinates2(this.getCoordinates2())
+                .setOffsetX2(this.getOffsetX2())
+                .setOffsetY2(this.getOffsetY2());
+        }
+
+        const hyperlink = this.getHyperlink();
+        if (hyperlink) {
+            drawing.setHyperlink(new Hyperlink(hyperlink.getUrl(), hyperlink.getLocation(), hyperlink.getTooltip()));
+        }
+
+        if (this.#path) {
+            drawing.setPath(this.#path, this.#mimeType, this.#extension);
+        }
+        if (this.#imageData) {
+            drawing.setImageData(this.#imageData, this.#mimeType, this.#extension);
+        }
+
+        return drawing;
     }
 
     #inferExtensionFromPath(filePath: string): string {

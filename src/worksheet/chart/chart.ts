@@ -900,6 +900,62 @@ export class Chart {
         return this;
     }
 
+    public clone(): Chart {
+        const chart = new Chart();
+        chart
+            .setName(this.getName())
+            .setTopLeftPosition(this.getTopLeftPosition())
+            .setBottomRightPosition(this.getBottomRightPosition())
+            .setChartXmlPath(this.getChartXmlPath())
+            .setTitleText(this.getTitleText())
+            .setTitle(this.getTitle())
+            .setTitleFont(this.getTitleFont())
+            .setXAxisTitle(this.getXAxisTitle())
+            .setXAxisTitleFont(this.getXAxisTitleFont())
+            .setYAxisTitle(this.getYAxisTitle())
+            .setYAxisTitleFont(this.getYAxisTitleFont())
+            .setXAxisMajorGridlines(this.getXAxisMajorGridlines())
+            .setXAxisMajorGridlineStyle(this.getXAxisMajorGridlineStyle())
+            .setXAxisMinorGridlines(this.getXAxisMinorGridlines())
+            .setXAxisMinorGridlineStyle(this.getXAxisMinorGridlineStyle())
+            .setYAxisMajorGridlines(this.getYAxisMajorGridlines())
+            .setYAxisMajorGridlineStyle(this.getYAxisMajorGridlineStyle())
+            .setYAxisMinorGridlines(this.getYAxisMinorGridlines())
+            .setYAxisMinorGridlineStyle(this.getYAxisMinorGridlineStyle())
+            .setSeries([...this.getSeries()])
+            .setPlotArea([...this.getPlotArea()])
+            .setPlotAreaLayout(this.getPlotAreaLayout())
+            .setChartAreaNoFill(this.getChartAreaNoFill())
+            .setChartAreaNoBorder(this.getChartAreaNoBorder())
+            .setChartAreaFillColor(this.getChartAreaFillColor())
+            .setChartAreaBorderStyle(this.getChartAreaBorderStyle())
+            .setChartAreaEffects(this.getChartAreaEffects())
+            .setPlotAreaNoFill(this.getPlotAreaNoFill())
+            .setPlotAreaGradientStops([...this.getPlotAreaGradientStops()])
+            .setPlotAreaGradientAngle(this.getPlotAreaGradientAngle())
+            .setRotX(this.getRotX())
+            .setRotY(this.getRotY())
+            .setRAngAx(this.getRAngAx())
+            .setPerspective(this.getPerspective())
+            .setSerAxisId(this.getSerAxisId())
+            .setXAxis(this.getXAxis())
+            .setYAxis(this.getYAxis());
+
+        const legendPosition = this.getLegendPosition();
+        if (legendPosition) {
+            chart.setLegendPosition(legendPosition as LegendPosition);
+        }
+        const legendTitle = this.getLegendTitle();
+        if (legendTitle) {
+            chart.setLegendTitle(legendTitle);
+        }
+        chart.setLegendOverlay(this.getLegendOverlay());
+        chart.setLegendObject(this.getLegend());
+        chart.setModel(this.getModel());
+
+        return chart;
+    }
+
     static #normalizePosition(position: ChartPosition): Required<ChartPosition> {
         return {
             cell: Chart.#normalizeCoordinate(position.cell),

@@ -610,7 +610,11 @@ export class Worksheet {
      * Set title.
      */
     public setTitle(title: string, _updateFormulaCellReferences: boolean = true, _validate: boolean = true): this {
+        const previousTitle = this.#title;
         this.#title = title;
+        if (this.#codeName === null || this.#codeName === previousTitle) {
+            this.setCodeName(title);
+        }
         return this;
     }
 
@@ -1086,6 +1090,14 @@ export class Worksheet {
      */
     public getSheetView(): SheetView {
         return this.#sheetView;
+    }
+
+    /**
+     * Set sheet view.
+     */
+    public setSheetView(sheetView: SheetView): this {
+        this.#sheetView = sheetView;
+        return this;
     }
 
     /**
