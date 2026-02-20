@@ -244,8 +244,8 @@ describe('Core Module Parity Fixes', () => {
     describe('Worksheet Management', () => {
         it('should check if sheet name exists', () => {
             const spreadsheet = new Spreadsheet();
-            spreadsheet.createSheet('Sheet1');
-            spreadsheet.createSheet('Sheet2');
+            spreadsheet.createSheet().setTitle('Sheet1');
+            spreadsheet.createSheet().setTitle('Sheet2');
 
             expect(spreadsheet.sheetNameExists('Sheet1')).toBe(true);
             expect(spreadsheet.sheetNameExists('Sheet2')).toBe(true);
@@ -254,9 +254,9 @@ describe('Core Module Parity Fixes', () => {
 
         it('should get all sheet names', () => {
             const spreadsheet = new Spreadsheet();
-            spreadsheet.createSheet('Alpha');
-            spreadsheet.createSheet('Beta');
-            spreadsheet.createSheet('Gamma');
+            spreadsheet.createSheet().setTitle('Alpha');
+            spreadsheet.createSheet().setTitle('Beta');
+            spreadsheet.createSheet().setTitle('Gamma');
 
             const names = spreadsheet.getSheetNames();
             expect(names).toContain('Alpha');
@@ -266,9 +266,9 @@ describe('Core Module Parity Fixes', () => {
 
         it('should remove sheet by index', () => {
             const spreadsheet = new Spreadsheet();
-            spreadsheet.createSheet('Sheet1');
-            spreadsheet.createSheet('Sheet2');
-            spreadsheet.createSheet('Sheet3');
+            spreadsheet.createSheet().setTitle('Sheet1');
+            spreadsheet.createSheet().setTitle('Sheet2');
+            spreadsheet.createSheet().setTitle('Sheet3');
 
             // PhpSpreadsheet uses 0-based sheet indices, including the default sheet.
             spreadsheet.removeSheetByIndex(2);
@@ -301,8 +301,8 @@ describe('Core Module Parity Fixes', () => {
 
         it('should set active sheet index', () => {
             const spreadsheet = new Spreadsheet();
-            spreadsheet.createSheet('Sheet1');
-            spreadsheet.createSheet('Sheet2');
+            spreadsheet.createSheet().setTitle('Sheet1');
+            spreadsheet.createSheet().setTitle('Sheet2');
 
             spreadsheet.setActiveSheetIndex(2);
 
@@ -312,8 +312,8 @@ describe('Core Module Parity Fixes', () => {
 
         it('should set active sheet by name', () => {
             const spreadsheet = new Spreadsheet();
-            spreadsheet.createSheet('Target');
-            spreadsheet.createSheet('Other');
+            spreadsheet.createSheet().setTitle('Target');
+            spreadsheet.createSheet().setTitle('Other');
 
             spreadsheet.setActiveSheetIndexByName('Target');
 
@@ -322,7 +322,7 @@ describe('Core Module Parity Fixes', () => {
 
         it('should get sheet by code name', () => {
             const spreadsheet = new Spreadsheet();
-            const sheet = spreadsheet.createSheet('MySheet');
+            const sheet = spreadsheet.createSheet().setTitle('MySheet');
 
             const found = spreadsheet.getSheetByCodeName('MySheet');
 

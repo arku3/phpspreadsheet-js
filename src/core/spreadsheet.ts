@@ -7,6 +7,7 @@ import { Theme } from '../style/theme.ts';
 import { DefaultValueBinder } from './default-value-binder.ts';
 import { DefinedName } from './defined-name.ts';
 import type { IValueBinder } from './i-value-binder.ts';
+import { NamedFormula } from './named-formula.ts';
 import { NamedRange } from './named-range.ts';
 import { Worksheet } from './worksheet.ts';
 
@@ -106,6 +107,26 @@ export class Spreadsheet {
      * Add a defined name.
      */
     public addDefinedName(definedName: DefinedName): void {
+        const nameKey = definedName.getName().toUpperCase();
+        let scopedName = nameKey;
+        if (definedName.getLocalOnly()) {
+            const scope = definedName.getScope() ?? definedName.getWorksheet();
+            if (!scope) {
+                throw new Error('Defined name scope is required for local-only names.');
+            }
+            scopedName = `${scope.getTitle().toUpperCase()}!${nameKey}`;
+        }
+        this.#definedNames = this.#definedNames.filter((item) => {
+            if (definedName.getLocalOnly() !== item.getLocalOnly()) {
+                return true;
+            }
+            if (definedName.getLocalOnly()) {
+                const itemScope = item.getScope() ?? item.getWorksheet();
+                const definedScope = definedName.getScope() ?? definedName.getWorksheet();
+                return !(item.getName().toUpperCase() === nameKey && itemScope === definedScope);
+            }
+            return item.getName().toUpperCase() !== scopedName;
+        });
         this.#definedNames.push(definedName);
     }
 
@@ -113,16 +134,18 @@ export class Spreadsheet {
      * Get a defined name by name.
      */
     public getDefinedName(name: string, worksheet: Worksheet | null = null): DefinedName | undefined {
+        const nameKey = Spreadsheet.#normalizeDefinedName(name).toUpperCase();
         if (worksheet) {
             const local = this.#definedNames.find((dn) => {
-                if (dn.getName() !== name) return false;
+                if (dn.getName().toUpperCase() !== nameKey) return false;
                 if (!dn.getLocalOnly()) return false;
-                return dn.getScope() === worksheet;
+                const scope = dn.getScope() ?? dn.getWorksheet();
+                return scope === worksheet;
             });
             if (local) return local;
         }
 
-        return this.#definedNames.find((dn) => dn.getName() === name && !dn.getLocalOnly());
+        return this.#definedNames.find((dn) => dn.getName().toUpperCase() === nameKey && !dn.getLocalOnly());
     }
 
     /**
@@ -132,6 +155,10 @@ export class Spreadsheet {
         return this.#definedNames.filter((dn) => dn instanceof NamedRange) as NamedRange[];
     }
 
+    public getNamedFormulae(): NamedFormula[] {
+        return this.#definedNames.filter((dn) => dn instanceof NamedFormula) as NamedFormula[];
+    }
+
     /**
      * Add a named range.
      */
@@ -139,12 +166,114 @@ export class Spreadsheet {
         this.addDefinedName(namedRange);
     }
 
+    public addNamedFormula(namedFormula: NamedFormula): void {
+        this.addDefinedName(namedFormula);
+    }
+
     /**
      * Get a named range by name.
      */
     public getNamedRange(name: string, worksheet: Worksheet | null = null): NamedRange | undefined {
-        const dn = this.getDefinedName(name, worksheet);
+        const normalized = Spreadsheet.#normalizeDefinedName(name);
+        if (normalized === '') {
+            return undefined;
+        }
+        const nameKey = normalized.toUpperCase();
+        const global = this.getGlobalDefinedNameByType(nameKey, 'range');
+        const local = this.getLocalDefinedNameByType(nameKey, 'range', worksheet);
+        const dn = local ?? global;
         return dn instanceof NamedRange ? dn : undefined;
+    }
+
+    public getNamedFormula(name: string, worksheet: Worksheet | null = null): NamedFormula | undefined {
+        const normalized = Spreadsheet.#normalizeDefinedName(name);
+        if (normalized === '') {
+            return undefined;
+        }
+        const nameKey = normalized.toUpperCase();
+        const global = this.getGlobalDefinedNameByType(nameKey, 'formula');
+        const local = this.getLocalDefinedNameByType(nameKey, 'formula', worksheet);
+        const dn = local ?? global;
+        return dn instanceof NamedFormula ? dn : undefined;
+    }
+
+    public removeNamedRange(name: string, worksheet: Worksheet | null = null): this {
+        const dn = this.getNamedRange(name, worksheet);
+        if (dn) {
+            this.removeDefinedName(dn.getName(), worksheet);
+        }
+        return this;
+    }
+
+    public removeNamedFormula(name: string, worksheet: Worksheet | null = null): this {
+        const dn = this.getNamedFormula(name, worksheet);
+        if (dn) {
+            this.removeDefinedName(dn.getName(), worksheet);
+        }
+        return this;
+    }
+
+    public removeDefinedName(name: string, worksheet: Worksheet | null = null): this {
+        const nameKey = Spreadsheet.#normalizeDefinedName(name).toUpperCase();
+        if (worksheet) {
+            const beforeCount = this.#definedNames.length;
+            this.#definedNames = this.#definedNames.filter((dn) => {
+                if (!dn.getLocalOnly()) return true;
+                if (dn.getScope() !== worksheet) return true;
+                return dn.getName().toUpperCase() !== nameKey;
+            });
+            if (this.#definedNames.length === beforeCount) {
+                this.#definedNames = this.#definedNames.filter((dn) => {
+                    if (dn.getLocalOnly()) return true;
+                    return dn.getName().toUpperCase() !== nameKey;
+                });
+            }
+            return this;
+        }
+        this.#definedNames = this.#definedNames.filter((dn) => {
+            if (dn.getLocalOnly()) return true;
+            return dn.getName().toUpperCase() !== nameKey;
+        });
+        return this;
+    }
+
+    static #normalizeDefinedName(name: string): string {
+        const trimmed = name.trim();
+        if (trimmed.includes('!')) {
+            const parts = trimmed.split('!');
+            return parts[parts.length - 1] ?? '';
+        }
+        return trimmed;
+    }
+
+    private getGlobalDefinedNameByType(name: string, kind: 'range' | 'formula'): DefinedName | undefined {
+        const dn = this.#definedNames.find((item) => !item.getLocalOnly() && item.getName().toUpperCase() === name);
+        if (!dn) {
+            return undefined;
+        }
+        const isFormula = dn instanceof NamedFormula;
+        return kind === 'formula' ? (isFormula ? dn : undefined) : !isFormula ? dn : undefined;
+    }
+
+    private getLocalDefinedNameByType(
+        name: string,
+        kind: 'range' | 'formula',
+        worksheet: Worksheet | null = null,
+    ): DefinedName | undefined {
+        if (!worksheet) {
+            return undefined;
+        }
+        const dn = this.#definedNames.find((item) => {
+            if (!item.getLocalOnly()) return false;
+            if (item.getName().toUpperCase() !== name) return false;
+            const scope = item.getScope() ?? item.getWorksheet();
+            return scope === worksheet;
+        });
+        if (!dn) {
+            return undefined;
+        }
+        const isFormula = dn instanceof NamedFormula;
+        return kind === 'formula' ? (isFormula ? dn : undefined) : !isFormula ? dn : undefined;
     }
 
     /**
@@ -152,6 +281,10 @@ export class Spreadsheet {
      */
     public getCalculationEngine(): Calculation {
         return this.#calculationEngine;
+    }
+
+    public getCalculationEngineOrNull(): Calculation | null {
+        return this.#calculationEngine ?? null;
     }
 
     /**
@@ -176,16 +309,6 @@ export class Spreadsheet {
      */
     public getSelectedCells(): string {
         return this.getActiveSheet().getSelectedCells();
-    }
-
-    /**
-     * Get sheet by index.
-     */
-    public getSheet(index: number): Worksheet {
-        if (index < 0 || index >= this.#workSheetCollection.length) {
-            throw new Error(`Sheet index ${index} is out of bounds.`);
-        }
-        return this.#workSheetCollection[index]!;
     }
 
     /**
@@ -218,7 +341,7 @@ export class Spreadsheet {
 
         if (this.sheetNameExists(worksheet.getTitle())) {
             throw new Error(
-                `Workbook already contains a worksheet named '${worksheet.getTitle()}'. Rename this worksheet first.`,
+                `Workbook already contains a worksheet named '${worksheet.getTitle()}'. Rename the external sheet first.`,
             );
         }
 
@@ -365,6 +488,278 @@ export class Spreadsheet {
     }
 
     /**
+     * Get all sheets.
+     */
+    public getAllSheets(): Worksheet[] {
+        return this.#workSheetCollection;
+    }
+
+    /**
+     * Get sheet by index.
+     */
+    public getSheet(index: number): Worksheet {
+        if (!this.#workSheetCollection[index]) {
+            const numSheets = this.getSheetCount();
+            throw new Error(
+                `Your requested sheet index: ${index} is out of bounds. The actual number of sheets is ${numSheets}.`,
+            );
+        }
+        return this.#workSheetCollection[index]!;
+    }
+
+    public getSheetByNameOrThrow(name: string): Worksheet {
+        const sheet = this.getSheetByName(name);
+        if (!sheet) {
+            throw new Error(`Workbook does not contain sheet: ${name}`);
+        }
+        return sheet;
+    }
+
+    public getWorksheetIterator(): IterableIterator<Worksheet> {
+        return this.#workSheetCollection[Symbol.iterator]();
+    }
+
+    public copy(): Spreadsheet {
+        const clone = new Spreadsheet();
+
+        const properties = new Properties();
+        properties
+            .setCreator(this.#properties.getCreator())
+            .setLastModifiedBy(this.#properties.getLastModifiedBy())
+            .setCreated(this.#properties.getCreated())
+            .setModified(this.#properties.getModified())
+            .setTitle(this.#properties.getTitle())
+            .setDescription(this.#properties.getDescription())
+            .setSubject(this.#properties.getSubject())
+            .setKeywords(this.#properties.getKeywords())
+            .setCategory(this.#properties.getCategory())
+            .setManager(this.#properties.getManager())
+            .setCompany(this.#properties.getCompany())
+            .setHyperlinkBase(this.#properties.getHyperlinkBase())
+            .setViewport(this.#properties.getViewport());
+        for (const key of this.#properties.getCustomProperties()) {
+            properties.setCustomProperty(
+                key,
+                this.#properties.getCustomPropertyValue(key),
+                this.#properties.getCustomPropertyType(key),
+            );
+        }
+
+        const security = new Security();
+        security
+            .setLockRevision(this.#security.getLockRevision())
+            .setLockStructure(this.#security.getLockStructure())
+            .setLockWindows(this.#security.getLockWindows())
+            .setWorkbookAlgorithmName(this.#security.getWorkbookAlgorithmName())
+            .setWorkbookSpinCount(this.#security.getWorkbookSpinCount())
+            .setWorkbookSaltValue(this.#security.getWorkbookSaltValue(), false)
+            .setRevisionsAlgorithmName(this.#security.getRevisionsAlgorithmName())
+            .setRevisionsSpinCount(this.#security.getRevisionsSpinCount())
+            .setRevisionsSaltValue(this.#security.getRevisionsSaltValue(), false);
+        const workbookHash = this.#security.getWorkbookHashValue();
+        if (workbookHash) {
+            security.setWorkbookPassword(workbookHash, true);
+        }
+        const revisionsHash = this.#security.getRevisionsHashValue();
+        if (revisionsHash) {
+            security.setRevisionsPassword(revisionsHash, true);
+        }
+
+        const theme = new Theme();
+        theme
+            .setThemeColorName(this.#theme.getThemeColorName(), this.#theme.getThemeColors())
+            .setMajorFontValues(
+                this.#theme.getMajorFontLatin(),
+                this.#theme.getMajorFontEastAsian(),
+                this.#theme.getMajorFontComplexScript(),
+                this.#theme.getMajorFontSubstitutions(),
+            )
+            .setMinorFontValues(
+                this.#theme.getMinorFontLatin(),
+                this.#theme.getMinorFontEastAsian(),
+                this.#theme.getMinorFontComplexScript(),
+                this.#theme.getMinorFontSubstitutions(),
+            )
+            .setThemeFontName(this.#theme.getThemeFontName());
+
+        clone.#properties = properties;
+        clone.#security = security;
+        clone.#theme = theme;
+        clone.#autoFilterDateGrouping = this.#autoFilterDateGrouping;
+        clone.#firstSheetIndex = this.#firstSheetIndex;
+        clone.#minimized = this.#minimized;
+        clone.#showHorizontalScroll = this.#showHorizontalScroll;
+        clone.#showSheetTabs = this.#showSheetTabs;
+        clone.#showVerticalScroll = this.#showVerticalScroll;
+        clone.#tabRatio = this.#tabRatio;
+        clone.#visibility = this.#visibility;
+        clone.#defaultCacheStrategy = this.#defaultCacheStrategy;
+
+        clone.#workSheetCollection = [];
+        for (const worksheet of this.#workSheetCollection) {
+            const newSheet = new Worksheet(clone, worksheet.getTitle());
+            if (worksheet.hasCodeName()) {
+                newSheet.setCodeName(worksheet.getCodeName() ?? worksheet.getTitle());
+            }
+            newSheet.setSheetState(worksheet.getSheetState());
+            if (worksheet.isTabColorSet()) {
+                newSheet.getTabColor().setARGB(worksheet.getTabColor().getARGB());
+            }
+            newSheet.setShowSummaryRight(worksheet.getShowSummaryRight());
+            newSheet.setShowSummaryBelow(worksheet.getShowSummaryBelow());
+            newSheet.setPrintGridlines(worksheet.getPrintGridlines());
+            newSheet.setShowGridlines(worksheet.getShowGridlines());
+            newSheet.setShowRowColHeaders(worksheet.getShowRowColHeaders());
+            newSheet.setRightToLeft(worksheet.getRightToLeft());
+
+            for (const cell of worksheet.getCellCollection().getCells()) {
+                newSheet.setCellValueExplicit(cell.getCoordinate(), cell.getValue(), cell.getDataType());
+                newSheet.getCell(cell.getCoordinate()).setXfIndex(cell.getXfIndex());
+            }
+
+            for (const mergeRange of Object.keys(worksheet.getMergeCells())) {
+                newSheet.mergeCells(mergeRange);
+            }
+
+            for (const [rowIndex, rowDimension] of worksheet.getRowDimensions()) {
+                const dimension = newSheet.getRowDimension(rowIndex);
+                dimension.setRowHeight(rowDimension.getRowHeight());
+                dimension.setZeroHeight(rowDimension.getZeroHeight());
+                dimension.setVisible(rowDimension.getVisible());
+                dimension.setOutlineLevel(rowDimension.getOutlineLevel());
+                dimension.setCollapsed(rowDimension.getCollapsed());
+                dimension.setVisibleAfterFilter(rowDimension.getVisibleAfterFilter());
+                const xfIndex = rowDimension.getXfIndex();
+                if (xfIndex !== null) {
+                    dimension.setXfIndex(xfIndex);
+                }
+            }
+
+            for (const [columnKey, columnDimension] of worksheet.getColumnDimensions()) {
+                const dimension = newSheet.getColumnDimension(columnKey);
+                dimension.setWidth(columnDimension.getWidth());
+                dimension.setAutoSize(columnDimension.getAutoSize());
+                dimension.setVisible(columnDimension.getVisible());
+                dimension.setOutlineLevel(columnDimension.getOutlineLevel());
+                dimension.setCollapsed(columnDimension.getCollapsed());
+                const xfIndex = columnDimension.getXfIndex();
+                if (xfIndex !== null) {
+                    dimension.setXfIndex(xfIndex);
+                }
+            }
+
+            clone.#workSheetCollection.push(newSheet);
+        }
+
+        clone.#activeSheetIndex = this.#activeSheetIndex;
+
+        clone.#cellStyleXfCollection = [];
+        for (const style of this.#cellStyleXfCollection) {
+            clone.#cellStyleXfCollection.push(style.clone());
+        }
+
+        clone.#cellXfCollection = [];
+        for (const style of this.#cellXfCollection) {
+            clone.#cellXfCollection.push(style.clone());
+        }
+
+        clone.#cellXfSupervisor = new Style(true);
+        clone.#cellXfSupervisor.bindParent(clone);
+
+        clone.#definedNames = [];
+        for (const definedName of this.#definedNames) {
+            const worksheet = definedName.getWorksheet();
+            const scope = definedName.getScope();
+            const newWorksheet = worksheet ? (clone.getSheetByName(worksheet.getTitle()) ?? null) : null;
+            const newScope = scope ? (clone.getSheetByName(scope.getTitle()) ?? null) : null;
+            let newDefined: DefinedName;
+            if (definedName instanceof NamedRange) {
+                newDefined = new NamedRange(
+                    definedName.getName(),
+                    newWorksheet,
+                    definedName.getValue(),
+                    definedName.getLocalOnly(),
+                    newScope,
+                );
+            } else if (definedName instanceof NamedFormula) {
+                newDefined = new NamedFormula(
+                    definedName.getName(),
+                    newWorksheet,
+                    definedName.getValue(),
+                    definedName.getLocalOnly(),
+                    newScope,
+                );
+            } else {
+                newDefined = new DefinedName(
+                    definedName.getName(),
+                    newWorksheet,
+                    definedName.getValue(),
+                    definedName.getLocalOnly(),
+                    newScope,
+                );
+            }
+            clone.#definedNames.push(newDefined);
+        }
+
+        return clone;
+    }
+
+    public setIndexByName(sheetName: string, newIndex: number): number {
+        const sheet = this.getSheetByNameOrThrow(sheetName);
+        if (newIndex < 0 || newIndex >= this.#workSheetCollection.length) {
+            throw new Error('Position is out of bounds.');
+        }
+        const currentIndex = this.#workSheetCollection.indexOf(sheet);
+        if (currentIndex === -1) {
+            throw new Error('Sheet does not exist.');
+        }
+        this.#workSheetCollection.splice(currentIndex, 1);
+        this.#workSheetCollection.splice(newIndex, 0, sheet);
+        return newIndex;
+    }
+
+    public addExternalSheet(worksheet: Worksheet, index?: number): Worksheet {
+        if (this.sheetNameExists(worksheet.getTitle())) {
+            throw new Error(
+                `Workbook already contains a worksheet named '${worksheet.getTitle()}'. Rename this worksheet first.`,
+            );
+        }
+
+        const externalParent = worksheet.getParent();
+        if (!externalParent) {
+            throw new Error('Worksheet has no parent spreadsheet.');
+        }
+        const cellXfCount = this.#cellXfCollection.length;
+        if (externalParent !== this) {
+            for (const style of externalParent.getCellXfCollection()) {
+                this.addCellXf(style.clone());
+            }
+        }
+
+        worksheet.rebindParent(this);
+
+        if (cellXfCount > 0) {
+            for (const cell of worksheet.getCellCollection().getCells()) {
+                cell.setXfIndex(cell.getXfIndex() + cellXfCount);
+            }
+            for (const rowDimension of worksheet.getRowDimensions().values()) {
+                const xfIndex = rowDimension.getXfIndex();
+                if (xfIndex !== null) {
+                    rowDimension.setXfIndex(xfIndex + cellXfCount);
+                }
+            }
+            for (const columnDimension of worksheet.getColumnDimensions().values()) {
+                const xfIndex = columnDimension.getXfIndex();
+                if (xfIndex !== null) {
+                    columnDimension.setXfIndex(xfIndex + cellXfCount);
+                }
+            }
+        }
+
+        return this.addSheet(worksheet, index);
+    }
+
+    /**
      * Garbage collect.
      */
     public garbageCollect(): void {
@@ -462,8 +857,12 @@ export class Spreadsheet {
     /**
      * Get index of worksheet.
      */
-    public getIndex(worksheet: Worksheet): number {
-        return this.#workSheetCollection.indexOf(worksheet);
+    public getIndex(worksheet: Worksheet, noThrow: boolean = false): number {
+        const index = this.#workSheetCollection.indexOf(worksheet);
+        if (index === -1 && !noThrow) {
+            throw new Error('Sheet does not exist.');
+        }
+        return index;
     }
 
     /**
@@ -664,7 +1063,7 @@ export class Spreadsheet {
      * @returns True if the sheet name exists
      */
     public sheetNameExists(sheetName: string): boolean {
-        return this.#workSheetCollection.some((sheet) => sheet.getTitle() === sheetName);
+        return this.getSheetByName(sheetName) !== undefined;
     }
 
     /**
@@ -683,8 +1082,11 @@ export class Spreadsheet {
      * @returns The worksheet or undefined
      */
     public getSheetByCodeName(codeName: string): Worksheet | undefined {
-        // In PHP this uses a separate codeName property, but we'll use title as fallback
-        return this.getSheetByName(codeName);
+        return this.#workSheetCollection.find((sheet) => sheet.getCodeName() === codeName);
+    }
+
+    public sheetCodeNameExists(codeName: string): boolean {
+        return this.getSheetByCodeName(codeName) !== undefined;
     }
 
     /**
@@ -694,11 +1096,12 @@ export class Spreadsheet {
      * @returns This spreadsheet for chaining
      */
     public removeSheetByIndex(index: number): void {
-        if (index < 0 || index >= this.#workSheetCollection.length) {
-            throw new Error(`Sheet index ${index} is out of bounds.`);
-        }
-
         const numSheets = this.#workSheetCollection.length;
+        if (index > numSheets - 1) {
+            throw new Error(
+                `You tried to remove a sheet by the out of bounds index: ${index}. The actual number of sheets is ${numSheets}.`,
+            );
+        }
         this.#workSheetCollection.splice(index, 1);
 
         if (this.#activeSheetIndex >= index && (this.#activeSheetIndex > 0 || numSheets <= 1)) {
@@ -774,8 +1177,11 @@ export class Spreadsheet {
      * @returns This spreadsheet for chaining
      */
     public setActiveSheetIndex(index: number): Worksheet {
-        if (index < 0 || index >= this.#workSheetCollection.length) {
-            throw new Error(`Sheet index ${index} is out of bounds.`);
+        const numSheets = this.#workSheetCollection.length;
+        if (index > numSheets - 1) {
+            throw new Error(
+                `You tried to set a sheet active by the out of bounds index: ${index}. The actual number of sheets is ${numSheets}.`,
+            );
         }
         this.#activeSheetIndex = index;
         return this.getActiveSheet();
@@ -790,7 +1196,7 @@ export class Spreadsheet {
     public setActiveSheetIndexByName(sheetName: string): Worksheet {
         const sheet = this.getSheetByName(sheetName);
         if (!sheet) {
-            throw new Error(`Sheet "${sheetName}" does not exist.`);
+            throw new Error(`Workbook does not contain sheet: ${sheetName}`);
         }
 
         const index = this.#workSheetCollection.indexOf(sheet);

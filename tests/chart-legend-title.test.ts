@@ -18,7 +18,7 @@ const getFirstChartXml = async (buffer: Uint8Array | ArrayBuffer): Promise<strin
 describe('Chart legend title', () => {
     test('writes legend title XML when set', async () => {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('LegendData');
+        const worksheet = spreadsheet.createSheet().setTitle('LegendData');
 
         worksheet.getCell('A1').setValue('Category');
         worksheet.getCell('A2').setValue('A');
@@ -47,7 +47,7 @@ describe('Chart legend title', () => {
 
     test('round-trip preserves legend title', async () => {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('LegendRoundTrip');
+        const worksheet = spreadsheet.createSheet().setTitle('LegendRoundTrip');
 
         worksheet.getCell('A1').setValue('Category');
         worksheet.getCell('A2').setValue('A');

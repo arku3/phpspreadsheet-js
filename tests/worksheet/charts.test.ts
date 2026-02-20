@@ -47,7 +47,7 @@ describe('Worksheet charts', () => {
     test('addChart rejects attaching to two worksheets', () => {
         const spreadsheet = new Spreadsheet();
         const sheet1 = spreadsheet.getActiveSheet();
-        const sheet2 = spreadsheet.createSheet('Sheet 2');
+        const sheet2 = spreadsheet.createSheet().setTitle('Sheet 2');
 
         const chart = new Chart();
         sheet1.addChart(chart);

@@ -94,7 +94,7 @@ describe('Chart Data Labels', () => {
     describe('DataLabels XML output', () => {
         test('should write c:dLbls with showVal to chart XML', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('DataLabelsTest');
+            const worksheet = spreadsheet.createSheet().setTitle('DataLabelsTest');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -126,7 +126,7 @@ describe('Chart Data Labels', () => {
 
         test('should write c:dLbls with showCatName to chart XML', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('DataLabelsCatName');
+            const worksheet = spreadsheet.createSheet().setTitle('DataLabelsCatName');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -158,7 +158,7 @@ describe('Chart Data Labels', () => {
 
         test('should write c:dLbls with multiple flags to chart XML', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('DataLabelsMulti');
+            const worksheet = spreadsheet.createSheet().setTitle('DataLabelsMulti');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -198,7 +198,7 @@ describe('Chart Data Labels', () => {
 
         test('should write c:dLblPos to chart XML when position is set', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('DataLabelsPos');
+            const worksheet = spreadsheet.createSheet().setTitle('DataLabelsPos');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -233,7 +233,7 @@ describe('Chart Data Labels', () => {
 
         test('should not write c:dLbls when no labels are enabled', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('NoDataLabels');
+            const worksheet = spreadsheet.createSheet().setTitle('NoDataLabels');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -268,7 +268,7 @@ describe('Chart Data Labels', () => {
     describe('DataLabels round-trip', () => {
         test('should round-trip showValue flag through write and read', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('RoundTripVal');
+            const worksheet = spreadsheet.createSheet().setTitle('RoundTripVal');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -314,7 +314,7 @@ describe('Chart Data Labels', () => {
 
         test('should round-trip showCatName flag through write and read', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('RoundTripCat');
+            const worksheet = spreadsheet.createSheet().setTitle('RoundTripCat');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -356,7 +356,7 @@ describe('Chart Data Labels', () => {
 
         test('should round-trip multiple data label flags through write and read', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('RoundTripMulti');
+            const worksheet = spreadsheet.createSheet().setTitle('RoundTripMulti');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -404,7 +404,7 @@ describe('Chart Data Labels', () => {
 
         test('should round-trip data label position through write and read', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('RoundTripPos');
+            const worksheet = spreadsheet.createSheet().setTitle('RoundTripPos');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -449,7 +449,7 @@ describe('Chart Data Labels', () => {
 
         test('should preserve data labels on multiple series in round-trip', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('MultiSeriesLabels');
+            const worksheet = spreadsheet.createSheet().setTitle('MultiSeriesLabels');
 
             worksheet.getCell('A1').setValue('Month');
             worksheet.getCell('A2').setValue('Jan');
@@ -508,7 +508,7 @@ describe('Chart Data Labels', () => {
     describe('DataLabels styling', () => {
         test('should write styled data labels with font to chart XML', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('StyledLabels');
+            const worksheet = spreadsheet.createSheet().setTitle('StyledLabels');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -548,7 +548,7 @@ describe('Chart Data Labels', () => {
 
         test('should write styled data labels with number format to chart XML', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('NumFmtLabels');
+            const worksheet = spreadsheet.createSheet().setTitle('NumFmtLabels');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -582,7 +582,7 @@ describe('Chart Data Labels', () => {
 
         test('should write styled data labels with fill and border colors to chart XML', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('ColorLabels');
+            const worksheet = spreadsheet.createSheet().setTitle('ColorLabels');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -621,7 +621,7 @@ describe('Chart Data Labels', () => {
 
         test('should round-trip data label font styling through write and read', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('RoundTripFontLabels');
+            const worksheet = spreadsheet.createSheet().setTitle('RoundTripFontLabels');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -675,7 +675,7 @@ describe('Chart Data Labels', () => {
 
         test('should round-trip data label number format through write and read', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('RoundTripNumFmt');
+            const worksheet = spreadsheet.createSheet().setTitle('RoundTripNumFmt');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');
@@ -720,7 +720,7 @@ describe('Chart Data Labels', () => {
 
         test('should round-trip data label fill and border colors through write and read', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('RoundTripColors');
+            const worksheet = spreadsheet.createSheet().setTitle('RoundTripColors');
 
             worksheet.getCell('A1').setValue('Category');
             worksheet.getCell('A2').setValue('A');

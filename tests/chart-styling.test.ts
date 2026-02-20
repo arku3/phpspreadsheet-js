@@ -128,7 +128,7 @@ describe('Chart Styling', () => {
     describe('XLSX output', () => {
         test('should write series fill color to XLSX', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Data');
+            const worksheet = spreadsheet.createSheet().setTitle('Data');
 
             // Add data
             worksheet.getCell('A1').setValue('Category');
@@ -161,7 +161,7 @@ describe('Chart Styling', () => {
 
         test('should write legend to XLSX', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Data');
+            const worksheet = spreadsheet.createSheet().setTitle('Data');
 
             // Add data
             worksheet.getCell('A1').setValue('X');
@@ -188,7 +188,7 @@ describe('Chart Styling', () => {
 
         test('should not write legend when position is none', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Data');
+            const worksheet = spreadsheet.createSheet().setTitle('Data');
 
             worksheet.getCell('A1').setValue('X');
             worksheet.getCell('B1').setValue('Y');
@@ -212,7 +212,7 @@ describe('Chart Styling', () => {
 
         test('should style multiple series differently', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('MultiSeries');
+            const worksheet = spreadsheet.createSheet().setTitle('MultiSeries');
 
             worksheet.getCell('A1').setValue('Month');
             worksheet.getCell('A2').setValue('Jan');
@@ -258,7 +258,7 @@ describe('Chart Styling', () => {
 
         test('should handle line chart styling', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('LineData');
+            const worksheet = spreadsheet.createSheet().setTitle('LineData');
 
             worksheet.getCell('A1').setValue('Day');
             worksheet.getCell('A2').setValue('Mon');
@@ -291,7 +291,7 @@ describe('Chart Styling', () => {
 
             for (const position of positions) {
                 const spreadsheet = new Spreadsheet();
-                const worksheet = spreadsheet.createSheet(`Legend_${position}`);
+                const worksheet = spreadsheet.createSheet().setTitle(`Legend_${position}`);
 
                 worksheet.getCell('A1').setValue('X');
                 worksheet.getCell('B1').setValue('Y');
@@ -323,7 +323,7 @@ describe('Chart Styling', () => {
 
         test('should preserve legend overlay setting in round-trip', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('OverlayTest');
+            const worksheet = spreadsheet.createSheet().setTitle('OverlayTest');
 
             worksheet.getCell('A1').setValue('X');
             worksheet.getCell('B1').setValue('Y');
@@ -349,7 +349,7 @@ describe('Chart Styling', () => {
 
         test('should handle pie chart styling', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('PieData');
+            const worksheet = spreadsheet.createSheet().setTitle('PieData');
 
             worksheet.getCell('A1').setValue('Segment');
             worksheet.getCell('A2').setValue('A');
@@ -380,7 +380,7 @@ describe('Chart Styling', () => {
 
         test('should handle chart with legend title', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('LegendTitle');
+            const worksheet = spreadsheet.createSheet().setTitle('LegendTitle');
 
             worksheet.getCell('A1').setValue('X');
             worksheet.getCell('B1').setValue('Y');
@@ -412,7 +412,7 @@ describe('Chart Styling', () => {
     describe('Chart XML structure verification', () => {
         test('generated XLSX contains valid chart XML structure', async () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('XmlTest');
+            const worksheet = spreadsheet.createSheet().setTitle('XmlTest');
 
             worksheet.getCell('A1').setValue('Label');
             worksheet.getCell('A2').setValue('A');

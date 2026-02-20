@@ -89,8 +89,8 @@ describe('I/O Module Writer Fixes', () => {
 
         it('should generate workbook relationships with dynamic rId mapping', () => {
             const spreadsheet = new Spreadsheet();
-            spreadsheet.createSheet('Sheet1');
-            spreadsheet.createSheet('Sheet2');
+            spreadsheet.createSheet().setTitle('Sheet1');
+            spreadsheet.createSheet().setTitle('Sheet2');
 
             const writer = new XlsxWriter(spreadsheet);
             const rels = new Rels(writer);
@@ -244,7 +244,7 @@ describe('I/O Module Writer Fixes', () => {
 
             // Create multiple sheets
             for (let i = 0; i < 5; i++) {
-                spreadsheet.createSheet(`Sheet${i + 1}`);
+                spreadsheet.createSheet().setTitle(`Sheet${i + 1}`);
             }
 
             const writer = new XlsxWriter(spreadsheet);

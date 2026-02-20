@@ -20,7 +20,7 @@ const getFirstChartXml = async (buffer: Uint8Array | ArrayBuffer): Promise<strin
 describe('Chart data points', () => {
     test('pie chart writes and reads per-point colors with explosion', async () => {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('PieData');
+        const worksheet = spreadsheet.createSheet().setTitle('PieData');
 
         worksheet.getCell('A1').setValue('Category');
         worksheet.getCell('A2').setValue('A');
@@ -82,7 +82,7 @@ describe('Chart data points', () => {
 
     test('bar chart writes and reads per-point fill and border', async () => {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('BarData');
+        const worksheet = spreadsheet.createSheet().setTitle('BarData');
 
         worksheet.getCell('A1').setValue('Category');
         worksheet.getCell('A2').setValue('One');

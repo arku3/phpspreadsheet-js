@@ -346,6 +346,9 @@ export class Calculation {
             if (worksheet) {
                 // Check if it's a named range first
                 const workbook = worksheet.getParent();
+                if (!workbook) {
+                    throw new Error('Worksheet has no parent spreadsheet.');
+                }
                 const namedRange = workbook.getNamedRange(value, worksheet);
                 if (namedRange) {
                     if (namedRange.isFormula()) {
@@ -435,6 +438,9 @@ export class Calculation {
 
             if (sheetName && cellRef) {
                 const workbook = worksheet.getParent();
+                if (!workbook) {
+                    throw new Error('Worksheet has no parent spreadsheet.');
+                }
                 const sheet = workbook.getSheetByName(sheetName);
                 if (sheet) {
                     targetWorksheet = sheet;

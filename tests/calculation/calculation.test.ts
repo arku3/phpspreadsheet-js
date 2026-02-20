@@ -88,7 +88,7 @@ describe('Calculation Engine', () => {
         sheet1.setTitle('DataSheet');
         sheet1.setCellValue('A1', 100);
 
-        const sheet2 = spreadsheet.createSheet('CalcSheet');
+        const sheet2 = spreadsheet.createSheet().setTitle('CalcSheet');
         sheet2.setCellValue('A1', '=DataSheet!A1 + 50');
         expect(sheet2.getCell('A1').getCalculatedValue()).toBe(150);
 

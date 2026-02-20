@@ -71,7 +71,7 @@ describe('XLSX in-memory IO', () => {
         const sheet1 = spreadsheet.getActiveSheet();
         sheet1.setTitle('Visible');
 
-        const hiddenSheet = spreadsheet.createSheet('Hidden');
+        const hiddenSheet = spreadsheet.createSheet().setTitle('Hidden');
         hiddenSheet.setSheetState(Worksheet.SHEETSTATE_HIDDEN);
 
         const writer = new XlsxWriter(spreadsheet);
@@ -88,7 +88,7 @@ describe('XLSX in-memory IO', () => {
         const sheet1 = spreadsheet.getActiveSheet();
         sheet1.setTitle('Visible');
 
-        const veryHiddenSheet = spreadsheet.createSheet('VeryHidden');
+        const veryHiddenSheet = spreadsheet.createSheet().setTitle('VeryHidden');
         veryHiddenSheet.setSheetState(Worksheet.SHEETSTATE_VERYHIDDEN);
 
         const writer = new XlsxWriter(spreadsheet);

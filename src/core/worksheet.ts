@@ -25,6 +25,8 @@ import { Spreadsheet } from './spreadsheet.ts';
  * Worksheet in a Spreadsheet.
  */
 export class Worksheet {
+    public static readonly INVALID_CHARACTERS: string[] = ['*', ':', '/', '\\', '?', '[', ']'];
+    public static readonly SHEET_TITLE_MAXIMUM_LENGTH: number = 31;
     // Sheet state constants
     public static readonly SHEETSTATE_VISIBLE = 'visible';
     public static readonly SHEETSTATE_HIDDEN = 'hidden';
@@ -181,16 +183,46 @@ export class Worksheet {
     /**
      * Set worksheet code name.
      */
-    public setCodeName(codeName: string | null): this {
-        const trimmed = (codeName ?? '').trim();
-        if (trimmed === '') {
-            this.#codeName = null;
-            return this;
+    public setCodeName(codeName: string): this {
+        const trimmed = codeName.trim();
+        if (trimmed.length === 0) {
+            throw new Error('Sheet code name cannot be empty.');
+        }
+        if (
+            Worksheet.INVALID_CHARACTERS.some((char) => trimmed.includes(char)) ||
+            trimmed.startsWith("'") ||
+            trimmed.endsWith("'")
+        ) {
+            throw new Error('Invalid character found in sheet code name');
+        }
+        if (trimmed.length > Worksheet.SHEET_TITLE_MAXIMUM_LENGTH) {
+            throw new Error(`Maximum ${Worksheet.SHEET_TITLE_MAXIMUM_LENGTH} characters allowed in sheet code name.`);
         }
 
-        // Match Excel/PhpSpreadsheet behavior: silently replace spaces with underscores.
-        this.#codeName = trimmed.replace(/ /g, '_');
+        let uniqueCodeName = trimmed;
+        if (this.#parent) {
+            let i = 1;
+            while (true) {
+                const existing = this.#parent.getSheetByCodeName(uniqueCodeName);
+                if (!existing || existing === this) {
+                    break;
+                }
+                const suffix = `_${i}`;
+                let base = trimmed;
+                if (base.length + suffix.length > Worksheet.SHEET_TITLE_MAXIMUM_LENGTH) {
+                    base = base.slice(0, Worksheet.SHEET_TITLE_MAXIMUM_LENGTH - suffix.length);
+                }
+                uniqueCodeName = `${base}${suffix}`;
+                i += 1;
+            }
+        }
+
+        this.#codeName = uniqueCodeName;
         return this;
+    }
+
+    public hasCodeName(): boolean {
+        return this.#codeName !== null;
     }
 
     /**
@@ -557,7 +589,7 @@ export class Worksheet {
                 parent.addDefinedName(definedName);
             }
 
-            const index = this.#parent.getIndex(this);
+            const index = this.#parent.getIndex(this, true);
             if (index >= 0) {
                 this.#parent.removeSheetByIndex(index);
             }

@@ -25,6 +25,9 @@ export class StructuredReference {
     public parse(cell: Cell): string {
         const worksheet = cell.getWorksheet();
         const workbook = worksheet.getParent();
+        if (!workbook) {
+            return '#REF!';
+        }
 
         const [cellCol1, cellRow1] = Coordinate.indexesFromString(cell.getCoordinate());
 

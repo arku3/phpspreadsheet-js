@@ -3,7 +3,7 @@ import { Worksheet } from './worksheet.ts';
 /**
  * Base class for Defined Names (Named Ranges or Named Formulas).
  */
-export abstract class DefinedName {
+export class DefinedName {
     #name: string;
     #worksheet: Worksheet | null;
     #value: string;
@@ -28,6 +28,10 @@ export abstract class DefinedName {
         return this.#name;
     }
 
+    public setName(name: string): void {
+        this.#name = name;
+    }
+
     public getValue(): string {
         return this.#value;
     }
@@ -40,12 +44,27 @@ export abstract class DefinedName {
         return this.#worksheet;
     }
 
+    public setWorksheet(worksheet: Worksheet | null): void {
+        this.#worksheet = worksheet;
+    }
+
     public getLocalOnly(): boolean {
         return this.#localOnly;
     }
 
+    public setLocalOnly(localOnly: boolean): void {
+        this.#localOnly = localOnly;
+        if (!localOnly) {
+            this.#scope = null;
+        }
+    }
+
     public getScope(): Worksheet | null {
         return this.#scope;
+    }
+
+    public setScope(scope: Worksheet | null): void {
+        this.#scope = scope;
     }
 
     public isFormula(): boolean {

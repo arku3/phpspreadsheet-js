@@ -59,7 +59,7 @@ describe('Worksheet drawings', () => {
     test('addDrawing rejects attaching to two worksheets', () => {
         const spreadsheet = new Spreadsheet();
         const sheet1 = spreadsheet.getActiveSheet();
-        const sheet2 = spreadsheet.createSheet('Sheet 2');
+        const sheet2 = spreadsheet.createSheet().setTitle('Sheet 2');
 
         const drawing = new Drawing();
         sheet1.addDrawing(drawing);

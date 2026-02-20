@@ -17,7 +17,7 @@ const getFirstChartXml = async (buffer: Uint8Array | ArrayBuffer): Promise<strin
 describe('Chart type-specific XML', () => {
     test('doughnut chart writes hole size and first slice angle', async () => {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('DoughnutData');
+        const worksheet = spreadsheet.createSheet().setTitle('DoughnutData');
 
         worksheet.getCell('A1').setValue('Segment');
         worksheet.getCell('A2').setValue('A');
@@ -47,7 +47,7 @@ describe('Chart type-specific XML', () => {
 
     test('scatter chart uses xVal/yVal and value axes', async () => {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('ScatterData');
+        const worksheet = spreadsheet.createSheet().setTitle('ScatterData');
 
         worksheet.getCell('A1').setValue('X');
         worksheet.getCell('A2').setValue(1);
@@ -80,7 +80,7 @@ describe('Chart type-specific XML', () => {
 
     test('stacked bar chart writes overlap and gap width', async () => {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('StackedBar');
+        const worksheet = spreadsheet.createSheet().setTitle('StackedBar');
 
         worksheet.getCell('A1').setValue('Category');
         worksheet.getCell('A2').setValue('One');

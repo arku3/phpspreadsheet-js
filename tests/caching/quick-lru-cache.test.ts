@@ -7,7 +7,7 @@ import { Worksheet } from '../../src/core/worksheet';
 describe('QuickLRUCache', () => {
     function createTestCell(): Cell {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('Test');
+        const worksheet = spreadsheet.createSheet().setTitle('Test');
         return new Cell(null, DataType.TYPE_STRING, worksheet, 1, 1);
     }
 
@@ -200,7 +200,7 @@ describe('QuickLRUCache', () => {
     describe('Integration with Worksheet', () => {
         it('should work as cache strategy for worksheet', () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Test');
+            const worksheet = spreadsheet.createSheet().setTitle('Test');
             const cache = new QuickLRUCache({ maxSize: 100 });
 
             worksheet.setCacheStrategy(cache);
@@ -215,7 +215,7 @@ describe('QuickLRUCache', () => {
 
         it('should maintain cell access through cache', () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Test');
+            const worksheet = spreadsheet.createSheet().setTitle('Test');
             const cache = new QuickLRUCache({ maxSize: 100 });
 
             worksheet.setCacheStrategy(cache);
@@ -231,7 +231,7 @@ describe('QuickLRUCache', () => {
 
         it('should handle eviction in worksheet context', () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Test');
+            const worksheet = spreadsheet.createSheet().setTitle('Test');
             const cache = new QuickLRUCache({ maxSize: 3 });
 
             worksheet.setCacheStrategy(cache);

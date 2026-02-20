@@ -87,9 +87,13 @@ export class Style extends Supervisor {
         }
 
         const activeSheet = this.getActiveSheet();
+        const workbook = activeSheet.getParent();
+        if (!workbook) {
+            throw new Error('Worksheet has no parent spreadsheet.');
+        }
         const coordinate = Style.getFirstCoordinateFromSelection(this.getSelectedCells());
         const cell = activeSheet.getCell(coordinate);
-        return activeSheet.getParent().getCellXfByIndex(cell.getXfIndex());
+        return workbook.getCellXfByIndex(cell.getXfIndex());
     }
 
     /**
@@ -251,6 +255,9 @@ export class Style extends Supervisor {
     private applyFromArraySupervisor(styleArray: Record<string, any>): void {
         const activeSheet = this.getActiveSheet();
         const workbook = activeSheet.getParent();
+        if (!workbook) {
+            throw new Error('Worksheet has no parent spreadsheet.');
+        }
         const ranges = Style.splitRanges(this.getSelectedCells());
 
         for (const range of ranges) {

@@ -9,7 +9,7 @@ describe('XlsxReader: definedNames (workbook.xml)', () => {
         const spreadsheet = new Spreadsheet();
         const sheet1 = spreadsheet.getActiveSheet();
         sheet1.setTitle('Sheet1');
-        const sheet2 = spreadsheet.createSheet('Sheet2');
+        const sheet2 = spreadsheet.createSheet().setTitle('Sheet2');
 
         spreadsheet.addNamedRange(new NamedRange('MyRange', sheet1, 'A1:B2'));
         spreadsheet.addDefinedName(new NamedRange('MyRange', null, 'C3:D4', true, sheet2));

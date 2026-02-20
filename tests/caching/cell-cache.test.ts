@@ -9,7 +9,7 @@ describe('CellCache', () => {
         function createCacheWithMockCell(): { cache: MemoryCache; mockCell: Cell } {
             const cache = new MemoryCache();
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Test');
+            const worksheet = spreadsheet.createSheet().setTitle('Test');
             const mockCell = new Cell(null, DataType.TYPE_STRING, worksheet, 1, 1);
             return { cache, mockCell };
         }
@@ -101,7 +101,7 @@ describe('CellCache', () => {
     describe('CellCollection with caching', () => {
         function createTestWorksheet(): { spreadsheet: Spreadsheet; worksheet: Worksheet } {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Test');
+            const worksheet = spreadsheet.createSheet().setTitle('Test');
             return { spreadsheet, worksheet };
         }
 
@@ -135,7 +135,7 @@ describe('CellCache', () => {
     describe('Backward compatibility', () => {
         it('should work with existing code without changes', () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Test');
+            const worksheet = spreadsheet.createSheet().setTitle('Test');
 
             // Existing API usage
             const cellA1 = worksheet.getCell('A1');
@@ -150,7 +150,7 @@ describe('CellCache', () => {
 
         it('should maintain cell references', () => {
             const spreadsheet = new Spreadsheet();
-            const worksheet = spreadsheet.createSheet('Test');
+            const worksheet = spreadsheet.createSheet().setTitle('Test');
 
             const cell = worksheet.getCell('A1');
             cell.setValue(1);

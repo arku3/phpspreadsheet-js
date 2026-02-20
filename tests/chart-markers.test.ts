@@ -18,7 +18,7 @@ const getFirstChartXml = async (buffer: Uint8Array | ArrayBuffer): Promise<strin
 describe('Chart markers and line styles', () => {
     test('writes marker symbol/size and smooth line', async () => {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('MarkerData');
+        const worksheet = spreadsheet.createSheet().setTitle('MarkerData');
 
         worksheet.getCell('A1').setValue('X');
         worksheet.getCell('A2').setValue(1);
@@ -53,7 +53,7 @@ describe('Chart markers and line styles', () => {
 
     test('round-trips marker symbol/size and smooth line', async () => {
         const spreadsheet = new Spreadsheet();
-        const worksheet = spreadsheet.createSheet('RoundTrip');
+        const worksheet = spreadsheet.createSheet().setTitle('RoundTrip');
 
         worksheet.getCell('A1').setValue('X');
         worksheet.getCell('A2').setValue(1);
