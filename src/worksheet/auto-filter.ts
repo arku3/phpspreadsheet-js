@@ -386,11 +386,11 @@ export class AutoFilter {
         const rowsWithData = new Set<number>();
         let maxRow = startRow;
         for (const cell of cells) {
-            const row = cell.getRow() + 1;
+            const row = cell.getRow();
             if (row <= startRow) {
                 continue;
             }
-            const col = cell.getColumn() + 1;
+            const col = cell.getColumnIndex() + 1;
             if (col >= startColumn && col <= endColumn) {
                 rowsWithData.add(row);
                 if (row > maxRow) {

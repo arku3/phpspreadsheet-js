@@ -297,31 +297,35 @@ export class Worksheet {
         if (Array.isArray(coordinate)) {
             const [column, row] = coordinate;
             if (!Number.isFinite(row) || row < 1) {
-                throw new Error('Cell coordinate array is not a valid A1 reference.');
+                throw new Error('Row and Column Ids must be positive integer values');
             }
             if (typeof column === 'number' && (!Number.isFinite(column) || column < 1)) {
-                throw new Error('Cell coordinate array is not a valid A1 reference.');
+                throw new Error('Row and Column Ids must be positive integer values');
             }
             const columnLetters =
                 typeof column === 'number' ? Coordinate.stringFromColumnIndex(column) : String(column).toUpperCase();
             if (!/^[A-Z]+$/.test(columnLetters)) {
-                throw new Error('Cell coordinate array is not a valid A1 reference.');
+                throw new Error('Row and Column Ids must be positive integer values');
             }
             return `${columnLetters}${row}`;
         }
 
+        const original = coordinate;
         let normalized = coordinate.trim();
+        if (normalized.length === 0) {
+            throw new Error('Cell coordinate can not be zero-length string');
+        }
         if (normalized.includes('!')) {
             const parts = normalized.split('!');
             normalized = parts[parts.length - 1] ?? '';
         }
         if (normalized.includes(':') || normalized.includes(',')) {
-            throw new Error('Cell coordinate string is not a valid A1 reference.');
+            throw new Error('Cell coordinate string can not be a range of cells');
         }
         normalized = normalized.replace(/\$/g, '').toUpperCase();
         const match = normalized.match(/^([A-Z]+)([1-9]\d*)$/);
         if (!match) {
-            throw new Error('Cell coordinate string is not a valid A1 reference.');
+            throw new Error(`Invalid cell coordinate ${original}`);
         }
         const colLetters = match[1]!;
         const rowValue = Number.parseInt(match[2]!, 10);
@@ -333,7 +337,7 @@ export class Worksheet {
             colIndex < 1 ||
             colIndex > Worksheet.#MAX_COLUMN_INDEX
         ) {
-            throw new Error('Cell coordinate string is not a valid A1 reference.');
+            throw new Error(`Invalid cell coordinate ${original}`);
         }
         return normalized;
     }
@@ -683,6 +687,49 @@ export class Worksheet {
             this.#cellCollection.add(normalized, cell);
         }
         return cell;
+    }
+
+    public getCellOrNull(coordinate: string | [string | number, number]): Cell | null {
+        if (typeof coordinate === 'string') {
+            let trimmed = coordinate.trim();
+            if (trimmed.includes('!')) {
+                if (!this.#parent) {
+                    throw new Error('Worksheet has no parent spreadsheet.');
+                }
+                const parts = trimmed.split('!');
+                const cellRef = parts.pop() ?? '';
+                const sheetNameRaw = parts.join('!');
+                const sheetName = sheetNameRaw.replace(/^'+|'+$/g, '');
+                const sheet = this.#parent.getSheetByName(sheetName);
+                if (!sheet) {
+                    throw new Error(`Sheet "${sheetName}" does not exist.`);
+                }
+                return sheet.getCellOrNull(cellRef);
+            }
+
+            if (this.#parent) {
+                const namedRange = this.#parent.getNamedRange(trimmed, this);
+                if (namedRange) {
+                    let rangeRef = namedRange.getRange();
+                    if (rangeRef.includes('!')) {
+                        const rangeParts = rangeRef.split('!');
+                        rangeRef = rangeParts.pop() ?? '';
+                    }
+                    const topLeft = rangeRef.split(':')[0] ?? rangeRef;
+                    const rangeSheet = namedRange.getWorksheet();
+                    if (rangeSheet && rangeSheet !== this) {
+                        return rangeSheet.getCellOrNull(topLeft);
+                    }
+                    trimmed = topLeft;
+                }
+            }
+
+            const normalized = Worksheet.#normalizeCellCoordinateInput(trimmed);
+            return this.#cellCollection.get(normalized) ?? null;
+        }
+
+        const normalized = Worksheet.#normalizeCellCoordinateInput(coordinate);
+        return this.#cellCollection.get(normalized) ?? null;
     }
 
     /**
@@ -1737,7 +1784,7 @@ export class Worksheet {
             const newCoord = `${Coordinate.stringFromColumnIndex(colIndex)}${newRow}`;
 
             this.#cellCollection.delete(oldCoord);
-            cell.setRow(newRow - 1); // Convert to 0-indexed
+            cell.setRowIndex(newRow - 1); // Convert to 0-indexed
             this.#cellCollection.add(newCoord, cell);
         }
     }
@@ -1774,7 +1821,7 @@ export class Worksheet {
             const newCoord = `${Coordinate.stringFromColumnIndex(newCol)}${rowIndex}`;
 
             this.#cellCollection.delete(oldCoord);
-            cell.setColumn(newCol - 1); // Convert to 0-indexed
+            cell.setColumnIndex(newCol - 1); // Convert to 0-indexed
             this.#cellCollection.add(newCoord, cell);
         }
     }
@@ -1812,7 +1859,7 @@ export class Worksheet {
             const newCoord = `${Coordinate.stringFromColumnIndex(colIndex)}${newRow}`;
 
             this.#cellCollection.delete(oldCoord);
-            cell.setRow(newRow - 1); // Convert to 0-indexed
+            cell.setRowIndex(newRow - 1); // Convert to 0-indexed
             this.#cellCollection.add(newCoord, cell);
         }
     }
@@ -1851,7 +1898,7 @@ export class Worksheet {
             const newCoord = `${Coordinate.stringFromColumnIndex(newCol)}${rowIndex}`;
 
             this.#cellCollection.delete(oldCoord);
-            cell.setColumn(newCol - 1); // Convert to 0-indexed
+            cell.setColumnIndex(newCol - 1); // Convert to 0-indexed
             this.#cellCollection.add(newCoord, cell);
         }
     }

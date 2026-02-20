@@ -277,30 +277,44 @@ export class Cell {
     }
 
     /**
-     * Get column (0-indexed).
+     * Get column (A1 column string).
      */
-    public getColumn(): number {
+    public getColumn(): string {
+        return Coordinate.stringFromColumnIndex(this.#column + 1);
+    }
+
+    /**
+     * Get column index (0-indexed).
+     */
+    public getColumnIndex(): number {
         return this.#column;
     }
 
     /**
-     * Set column (0-indexed).
+     * Set column index (0-indexed).
      */
-    public setColumn(column: number): void {
+    public setColumnIndex(column: number): void {
         this.#column = column;
     }
 
     /**
-     * Get row (0-indexed).
+     * Get row (1-indexed).
      */
     public getRow(): number {
+        return this.#row + 1;
+    }
+
+    /**
+     * Get row index (0-indexed).
+     */
+    public getRowIndex(): number {
         return this.#row;
     }
 
     /**
-     * Set row (0-indexed).
+     * Set row index (0-indexed).
      */
-    public setRow(row: number): void {
+    public setRowIndex(row: number): void {
         this.#row = row;
     }
 

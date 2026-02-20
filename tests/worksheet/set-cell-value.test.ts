@@ -56,4 +56,37 @@ describe('Worksheet setCellValue', () => {
         expect(() => sheet.setCellValue('XFE1', 'Value')).toThrow();
         expect(() => sheet.setCellValue('XFD1048577', 'Value')).toThrow();
     });
+
+    test('setCellValueExplicit rejects range and out-of-range coordinates', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        expect(() => sheet.setCellValueExplicit('A1:B2', 'Value')).toThrow();
+        expect(() => sheet.setCellValueExplicit('A0', 'Value')).toThrow();
+        expect(() => sheet.setCellValueExplicit('XFE1', 'Value')).toThrow();
+        expect(() => sheet.setCellValueExplicit('XFD1048577', 'Value')).toThrow();
+    });
+
+    test('getCellOrNull does not create cells', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        expect(sheet.getCellOrNull('B2')).toBeNull();
+        sheet.setCellValue('B2', 'Value');
+        expect(sheet.getCellOrNull('B2')).not.toBeNull();
+    });
+
+    test('getCellOrNull resolves sheet references and named ranges', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet1 = spreadsheet.getActiveSheet();
+        const sheet2 = spreadsheet.createSheet();
+        sheet2.setTitle('Sheet2');
+        spreadsheet.addNamedRange(new NamedRange('MyRange', sheet2, 'C3:D4'));
+
+        expect(sheet1.getCellOrNull('Sheet2!C3')).toBeNull();
+        sheet2.setCellValue('C3', 'Value');
+        expect(sheet1.getCellOrNull('Sheet2!C3')).not.toBeNull();
+
+        expect(sheet1.getCellOrNull('MyRange')).not.toBeNull();
+    });
 });

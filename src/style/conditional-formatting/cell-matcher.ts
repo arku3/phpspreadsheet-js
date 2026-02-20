@@ -35,8 +35,8 @@ export class CellMatcher {
     constructor(cell: Cell, conditionalRange: string) {
         this.cell = cell;
         this.worksheet = cell.getWorksheet();
-        this.cellColumn = cell.getColumn() + 1; // 1-indexed for matching PHP logic
-        this.cellRow = cell.getRow() + 1;
+        this.cellColumn = cell.getColumnIndex() + 1; // 1-indexed for matching PHP logic
+        this.cellRow = cell.getRow();
         this.setReferenceCellForExpressions(conditionalRange);
     }
 
@@ -58,7 +58,7 @@ export class CellMatcher {
 
     public evaluateConditional(conditional: Conditional): boolean {
         // Refresh cell in case calculations modified it
-        const cellAddress = Coordinate.stringFromCoordinate(this.cellColumn - 1, this.cellRow - 1);
+        const cellAddress = Coordinate.stringFromCoordinate(this.cellColumn, this.cellRow);
         this.cell = this.worksheet.getCell(cellAddress);
 
         switch (conditional.getConditionType()) {
@@ -146,7 +146,11 @@ export class CellMatcher {
 
     protected evaluateExpression(expression: string): boolean {
         try {
-            const calculation = this.worksheet.getParent().getCalculationEngine();
+            const parent = this.worksheet.getParent();
+            if (!parent) {
+                return false;
+            }
+            const calculation = parent.getCalculationEngine();
             calculation.flushInstance();
             return Boolean(calculation.calculateFormula(expression, this.worksheet, this.cell.getCoordinate()));
         } catch (e) {
