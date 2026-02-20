@@ -13,9 +13,9 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
 - [x] Worksheet: align `setTitle`, `getStyle`, `setCellValue` signatures.
 - [x] Worksheet: add missing methods (cell lookup helpers, hyperlinks, conditional styles, table/chart collections, protection, active cell, dimension helpers).
 - [x] Cell: align constructor, `getColumn/getRow`, `setValue`, `setValueExplicit`, data validation/hyperlink APIs.
-- [ ] Cell: add calculated-value and formula attribute APIs.
+- [x] Cell: add calculated-value and formula attribute APIs.
 - [x] Comment/DefinedName/NamedRange/Hyperlink: add missing APIs and align constructors/constants.
-- [ ] CellCollection: implement Cells-like behaviors (active cell, sorting, delete/unset, clone, factory).
+- [x] CellCollection: implement Cells-like behaviors (active cell, sorting, delete/unset, clone, factory).
 
 ## Phase 2: Worksheet Extras Parity
 - [ ] Tables: add `Table/Column`, `TableStyle`, `TableDxfsStyle` and align table APIs.
@@ -47,7 +47,7 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
 - [ ] Complete `StringHelper`, `Coordinate/ReferenceHelper`, and `HashTable` APIs.
 
 ## Verification
-- [ ] For each subsystem: update/add tests to match PHP behavior.
-- [ ] Run `bunx tsc --noEmit`.
-- [ ] Run `bun test`.
+- [x] For each subsystem: update/add tests to match PHP behavior.
+- [x] Run `bunx tsc --noEmit`.
+- [x] Run `bun test`.
 - [ ] Run `verify-php/` scripts when XLSX writer changes.

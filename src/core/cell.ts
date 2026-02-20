@@ -44,6 +44,9 @@ export class Cell {
     #isDetached: boolean = false;
 
     #hyperlink: Hyperlink | null = null;
+    #formulaAttributes: Record<string, unknown> | null = null;
+    #ignoredErrors: Record<string, unknown> = {};
+    #oldCalculatedValue: any = null;
 
     public static getValueBinder(): IValueBinder | null {
         if (!Cell.#valueBinderInitialized) {
@@ -77,6 +80,11 @@ export class Cell {
         return this.#value;
     }
 
+    public getValueString(): string {
+        const value = this.getValue();
+        return value === null || value === undefined ? '' : String(value);
+    }
+
     /**
      * Get calculated value.
      */
@@ -100,6 +108,21 @@ export class Cell {
         return this.#value;
     }
 
+    public getCalculatedValueString(): string {
+        const value = this.getCalculatedValue();
+        return value === null || value === undefined ? '' : String(value);
+    }
+
+    public setCalculatedValue(value: any): this {
+        this.#oldCalculatedValue = this.#calculatedValue;
+        this.#calculatedValue = value;
+        return this;
+    }
+
+    public getOldCalculatedValue(): any {
+        return this.#oldCalculatedValue;
+    }
+
     /**
      * Get coordinate.
      */
@@ -112,12 +135,13 @@ export class Cell {
      */
     public setValue(value: any, binder: IValueBinder | null = null): this {
         this.#assertAttached('setValue');
-        if (this.hasHyperlink()) {
-            this.#hyperlink = null;
-        }
         const worksheet = this.#worksheet;
         if (!worksheet) {
             this.#throwDetached('setValue');
+        }
+        if (this.hasHyperlink()) {
+            worksheet.setHyperlink(this.getCoordinate(), null);
+            this.#hyperlink = null;
         }
         const activeBinder = binder ?? worksheet.getParent()?.getValueBinder() ?? Cell.getValueBinder();
         if (!activeBinder) {
@@ -133,7 +157,8 @@ export class Cell {
      * Set value explicit.
      */
     public setValueExplicit(value: any, dataType: TDataType = DataType.TYPE_STRING): this {
-        if (this.hasHyperlink()) {
+        if (this.#worksheet && this.hasHyperlink()) {
+            this.#worksheet.setHyperlink(this.getCoordinate(), null);
             this.#hyperlink = null;
         }
         const oldValue = this.#value;
@@ -211,12 +236,11 @@ export class Cell {
         this.#dataType = normalizedType;
         this.#calculatedValue = undefined;
 
-        const worksheet = this.#worksheet;
-        if (worksheet) {
+        if (this.#worksheet) {
             const oldText = oldValue === null || oldValue === undefined ? '' : String(oldValue);
             const newText = normalizedValue === null || normalizedValue === undefined ? '' : String(normalizedValue);
             if (oldText.toLowerCase() !== newText.toLowerCase()) {
-                const tables = worksheet.getTables();
+                const tables = this.#worksheet.getTables();
                 const [cellCol, cellRow] = Coordinate.indexesFromString(this.getCoordinate());
                 for (const table of tables) {
                     const boundaries = table.getRangeBoundaries();
@@ -473,7 +497,17 @@ export class Cell {
      * @returns True if cell contains a formula
      */
     public isFormula(): boolean {
-        return this.#dataType === DataType.TYPE_FORMULA;
+        return this.#dataType === DataType.TYPE_FORMULA && this.getStyle().getQuotePrefix() === false;
+    }
+
+    public getAppliedStyle(): Style {
+        return this.getStyle();
+    }
+
+    public rebindParent(worksheet: Worksheet): this {
+        this.#worksheet = worksheet;
+        worksheet.getCellCollection().update(this);
+        return this;
     }
 
     /**
@@ -522,19 +556,38 @@ export class Cell {
      *
      * @returns The hyperlink object or null if no hyperlink
      */
-    public getHyperlink(): any {
+    public getHyperlink(): Hyperlink {
         this.#assertAttached('getHyperlink');
-        if (this.#hyperlink === null) {
-            this.#hyperlink = new Hyperlink();
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('getHyperlink');
         }
-        return this.#hyperlink;
+        return worksheet.getHyperlink(this.getCoordinate());
+    }
+
+    public setHyperlink(hyperlink: Hyperlink | null): this {
+        this.#assertAttached('setHyperlink');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('setHyperlink');
+        }
+        worksheet.setHyperlink(this.getCoordinate(), hyperlink);
+        return this;
     }
 
     /**
      * True if a real hyperlink is present.
      */
     public hasHyperlink(): boolean {
-        return this.#hyperlink !== null && !this.#hyperlink.isEmpty();
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('hasHyperlink');
+        }
+        return worksheet.hyperlinkExists(this.getCoordinate());
+    }
+
+    public getWorksheetOrNull(): Worksheet | null {
+        return this.#worksheet;
     }
 
     /**
@@ -553,6 +606,15 @@ export class Cell {
         return worksheet.getDataValidation(this.getCoordinate());
     }
 
+    public hasDataValidation(): boolean {
+        this.#assertAttached('hasDataValidation');
+        const worksheet = this.#worksheet;
+        if (!worksheet) {
+            this.#throwDetached('hasDataValidation');
+        }
+        return worksheet.dataValidationExists(this.getCoordinate());
+    }
+
     /**
      * Set the data validation for this cell.
      *
@@ -567,6 +629,37 @@ export class Cell {
         }
         worksheet.setDataValidation(this.getCoordinate(), dataValidation);
         return this;
+    }
+
+    public setFormulaAttributes(attributes: Record<string, unknown> | null = null): this {
+        this.#formulaAttributes = attributes;
+        return this;
+    }
+
+    public getFormulaAttributes(): Record<string, unknown> | null {
+        return this.#formulaAttributes;
+    }
+
+    public getIgnoredErrors(): Record<string, unknown> {
+        return this.#ignoredErrors;
+    }
+
+    public static compareCells(a: Cell, b: Cell): number {
+        if (a.getRow() < b.getRow()) {
+            return -1;
+        }
+        if (a.getRow() > b.getRow()) {
+            return 1;
+        }
+        const colA = Coordinate.columnIndexFromString(a.getColumn());
+        const colB = Coordinate.columnIndexFromString(b.getColumn());
+        if (colA < colB) {
+            return -1;
+        }
+        if (colA > colB) {
+            return 1;
+        }
+        return 0;
     }
 
     /**

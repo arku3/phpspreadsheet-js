@@ -32,6 +32,20 @@ describe('Memory Management', () => {
             worksheet.getCell('A1').setValue('Test');
             expect(collection.getCount()).toBeGreaterThan(0);
         });
+
+        it('tracks current cell and sorted coordinates', () => {
+            const spreadsheet = new Spreadsheet();
+            const worksheet = spreadsheet.getActiveSheet();
+            const collection = worksheet.getCellCollection();
+
+            worksheet.getCell('B2').setValue('B');
+            worksheet.getCell('A1').setValue('A');
+
+            expect(collection.getCurrentCoordinate()).toBe('A1');
+            expect(collection.getCurrentRow()).toBe(1);
+            expect(collection.getCurrentColumn()).toBe('A');
+            expect(collection.getSortedCoordinates()).toEqual(['A1', 'B2']);
+        });
     });
 
     describe('Worksheet.disconnectCells', () => {

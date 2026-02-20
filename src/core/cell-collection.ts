@@ -11,9 +11,17 @@ import { Worksheet } from './worksheet.ts';
  */
 export class CellCollection {
     #cache: CellCache;
+    #parent: Worksheet;
+    #currentCoordinate: string | null = null;
+    #currentCell: Cell | null = null;
 
-    constructor(cache?: CellCache) {
+    constructor(parent: Worksheet, cache?: CellCache) {
+        this.#parent = parent;
         this.#cache = cache ?? new MemoryCache();
+    }
+
+    public getParent(): Worksheet {
+        return this.#parent;
     }
 
     /**
@@ -42,15 +50,25 @@ export class CellCollection {
     /**
      * Add or update a cell.
      */
-    public add(coordinate: string, cell: Cell): void {
-        this.#cache.set(coordinate.toUpperCase(), cell);
+    public add(coordinate: string, cell: Cell): Cell {
+        const key = coordinate.toUpperCase();
+        this.#cache.set(key, cell);
+        this.#currentCoordinate = key;
+        this.#currentCell = cell;
+        return cell;
     }
 
     /**
      * Get a cell by coordinate.
      */
     public get(coordinate: string): Cell | undefined {
-        return this.#cache.get(coordinate.toUpperCase());
+        const key = coordinate.toUpperCase();
+        const cell = this.#cache.get(key);
+        if (cell) {
+            this.#currentCoordinate = key;
+            this.#currentCell = cell;
+        }
+        return cell;
     }
 
     /**
@@ -63,8 +81,20 @@ export class CellCollection {
     /**
      * Remove a cell.
      */
-    public delete(coordinate: string): void {
-        this.#cache.delete(coordinate.toUpperCase());
+    public delete(coordinate: string): boolean {
+        const key = coordinate.toUpperCase();
+        const existed = this.#cache.has(key);
+        this.#cache.delete(key);
+        if (this.#currentCoordinate === key) {
+            this.#currentCoordinate = null;
+            this.#currentCell = null;
+        }
+        return existed;
+    }
+
+    public setCurrentCellDirty(): void {
+        this.#currentCoordinate = null;
+        this.#currentCell = null;
     }
 
     /**
@@ -72,6 +102,69 @@ export class CellCollection {
      */
     public getCoordinates(): string[] {
         return Array.from(this.#cache.keys());
+    }
+
+    public getSortedCoordinates(): string[] {
+        return [...this.#cache.keys()].sort((a, b) => {
+            const [colA, rowA] = Coordinate.indexesFromString(a);
+            const [colB, rowB] = Coordinate.indexesFromString(b);
+            if (rowA !== rowB) {
+                return rowA - rowB;
+            }
+            return colA - colB;
+        });
+    }
+
+    public getCurrentCoordinate(): string | null {
+        return this.#currentCoordinate;
+    }
+
+    public getCurrentRow(): number | null {
+        if (!this.#currentCoordinate) {
+            return null;
+        }
+        const [, rowIndex] = Coordinate.indexesFromString(this.#currentCoordinate);
+        return rowIndex;
+    }
+
+    public getCurrentColumn(): string | null {
+        if (!this.#currentCoordinate) {
+            return null;
+        }
+        const [colIndex] = Coordinate.indexesFromString(this.#currentCoordinate);
+        return Coordinate.stringFromColumnIndex(colIndex);
+    }
+
+    public getCurrentCell(): Cell | null {
+        return this.#currentCell;
+    }
+
+    public update(cell: Cell): Cell {
+        const coordinate = cell.getCoordinate().toUpperCase();
+        this.#cache.set(coordinate, cell);
+        this.#currentCoordinate = coordinate;
+        this.#currentCell = cell;
+        return cell;
+    }
+
+    public cloneCellCollection(worksheet: Worksheet): CellCollection {
+        const collection = new CellCollection(worksheet);
+        for (const key of this.#cache.keys()) {
+            const cell = this.#cache.get(key);
+            if (cell) {
+                collection.add(key, cell);
+            }
+        }
+        return collection;
+    }
+
+    public unsetWorksheetCells(): void {
+        for (const cell of this.#cache.values()) {
+            cell.detach();
+        }
+        this.#cache.clear();
+        this.#currentCoordinate = null;
+        this.#currentCell = null;
     }
 
     /**

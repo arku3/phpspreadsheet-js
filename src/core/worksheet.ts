@@ -18,8 +18,10 @@ import { SheetView } from '../worksheet/sheet-view.ts';
 import { Table } from '../worksheet/table.ts';
 import { CellCollection } from './cell-collection.ts';
 import { Cell, DataType, type TDataType } from './cell.ts';
+import { CellsFactory } from './cells-factory.ts';
 import { Comment } from './comment.ts';
 import { DataValidation } from './data-validation.ts';
+import { Hyperlink } from './hyperlink.ts';
 import type { IValueBinder } from './i-value-binder.ts';
 import { ProtectedRange } from './protected-range.ts';
 import { Spreadsheet } from './spreadsheet.ts';
@@ -154,6 +156,7 @@ export class Worksheet {
      * Sparse collection of classic cell comments, keyed by A1 coordinate (no $).
      */
     #comments: Map<string, Comment> = new Map();
+    #hyperlinkCollection: Map<string, Hyperlink> = new Map();
 
     /**
      * Default column dimension.
@@ -175,7 +178,7 @@ export class Worksheet {
         this.#title = title;
         // Match PhpSpreadsheet: default codeName is derived from the title.
         this.setCodeName(this.#title);
-        this.#cellCollection = new CellCollection();
+        this.#cellCollection = CellsFactory.getInstance(this, parent.getDefaultCacheStrategy());
         this.#pageSetup = new PageSetup();
         this.#pageMargins = new PageMargins();
         this.#headerFooter = new HeaderFooter();
@@ -716,6 +719,10 @@ export class Worksheet {
      * @returns Current CellCache implementation
      */
     public getCacheStrategy(): CellCache {
+        return this.#cellCollection.getCacheStrategy();
+    }
+
+    public getCacheStrategyOrNull(): CellCache | null {
         return this.#cellCollection.getCacheStrategy();
     }
 
@@ -1859,6 +1866,32 @@ export class Worksheet {
             return this.#dataValidationCollection.get(cellAddress) ?? null;
         }
         return null;
+    }
+
+    public getHyperlink(cellCoordinate: string): Hyperlink {
+        const cellAddress = cellCoordinate.toUpperCase();
+        const hyperlink = this.#hyperlinkCollection.get(cellAddress);
+        if (hyperlink) {
+            return hyperlink;
+        }
+        const newHyperlink = new Hyperlink();
+        this.#hyperlinkCollection.set(cellAddress, newHyperlink);
+        return newHyperlink;
+    }
+
+    public setHyperlink(cellCoordinate: string, hyperlink: Hyperlink | null): this {
+        const cellAddress = cellCoordinate.toUpperCase();
+        if (hyperlink === null) {
+            this.#hyperlinkCollection.delete(cellAddress);
+            return this;
+        }
+        this.#hyperlinkCollection.set(cellAddress, hyperlink);
+        return this;
+    }
+
+    public hyperlinkExists(cellCoordinate: string): boolean {
+        const hyperlink = this.#hyperlinkCollection.get(cellCoordinate.toUpperCase());
+        return hyperlink !== undefined && !hyperlink.isEmpty();
     }
 
     /**
