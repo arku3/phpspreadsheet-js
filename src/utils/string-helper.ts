@@ -127,6 +127,15 @@ export function containsControlCharacters(textValue: string): boolean {
     return false;
 }
 
+export function countCharactersDbcs(textValue: string): number {
+    let count = 0;
+    for (const char of textValue) {
+        const codePoint = char.codePointAt(0) ?? 0;
+        count += codePoint > 0xff ? 2 : 1;
+    }
+    return count;
+}
+
 /**
  * Format a number as a string for XML output.
  * Forces decimal point (.) regardless of locale.

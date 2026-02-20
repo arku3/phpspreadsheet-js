@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { countCharactersDbcs } from '../utils/string-helper.ts';
+import { Alignment } from './alignment.ts';
 import { Color } from './color.ts';
 import { Supervisor } from './supervisor.ts';
 
@@ -16,6 +18,51 @@ export class Font extends Supervisor {
     public static readonly CAP_ALL = 'all';
     public static readonly CAP_SMALL = 'small';
     public static readonly CAP_NONE = 'none';
+
+    public static readonly DEFAULT_COLUMN_WIDTHS: Record<
+        string,
+        Record<number, { px: number; width: number; height: number }>
+    > = {
+        Arial: {
+            1: { px: 24, width: 12.0, height: 5.25 },
+            2: { px: 24, width: 12.0, height: 5.25 },
+            3: { px: 32, width: 10.6640625, height: 6.0 },
+            4: { px: 32, width: 10.6640625, height: 6.75 },
+            5: { px: 40, width: 10.0, height: 8.25 },
+            6: { px: 48, width: 9.59765625, height: 8.25 },
+            7: { px: 48, width: 9.59765625, height: 9.0 },
+            8: { px: 56, width: 9.33203125, height: 11.25 },
+            9: { px: 64, width: 9.140625, height: 12.0 },
+            10: { px: 64, width: 9.140625, height: 12.75 },
+        },
+        Calibri: {
+            1: { px: 24, width: 12.0, height: 5.25 },
+            2: { px: 24, width: 12.0, height: 5.25 },
+            3: { px: 32, width: 10.6640625, height: 6.0 },
+            4: { px: 32, width: 10.6640625, height: 6.75 },
+            5: { px: 40, width: 10.0, height: 8.25 },
+            6: { px: 48, width: 9.59765625, height: 8.25 },
+            7: { px: 48, width: 9.59765625, height: 9.0 },
+            8: { px: 56, width: 9.33203125, height: 11.25 },
+            9: { px: 56, width: 9.33203125, height: 12.0 },
+            10: { px: 64, width: 9.140625, height: 12.75 },
+            11: { px: 64, width: 9.140625, height: 15.0 },
+        },
+        Verdana: {
+            1: { px: 24, width: 12.0, height: 5.25 },
+            2: { px: 24, width: 12.0, height: 5.25 },
+            3: { px: 32, width: 10.6640625, height: 6.0 },
+            4: { px: 32, width: 10.6640625, height: 6.75 },
+            5: { px: 40, width: 10.0, height: 8.25 },
+            6: { px: 48, width: 9.59765625, height: 8.25 },
+            7: { px: 48, width: 9.59765625, height: 9.0 },
+            8: { px: 64, width: 9.140625, height: 10.5 },
+            9: { px: 72, width: 9.0, height: 11.25 },
+            10: { px: 72, width: 9.0, height: 12.75 },
+        },
+    };
+
+    public static readonly DEFAULT_CALIBRI_11 = { px: 64, width: 9.140625, height: 15.0 };
 
     #name: string = 'Calibri';
     #size: number = 11;
@@ -74,7 +121,6 @@ export class Font extends Supervisor {
             this.parent!.applyFromArray(styleArray);
         } else {
             this.#name = name || 'Calibri';
-            this.#scheme = '';
         }
         return this;
     }
@@ -454,5 +500,96 @@ export class Font extends Supervisor {
         clone.#baseLine = this.#baseLine;
         clone.#strikeType = this.#strikeType;
         return clone;
+    }
+
+    public static getDefaultColumnWidthByFont(font: Font, returnAsPixels: boolean = false): number {
+        const name = font.getName();
+        const size = Math.trunc(font.getSize());
+        const mapping = Font.DEFAULT_COLUMN_WIDTHS[name]?.[size];
+        if (mapping) {
+            return returnAsPixels ? mapping.px : mapping.width;
+        }
+        const defaultMapping = Font.DEFAULT_COLUMN_WIDTHS.Calibri?.[11] ?? Font.DEFAULT_CALIBRI_11;
+        const base = returnAsPixels ? defaultMapping.px : defaultMapping.width;
+        const scaled = (base * size) / 11.0;
+        return returnAsPixels ? Math.round(scaled) : scaled;
+    }
+
+    public static getDefaultRowHeightByFont(font: Font): number {
+        const name = font.getName();
+        const size = font.getSize();
+        const mapping = Font.DEFAULT_COLUMN_WIDTHS[name]?.[Math.trunc(size)];
+        if (mapping) {
+            return mapping.height;
+        }
+        if (name === 'Arial' || name === 'Verdana') {
+            const rowHeight = Font.DEFAULT_COLUMN_WIDTHS[name]?.[10]?.height ?? 12.75;
+            return (rowHeight * size) / 10.0;
+        }
+        const calibriHeight = (Font.DEFAULT_COLUMN_WIDTHS.Calibri?.[11] ?? Font.DEFAULT_CALIBRI_11).height;
+        return (calibriHeight * size) / 11.0;
+    }
+
+    public static calculateColumnWidth(
+        font: Font,
+        cellText: string,
+        rotation: number,
+        defaultFont: Font,
+        filterAdjustment: boolean,
+        indentAdjustment: number,
+    ): number {
+        if (cellText.includes('\n')) {
+            let maxWidth = 0;
+            for (const line of cellText.split('\n')) {
+                maxWidth = Math.max(
+                    maxWidth,
+                    Font.calculateColumnWidth(font, line, 0, defaultFont, filterAdjustment, indentAdjustment),
+                );
+            }
+            return maxWidth;
+        }
+
+        const adjustment = (filterAdjustment ? 3 : 1) + indentAdjustment * 2;
+        const paddingText = 'n'.repeat(Math.max(0, adjustment));
+        const cellWidth = Font.getTextWidthPixelsApprox(cellText, font, rotation);
+        const paddingWidth = Font.getTextWidthPixelsApprox(paddingText, font, 0);
+        const columnWidthPixels = cellWidth + paddingWidth;
+        return Font.pixelsToCellDimension(columnWidthPixels, defaultFont);
+    }
+
+    public static getTextWidthPixelsApprox(text: string, font: Font, rotation: number): number {
+        const name = font.getName();
+        const size = font.getSize();
+        const charCount = countCharactersDbcs(text);
+        let width = 0;
+        if (name === 'Arial' || name === 'Verdana') {
+            width = 8 * charCount;
+            width = (width * size) / 10.0;
+        } else {
+            width = 8.26 * charCount;
+            width = (width * size) / 11.0;
+        }
+
+        if (rotation === Alignment.TEXTROTATION_STACK_PHPSPREADSHEET) {
+            width = 4;
+        } else if (rotation !== 0) {
+            const angle = (rotation * Math.PI) / 180.0;
+            width = width * Math.cos(angle) + (size * Math.abs(Math.sin(angle))) / 5.0;
+        }
+
+        return Math.round(width);
+    }
+
+    public static pixelsToCellDimension(pixelValue: number, defaultFont: Font): number {
+        const name = defaultFont.getName();
+        const size = Math.trunc(defaultFont.getSize());
+        const mapping = Font.DEFAULT_COLUMN_WIDTHS[name]?.[size];
+        if (mapping) {
+            return (pixelValue * mapping.width) / mapping.px;
+        }
+        const defaultMapping = Font.DEFAULT_COLUMN_WIDTHS.Calibri?.[11] ?? Font.DEFAULT_CALIBRI_11;
+        const scaledWidth = (defaultMapping.width * size) / 11.0;
+        const scaledPx = (defaultMapping.px * size) / 11.0;
+        return (pixelValue * scaledWidth) / scaledPx;
     }
 }

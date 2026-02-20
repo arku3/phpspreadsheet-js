@@ -65,6 +65,18 @@ export class AutoFilter {
         return this;
     }
 
+    public setRangeToMaxRow(): this {
+        if (!this.#worksheet || this.#range === '') {
+            return this;
+        }
+        const maxRow = this.#worksheet.getHighestRow();
+        const updatedRange = this.#range.replace(/\d+$/, String(maxRow));
+        if (updatedRange !== this.#range) {
+            this.setRange(updatedRange);
+        }
+        return this;
+    }
+
     public getColumns(): Map<string, Column> {
         return this.#columns;
     }

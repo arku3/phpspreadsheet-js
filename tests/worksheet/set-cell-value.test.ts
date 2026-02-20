@@ -67,6 +67,19 @@ describe('Worksheet setCellValue', () => {
         expect(() => sheet.setCellValueExplicit('XFD1048577', 'Value')).toThrow();
     });
 
+    test('protect/unprotect cells behave like PHP', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        sheet.protectCells('A1:B2', 'pass');
+        expect(sheet.getProtectedCellRanges().length).toBe(1);
+
+        sheet.unprotectCells('A1:B2');
+        expect(sheet.getProtectedCellRanges().length).toBe(0);
+
+        expect(() => sheet.unprotectCells('A1:B2')).toThrow('Cell range A1:B2 not known as protected.');
+    });
+
     test('getCellOrNull does not create cells', () => {
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();

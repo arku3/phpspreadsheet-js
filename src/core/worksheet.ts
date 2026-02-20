@@ -1,6 +1,8 @@
 import type { CellCache } from '../caching/cell-cache.ts';
+import { Alignment } from '../style/alignment.ts';
 import { Color } from '../style/color.ts';
 import { Conditional } from '../style/conditional.ts';
+import { Font } from '../style/font.ts';
 import { Style } from '../style/style.ts';
 import { Coordinate } from '../utils/coordinate.ts';
 import { AutoFilter } from '../worksheet/auto-filter.ts';
@@ -19,6 +21,7 @@ import { Cell, DataType, type TDataType } from './cell.ts';
 import { Comment } from './comment.ts';
 import { DataValidation } from './data-validation.ts';
 import type { IValueBinder } from './i-value-binder.ts';
+import { ProtectedRange } from './protected-range.ts';
 import { Spreadsheet } from './spreadsheet.ts';
 
 /**
@@ -27,6 +30,10 @@ import { Spreadsheet } from './spreadsheet.ts';
 export class Worksheet {
     public static readonly INVALID_CHARACTERS: string[] = ['*', ':', '/', '\\', '?', '[', ']'];
     public static readonly SHEET_TITLE_MAXIMUM_LENGTH: number = 31;
+
+    public static getInvalidCharacters(): string[] {
+        return Worksheet.INVALID_CHARACTERS;
+    }
     // Sheet state constants
     public static readonly SHEETSTATE_VISIBLE = 'visible';
     public static readonly SHEETSTATE_HIDDEN = 'hidden';
@@ -137,6 +144,11 @@ export class Worksheet {
      * Collection of data validations.
      */
     #dataValidationCollection: Map<string, DataValidation> = new Map();
+
+    /**
+     * Protected cell ranges.
+     */
+    #protectedCells: Map<string, ProtectedRange> = new Map();
 
     /**
      * Sparse collection of classic cell comments, keyed by A1 coordinate (no $).
@@ -382,10 +394,54 @@ export class Worksheet {
     }
 
     /**
+     * Get in-cell drawing collection.
+     */
+    public getInCellDrawingCollection(): ReadonlyArray<BaseDrawing> {
+        return this.#drawingCollection;
+    }
+
+    /**
      * Get a readonly view of all charts on this worksheet.
      */
     public getChartCollection(): readonly Chart[] {
         return this.#chartCollection;
+    }
+
+    public getChartCount(): number {
+        return this.#chartCollection.length;
+    }
+
+    public getChartByIndex(index: number | null): Chart | false {
+        const chartCount = this.#chartCollection.length;
+        if (chartCount === 0) {
+            return false;
+        }
+        let chartIndex = index ?? chartCount - 1;
+        if (!this.#chartCollection[chartIndex]) {
+            return false;
+        }
+        return this.#chartCollection[chartIndex]!;
+    }
+
+    public getChartNames(): string[] {
+        return this.#chartCollection.map((chart) => chart.getName());
+    }
+
+    public getChartByName(chartName: string): Chart | false {
+        for (const chart of this.#chartCollection) {
+            if (chart.getName() === chartName) {
+                return chart;
+            }
+        }
+        return false;
+    }
+
+    public getChartByNameOrThrow(chartName: string): Chart {
+        const chart = this.getChartByName(chartName);
+        if (chart !== false) {
+            return chart;
+        }
+        throw new Error(`Sheet does not have a chart named ${chartName}.`);
     }
 
     /**
@@ -610,10 +666,11 @@ export class Worksheet {
      * Set title.
      */
     public setTitle(title: string, _updateFormulaCellReferences: boolean = true, _validate: boolean = true): this {
+        const validatedTitle = _validate ? Worksheet.#checkSheetTitle(title) : title;
         const previousTitle = this.#title;
-        this.#title = title;
+        this.#title = validatedTitle;
         if (this.#codeName === null || this.#codeName === previousTitle) {
-            this.setCodeName(title);
+            this.setCodeName(validatedTitle);
         }
         return this;
     }
@@ -629,9 +686,16 @@ export class Worksheet {
      * Set selected cells.
      */
     public setSelectedCells(coordinate: string): this {
+        if (!coordinate) {
+            throw new Error('Cell coordinate can not be zero-length string');
+        }
         this.#selectedCells = coordinate.toUpperCase();
         this.#setSelectedCellsActivePane();
         return this;
+    }
+
+    public setSelectedCell(cell: string): this {
+        return this.setSelectedCells(cell);
     }
 
     /**
@@ -665,6 +729,56 @@ export class Worksheet {
             return first.split(':')[0]!.toUpperCase();
         }
         return first.toUpperCase();
+    }
+
+    public setActiveCell(cell: string): this {
+        return this.setSelectedCells(cell);
+    }
+
+    static #checkSheetTitle(sheetTitle: string): string {
+        if (Worksheet.INVALID_CHARACTERS.some((char) => sheetTitle.includes(char))) {
+            throw new Error('Invalid character found in sheet title');
+        }
+        if (sheetTitle.length > Worksheet.SHEET_TITLE_MAXIMUM_LENGTH) {
+            throw new Error(`Maximum ${Worksheet.SHEET_TITLE_MAXIMUM_LENGTH} characters allowed in sheet title.`);
+        }
+        return sheetTitle;
+    }
+
+    static #normalizeRangeInput(range: string | [number, number] | [number, number, number, number]): string {
+        if (Array.isArray(range)) {
+            if (range.length === 2) {
+                const [col, row] = range;
+                return Worksheet.#normalizeCellCoordinateInput([col, row]);
+            }
+            if (range.length === 4) {
+                const [fromCol, fromRow, toCol, toRow] = range;
+                const start = Worksheet.#normalizeCellCoordinateInput([fromCol, fromRow]);
+                const end = Worksheet.#normalizeCellCoordinateInput([toCol, toRow]);
+                return `${start}:${end}`;
+            }
+            throw new Error('Cell coordinate string is not a valid A1 reference.');
+        }
+
+        const trimmed = range.trim();
+        if (trimmed.length === 0) {
+            throw new Error('Cell coordinate can not be zero-length string');
+        }
+        let normalized = trimmed;
+        if (normalized.includes('!')) {
+            const parts = normalized.split('!');
+            normalized = parts[parts.length - 1] ?? '';
+        }
+        if (normalized.includes(':')) {
+            const [start, end] = normalized.split(':');
+            if (!start || !end) {
+                throw new Error('Cell coordinate string can not be a range of cells');
+            }
+            const normalizedStart = Worksheet.#normalizeCellCoordinateInput(start);
+            const normalizedEnd = Worksheet.#normalizeCellCoordinateInput(end);
+            return `${normalizedStart}:${normalizedEnd}`;
+        }
+        return Worksheet.#normalizeCellCoordinateInput(normalized);
     }
 
     /**
@@ -706,23 +820,19 @@ export class Worksheet {
             }
 
             const normalized = Worksheet.#normalizeCellCoordinateInput(trimmed);
-            let cell = this.#cellCollection.get(normalized);
-            if (!cell) {
-                const [colIndex, rowIndex] = Coordinate.indexesFromString(normalized);
-                cell = new Cell(null, DataType.TYPE_NULL, this, Coordinate.stringFromColumnIndex(colIndex), rowIndex);
-                this.#cellCollection.add(normalized, cell);
+            const cell = this.#cellCollection.get(normalized);
+            if (cell) {
+                return cell;
             }
-            return cell;
+            return this.createNewCell(normalized);
         }
 
         const normalized = Worksheet.#normalizeCellCoordinateInput(coordinate);
-        let cell = this.#cellCollection.get(normalized);
-        if (!cell) {
-            const [colIndex, rowIndex] = Coordinate.indexesFromString(normalized);
-            cell = new Cell(null, DataType.TYPE_NULL, this, Coordinate.stringFromColumnIndex(colIndex), rowIndex);
-            this.#cellCollection.add(normalized, cell);
+        const cell = this.#cellCollection.get(normalized);
+        if (cell) {
+            return cell;
         }
-        return cell;
+        return this.createNewCell(normalized);
     }
 
     public getCellOrNull(coordinate: string | [string | number, number]): Cell | null {
@@ -766,6 +876,66 @@ export class Worksheet {
 
         const normalized = Worksheet.#normalizeCellCoordinateInput(coordinate);
         return this.#cellCollection.get(normalized) ?? null;
+    }
+
+    /**
+     * Create a new cell at coordinate.
+     */
+    public createNewCell(coordinate: string | [string | number, number]): Cell {
+        const normalized = Worksheet.#normalizeCellCoordinateInput(coordinate);
+        const existing = this.#cellCollection.get(normalized);
+        if (existing) {
+            return existing;
+        }
+        const [colIndex, rowIndex] = Coordinate.indexesFromString(normalized);
+        const cell = new Cell(null, DataType.TYPE_NULL, this, Coordinate.stringFromColumnIndex(colIndex), rowIndex);
+        this.#cellCollection.add(normalized, cell);
+
+        const rowDimension = this.#rowDimensions.get(rowIndex);
+        if (rowDimension) {
+            const rowXf = rowDimension.getXfIndex();
+            if (rowXf !== null && rowXf > 0) {
+                cell.setXfIndex(rowXf);
+                return cell;
+            }
+        }
+
+        const columnKey = Coordinate.stringFromColumnIndex(colIndex);
+        const columnDimension = this.#columnDimensions.get(columnKey);
+        if (columnDimension) {
+            const colXf = columnDimension.getXfIndex();
+            if (colXf !== null && colXf > 0) {
+                cell.setXfIndex(colXf);
+            }
+        }
+
+        return cell;
+    }
+
+    /**
+     * Does the cell exist?
+     */
+    public cellExists(coordinate: string | [string | number, number]): boolean {
+        const cell = this.getCellOrNull(coordinate);
+        return cell !== null;
+    }
+
+    /**
+     * Get all coordinates with values.
+     */
+    public getCoordinates(sorted: boolean = true): string[] {
+        const coordinates = [...this.#cellCollection.getCoordinates()];
+        if (!sorted) {
+            return coordinates;
+        }
+        return coordinates.sort((a, b) => {
+            const [colA, rowA] = Coordinate.indexesFromString(a);
+            const [colB, rowB] = Coordinate.indexesFromString(b);
+            if (rowA !== rowB) {
+                return rowA - rowB;
+            }
+            return colA - colB;
+        });
     }
 
     /**
@@ -940,11 +1110,30 @@ export class Worksheet {
         return this.#rowDimensions.has(row);
     }
 
+    public getRowStyle(row: number): Style | null {
+        const parent = this.#parent;
+        if (!parent) {
+            return null;
+        }
+        const rowDimension = this.#rowDimensions.get(row);
+        return parent.getCellXfByIndexOrNull(rowDimension?.getXfIndex() ?? null);
+    }
+
     /**
      * Get column dimensions.
      */
     public getColumnDimensions(): Map<string, ColumnDimension> {
-        return this.#columnDimensions;
+        const sorted = [...this.#columnDimensions.values()].sort((a, b) => {
+            return a.getColumnNumeric() - b.getColumnNumeric();
+        });
+        const map = new Map<string, ColumnDimension>();
+        for (const dimension of sorted) {
+            const key = dimension.getColumnIndex();
+            if (key) {
+                map.set(key, dimension);
+            }
+        }
+        return map;
     }
 
     /**
@@ -987,6 +1176,16 @@ export class Worksheet {
         return this.#columnDimensions.has(column.toUpperCase());
     }
 
+    public getColumnStyle(column: string): Style | null {
+        const parent = this.#parent;
+        if (!parent) {
+            return null;
+        }
+        const columnKey = column.toUpperCase();
+        const columnDimension = this.#columnDimensions.get(columnKey);
+        return parent.getCellXfByIndexOrNull(columnDimension?.getXfIndex() ?? null);
+    }
+
     /**
      * Get table by name.
      *
@@ -995,6 +1194,176 @@ export class Worksheet {
     public getTableByName(name: string): Table | undefined {
         const searchName = name.toUpperCase();
         return this.#tables.find((table) => table.getName().toUpperCase() === searchName);
+    }
+
+    public getTableNames(): string[] {
+        return this.#tables.map((table) => table.getName());
+    }
+
+    public removeTableByName(name: string): boolean {
+        const searchName = name.toUpperCase();
+        const index = this.#tables.findIndex((table) => table.getName().toUpperCase() === searchName);
+        if (index === -1) {
+            return false;
+        }
+        this.#tables.splice(index, 1);
+        return true;
+    }
+
+    public removeTableCollection(): void {
+        this.#tables = [];
+    }
+
+    public refreshColumnDimensions(): this {
+        const refreshed = new Map<string, ColumnDimension>();
+        for (const [key, dimension] of this.#columnDimensions.entries()) {
+            const columnIndex = dimension.getColumnIndex() ?? key;
+            refreshed.set(columnIndex, dimension);
+        }
+        this.#columnDimensions = refreshed;
+        return this;
+    }
+
+    public refreshRowDimensions(): this {
+        const refreshed = new Map<number, RowDimension>();
+        for (const [key, dimension] of this.#rowDimensions.entries()) {
+            const rowIndex = dimension.getRowIndex() ?? key;
+            refreshed.set(rowIndex, dimension);
+        }
+        this.#rowDimensions = refreshed;
+        return this;
+    }
+
+    public calculateWorksheetDimension(): string {
+        return `A1:${this.getHighestColumn()}${this.getHighestRow()}`;
+    }
+
+    public calculateWorksheetDataDimension(): string {
+        return `A1:${this.getHighestDataColumn()}${this.getHighestDataRow()}`;
+    }
+
+    public calculateColumnWidths(): this {
+        const workbook = this.#parent;
+        if (!workbook) {
+            return this;
+        }
+
+        const activeSheetIndex = workbook.getActiveSheetIndex();
+        const selectedCells = this.getSelectedCells();
+
+        const autoSizes = new Map<string, number>();
+        for (const [key, dimension] of this.#columnDimensions.entries()) {
+            if (dimension.getAutoSize()) {
+                autoSizes.set(key, -1);
+            }
+        }
+
+        if (autoSizes.size === 0) {
+            return this;
+        }
+
+        const activePane = this.getActivePane();
+        const mergeCells = this.getMergeCells();
+        const isMergeCell = new Set<string>();
+        for (const range of Object.keys(mergeCells)) {
+            const [[startCol, startRow], [endCol, endRow]] = Coordinate.rangeBoundaries(range);
+            for (let row = startRow; row <= endRow; row++) {
+                for (let col = startCol; col <= endCol; col++) {
+                    isMergeCell.add(`${Coordinate.stringFromColumnIndex(col)}${row}`);
+                }
+            }
+        }
+
+        const autoFilterIndentRanges: string[] = [];
+        const autoFilterRange = this.#autoFilter.getRange();
+        if (autoFilterRange) {
+            const [[startCol, startRow], [endCol]] = Coordinate.rangeBoundaries(autoFilterRange);
+            autoFilterIndentRanges.push(
+                `${Coordinate.stringFromColumnIndex(startCol)}${startRow}:${Coordinate.stringFromColumnIndex(endCol)}${startRow}`,
+            );
+        }
+        for (const table of this.#tables) {
+            if (!table.getShowHeader()) {
+                continue;
+            }
+            const [[startCol, startRow], [endCol]] = table.getRangeBoundaries();
+            autoFilterIndentRanges.push(
+                `${Coordinate.stringFromColumnIndex(startCol)}${startRow}:${Coordinate.stringFromColumnIndex(endCol)}${startRow}`,
+            );
+        }
+
+        const defaultFont = workbook.getDefaultStyle().getFont();
+
+        for (const coordinate of this.getCoordinates(false)) {
+            const cell = this.getCellOrNull(coordinate);
+            if (!cell) {
+                continue;
+            }
+            const column = cell.getColumn();
+            if (!autoSizes.has(column)) {
+                continue;
+            }
+
+            let isMergedButProceed = false;
+            if (isMergeCell.has(coordinate)) {
+                if (cell.isMergeRangeValueCell()) {
+                    const mergeRange = cell.getMergeRange();
+                    if (mergeRange) {
+                        const [[startCol, startRow], [endCol]] = Coordinate.rangeBoundaries(mergeRange);
+                        if (startCol === endCol) {
+                            isMergedButProceed = true;
+                        }
+                    }
+                }
+                if (!isMergedButProceed) {
+                    continue;
+                }
+            }
+
+            let filterAdjustment = false;
+            for (const range of autoFilterIndentRanges) {
+                if (cell.isInRange(range)) {
+                    filterAdjustment = true;
+                    break;
+                }
+            }
+
+            const alignment = cell.getStyle().getAlignment();
+            const indentAdjustment =
+                alignment.getIndent() + (alignment.getHorizontal() === Alignment.HORIZONTAL_CENTER ? 1 : 0);
+
+            const cellValue = cell.getFormattedValue();
+            if (cellValue === '') {
+                continue;
+            }
+
+            const cellFont = cell.getStyle().getFont();
+            const columnWidth = Font.calculateColumnWidth(
+                cellFont,
+                cellValue,
+                alignment.getTextRotation(),
+                defaultFont,
+                filterAdjustment,
+                indentAdjustment,
+            );
+            const currentWidth = autoSizes.get(column) ?? -1;
+            const roundedWidth = Math.round(columnWidth * 1000) / 1000;
+            if (roundedWidth > currentWidth) {
+                autoSizes.set(column, roundedWidth);
+            }
+        }
+
+        for (const [column, width] of autoSizes) {
+            const dimension = this.getColumnDimension(column);
+            const finalWidth = width < 0 ? Font.getDefaultColumnWidthByFont(defaultFont) : width;
+            dimension.setWidth(finalWidth);
+        }
+
+        this.setSelectedCells(selectedCells);
+        this.setActivePane(activePane);
+        workbook.setActiveSheetIndex(activeSheetIndex);
+
+        return this;
     }
 
     /**
@@ -1389,13 +1758,51 @@ export class Worksheet {
     /**
      * Set auto filter.
      */
-    public setAutoFilter(autoFilter: AutoFilter | string): this {
-        if (typeof autoFilter === 'string') {
-            this.#autoFilter.setRange(autoFilter);
-        } else {
+    public setAutoFilter(autoFilter: AutoFilter | string | [number, number] | [number, number, number, number]): this {
+        if (autoFilter instanceof AutoFilter) {
             this.#autoFilter = autoFilter;
+            return this;
         }
+        const range = Worksheet.#normalizeRangeInput(autoFilter);
+        this.#autoFilter.setRange(range);
         return this;
+    }
+
+    public setAutoFilterRange(range: string | [number, number] | [number, number, number, number]): this {
+        const normalized = Worksheet.#normalizeRangeInput(range);
+        this.#autoFilter.setRange(normalized);
+        return this;
+    }
+
+    public removeAutoFilter(): this {
+        this.#autoFilter.setRange('');
+        return this;
+    }
+
+    public protectCells(
+        range: string | [number, number] | [number, number, number, number],
+        password: string = '',
+        alreadyHashed: boolean = false,
+        name: string = '',
+        securityDescriptor: string = '',
+    ): this {
+        const normalized = Worksheet.#normalizeRangeInput(range);
+        const protectedRange = ProtectedRange.create(normalized, password, alreadyHashed, name, securityDescriptor);
+        this.#protectedCells.set(normalized, protectedRange);
+        return this;
+    }
+
+    public unprotectCells(range: string | [number, number] | [number, number, number, number]): this {
+        const normalized = Worksheet.#normalizeRangeInput(range);
+        if (!this.#protectedCells.has(normalized)) {
+            throw new Error(`Cell range ${normalized} not known as protected.`);
+        }
+        this.#protectedCells.delete(normalized);
+        return this;
+    }
+
+    public getProtectedCellRanges(): ProtectedRange[] {
+        return [...this.#protectedCells.values()];
     }
 
     /**

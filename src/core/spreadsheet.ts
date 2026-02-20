@@ -4,6 +4,7 @@ import { Properties } from '../document/properties.ts';
 import { Security } from '../document/security.ts';
 import { Style } from '../style/style.ts';
 import { Theme } from '../style/theme.ts';
+import { Table } from '../worksheet/table.ts';
 import { DefaultValueBinder } from './default-value-binder.ts';
 import { DefinedName } from './defined-name.ts';
 import type { IValueBinder } from './i-value-binder.ts';
@@ -19,6 +20,8 @@ export class Spreadsheet {
     public static readonly VISIBILITY_VISIBLE = 'visible';
     public static readonly VISIBILITY_HIDDEN = 'hidden';
     public static readonly VISIBILITY_VERY_HIDDEN = 'veryHidden';
+    public static readonly CALENDAR_WINDOWS_1900 = 1900;
+    public static readonly CALENDAR_MAC_1904 = 1904;
 
     #workSheetCollection: Worksheet[] = [];
     #activeSheetIndex: number = 0;
@@ -38,6 +41,7 @@ export class Spreadsheet {
     #ribbonXMLData: { target: string; data: string } | null = null;
     #ribbonBinObjects: { names: unknown; data: Record<string, unknown> } | null = null;
     #unparsedLoadedData: unknown[] = [];
+    #excelCalendar: number = Spreadsheet.CALENDAR_WINDOWS_1900;
 
     // Workbook view properties
     #autoFilterDateGrouping: boolean = true;
@@ -163,6 +167,141 @@ export class Spreadsheet {
             }
         }
         return false;
+    }
+
+    public cellXfExists(style: Style): boolean {
+        return this.#cellXfCollection.includes(style);
+    }
+
+    public removeCellStyleXfByIndex(index: number): void {
+        if (index < 0 || index >= this.#cellStyleXfCollection.length) {
+            throw new Error(`CellStyleXf index ${index} is out of bounds.`);
+        }
+        this.#cellStyleXfCollection.splice(index, 1);
+    }
+
+    public resetThemeFonts(): void {
+        const majorFont = this.#theme.getMajorFontLatin();
+        const minorFont = this.#theme.getMinorFontLatin();
+
+        const updateScheme = (style: Style): void => {
+            const font = style.getFont();
+            const scheme = font.getScheme();
+            if (scheme === 'major') {
+                font.setName(majorFont);
+            } else if (scheme === 'minor') {
+                font.setName(minorFont);
+            }
+        };
+
+        if (this.#cellXfSupervisor) {
+            updateScheme(this.#cellXfSupervisor);
+        }
+        for (const style of this.#cellXfCollection) {
+            updateScheme(style);
+        }
+        for (const style of this.#cellStyleXfCollection) {
+            updateScheme(style);
+        }
+    }
+
+    public setExcelCalendar(baseYear: number): boolean {
+        if (baseYear === Spreadsheet.CALENDAR_WINDOWS_1900 || baseYear === Spreadsheet.CALENDAR_MAC_1904) {
+            this.#excelCalendar = baseYear;
+            return true;
+        }
+        return false;
+    }
+
+    public getExcelCalendar(): number {
+        return this.#excelCalendar;
+    }
+
+    public getTableByName(name: string): Table | null {
+        for (const sheet of this.#workSheetCollection) {
+            const table = sheet.getTableByName(name);
+            if (table) {
+                return table;
+            }
+        }
+        return null;
+    }
+
+    public getLegacyDrawing(worksheet: Worksheet): unknown | null {
+        const data = this.#unparsedLoadedData as any;
+        const codeName = worksheet.getCodeName();
+        if (!data?.sheets || !codeName) {
+            return null;
+        }
+        return data.sheets?.[codeName]?.legacyDrawing ?? null;
+    }
+
+    public deleteLegacyDrawing(worksheet: Worksheet): void {
+        const data = this.#unparsedLoadedData as any;
+        const codeName = worksheet.getCodeName();
+        if (!data?.sheets || !codeName) {
+            return;
+        }
+        if (data.sheets[codeName]) {
+            delete data.sheets[codeName].legacyDrawing;
+        }
+    }
+
+    public mergeChartCellsForPdf(): void {
+        for (const sheet of this.#workSheetCollection) {
+            for (const chart of sheet.getChartCollection()) {
+                const topLeft = chart.getTopLeftPosition().cell;
+                const bottomRight = chart.getBottomRightPosition()?.cell;
+                if (!bottomRight || bottomRight === topLeft) {
+                    continue;
+                }
+                sheet.getCell(bottomRight);
+                sheet.mergeCells(`${topLeft}:${bottomRight}`);
+            }
+        }
+    }
+
+    public mergeDrawingCellsForPdf(): void {
+        for (const sheet of this.#workSheetCollection) {
+            for (const drawing of sheet.getDrawingCollection()) {
+                const topLeft = drawing.getCoordinates();
+                const bottomRight = drawing.getCoordinates2();
+                if (!bottomRight || bottomRight === topLeft) {
+                    continue;
+                }
+                sheet.getCell(bottomRight);
+                sheet.mergeCells(`${topLeft}:${bottomRight}`);
+            }
+        }
+    }
+
+    public reevaluateAutoFilters(resetToMaxRow: boolean = false): void {
+        for (const sheet of this.#workSheetCollection) {
+            const autoFilter = sheet.getAutoFilter();
+            if (autoFilter.getRange() === '') {
+                continue;
+            }
+            if (resetToMaxRow) {
+                autoFilter.setRangeToMaxRow();
+            }
+            autoFilter.showHideRows();
+        }
+    }
+
+    public replaceBuiltinNumberFormat(builtInFormatCode: number, formatCode: string): void {
+        for (const style of this.#cellXfCollection) {
+            if (style.getNumberFormat().getBuiltInFormatCode() === builtInFormatCode) {
+                style.getNumberFormat().setFormatCode(formatCode);
+            }
+        }
+    }
+
+    public returnArrayAsArray(): void {
+        this.#calculationEngine.setInstanceArrayReturnType(Calculation.RETURN_ARRAY_AS_ARRAY);
+    }
+
+    public returnArrayAsValue(): void {
+        this.#calculationEngine.setInstanceArrayReturnType(Calculation.RETURN_ARRAY_AS_VALUE);
     }
 
     public getUnparsedLoadedData(): unknown[] {
@@ -332,7 +471,8 @@ export class Spreadsheet {
             const beforeCount = this.#definedNames.length;
             this.#definedNames = this.#definedNames.filter((dn) => {
                 if (!dn.getLocalOnly()) return true;
-                if (dn.getScope() !== worksheet) return true;
+                const scope = dn.getScope() ?? dn.getWorksheet();
+                if (scope !== worksheet) return true;
                 return dn.getName().toUpperCase() !== nameKey;
             });
             if (this.#definedNames.length === beforeCount) {
@@ -773,6 +913,16 @@ export class Spreadsheet {
                 }
             }
 
+            for (const protectedRange of worksheet.getProtectedCellRanges()) {
+                newSheet.protectCells(
+                    protectedRange.getRange(),
+                    protectedRange.getPassword(),
+                    true,
+                    protectedRange.getName(),
+                    protectedRange.getSecurityDescriptor(),
+                );
+            }
+
             for (const drawing of worksheet.getDrawingCollection()) {
                 newSheet.addDrawing(drawing.clone());
             }
@@ -854,7 +1004,7 @@ export class Spreadsheet {
     public addExternalSheet(worksheet: Worksheet, index?: number): Worksheet {
         if (this.sheetNameExists(worksheet.getTitle())) {
             throw new Error(
-                `Workbook already contains a worksheet named '${worksheet.getTitle()}'. Rename this worksheet first.`,
+                `Workbook already contains a worksheet named '${worksheet.getTitle()}'. Rename the external sheet first.`,
             );
         }
 

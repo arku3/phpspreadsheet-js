@@ -107,6 +107,50 @@ describe('Spreadsheet core parity', () => {
         expect(spreadsheet.getRibbonBinObjects('types')).toEqual(['bin']);
     });
 
+    test('excel calendar setters match PHP', () => {
+        const spreadsheet = new Spreadsheet();
+        expect(spreadsheet.setExcelCalendar(Spreadsheet.CALENDAR_WINDOWS_1900)).toBe(true);
+        expect(spreadsheet.getExcelCalendar()).toBe(Spreadsheet.CALENDAR_WINDOWS_1900);
+        expect(spreadsheet.setExcelCalendar(Spreadsheet.CALENDAR_MAC_1904)).toBe(true);
+        expect(spreadsheet.getExcelCalendar()).toBe(Spreadsheet.CALENDAR_MAC_1904);
+        expect(spreadsheet.setExcelCalendar(2000)).toBe(false);
+    });
+
+    test('resetThemeFonts updates font schemes', () => {
+        const spreadsheet = new Spreadsheet();
+        const style = spreadsheet.getDefaultStyle();
+        style.getFont().setScheme('major').setName('OldMajor');
+
+        spreadsheet.getTheme().setMajorFontValues('NewMajor', 'East', 'Complex', {});
+        spreadsheet.resetThemeFonts();
+
+        expect(style.getFont().getName()).toBe('NewMajor');
+    });
+
+    test('cellXfExists and removeCellStyleXfByIndex', () => {
+        const spreadsheet = new Spreadsheet();
+        const style = spreadsheet.getDefaultStyle();
+
+        expect(spreadsheet.cellXfExists(style)).toBe(true);
+        expect(() => spreadsheet.removeCellStyleXfByIndex(99)).toThrow();
+    });
+
+    test('reevaluateAutoFilters refreshes ranges', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        sheet.setCellValue('A1', 'Header');
+        sheet.setCellValue('A2', 'Apple');
+        sheet.setCellValue('A3', 'Banana');
+
+        const autoFilter = sheet.getAutoFilter();
+        autoFilter.setRange('A1:A1');
+        autoFilter.getColumn('A').createRule().setValue('Apple');
+
+        spreadsheet.reevaluateAutoFilters(true);
+        expect(autoFilter.getRange()).toBe('A1:A3');
+    });
+
     test('addExternalSheet rebinds worksheet parent', () => {
         const source = new Spreadsheet();
         const sheet = source.getActiveSheet();

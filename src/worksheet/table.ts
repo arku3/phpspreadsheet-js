@@ -51,6 +51,24 @@ export class Table {
         return this.#range;
     }
 
+    public setRange(range: string): this {
+        this.#range = range;
+        return this;
+    }
+
+    public setRangeToMaxRow(): this {
+        const worksheet = this.#worksheet;
+        if (!worksheet || this.#range === '') {
+            return this;
+        }
+        const maxRow = worksheet.getHighestRow();
+        const updatedRange = this.#range.replace(/\d+$/, String(maxRow));
+        if (updatedRange !== this.#range) {
+            this.setRange(updatedRange);
+        }
+        return this;
+    }
+
     public getWorksheet(): Worksheet {
         return this.#worksheet;
     }

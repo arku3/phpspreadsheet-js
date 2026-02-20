@@ -132,4 +132,18 @@ describe('AutoFilter', () => {
         // A5 should not be affected because it's beyond the extended range
         expect(sheet.rowDimensionExists(5)).toBe(false);
     });
+
+    test('setRangeToMaxRow expands range to highest row', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        sheet.setCellValue('A1', 'Header');
+        sheet.setCellValue('A4', 'Data');
+
+        const autoFilter = sheet.getAutoFilter();
+        autoFilter.setRange('A1:A1');
+        autoFilter.setRangeToMaxRow();
+
+        expect(autoFilter.getRange()).toBe('A1:A4');
+    });
 });

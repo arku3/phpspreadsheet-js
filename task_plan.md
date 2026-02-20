@@ -8,13 +8,13 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
 - Public API parity with PHP in naming, arguments, and return types.
 
 ## Phase 1: Public API Parity (Core)
-- [ ] Spreadsheet: align return types for `setActiveSheetIndex`, `setActiveSheetIndexByName`, `setValueBinder`.
-- [ ] Spreadsheet: add missing APIs (named formulas/ranges, calculation hooks, sheet management, cell Xf helpers, macros/ribbon, PDF helpers).
-- [ ] Worksheet: align `setTitle`, `getStyle`, `setCellValue` signatures.
-- [ ] Worksheet: add missing methods (cell lookup helpers, hyperlinks, conditional styles, table/chart collections, protection, active cell, dimension helpers).
-- [ ] Cell: align constructor, `getColumn/getRow`, `setValue`, `setValueExplicit`, data validation/hyperlink APIs.
+- [x] Spreadsheet: align return types for `setActiveSheetIndex`, `setActiveSheetIndexByName`, `setValueBinder`.
+- [x] Spreadsheet: add missing APIs (named formulas/ranges, calculation hooks, sheet management, cell Xf helpers, macros/ribbon, PDF helpers).
+- [x] Worksheet: align `setTitle`, `getStyle`, `setCellValue` signatures.
+- [x] Worksheet: add missing methods (cell lookup helpers, hyperlinks, conditional styles, table/chart collections, protection, active cell, dimension helpers).
+- [x] Cell: align constructor, `getColumn/getRow`, `setValue`, `setValueExplicit`, data validation/hyperlink APIs.
 - [ ] Cell: add calculated-value and formula attribute APIs.
-- [ ] Comment/DefinedName/NamedRange/Hyperlink: add missing APIs and align constructors/constants.
+- [x] Comment/DefinedName/NamedRange/Hyperlink: add missing APIs and align constructors/constants.
 - [ ] CellCollection: implement Cells-like behaviors (active cell, sorting, delete/unset, clone, factory).
 
 ## Phase 2: Worksheet Extras Parity

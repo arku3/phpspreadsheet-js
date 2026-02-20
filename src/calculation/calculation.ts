@@ -12,17 +12,29 @@ import { Stack } from './token/stack.ts';
  * Calculation Engine.
  */
 export class Calculation {
+    public static readonly RETURN_ARRAY_AS_VALUE = 'value';
+    public static readonly RETURN_ARRAY_AS_ARRAY = 'array';
+
     #branchPruner: BranchPruner;
     #stack: Stack;
     #functionRegistry: FunctionRegistry;
     #cyclicReferenceStack: Set<string> = new Set();
     #calculationCache: Map<string, Map<string, any>> = new Map();
     #cacheEnabled: boolean = true;
+    #instanceArrayReturnType: string = Calculation.RETURN_ARRAY_AS_VALUE;
 
     constructor() {
         this.#branchPruner = new BranchPruner();
         this.#stack = new Stack(this.#branchPruner);
         this.#functionRegistry = new FunctionRegistry();
+    }
+
+    public getInstanceArrayReturnType(): string {
+        return this.#instanceArrayReturnType;
+    }
+
+    public setInstanceArrayReturnType(value: string): void {
+        this.#instanceArrayReturnType = value;
     }
 
     /**
