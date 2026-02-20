@@ -33,6 +33,10 @@ export class AutoFilter {
         return this;
     }
 
+    public setWorksheet(worksheet: Worksheet | null): this {
+        return this.setParent(worksheet);
+    }
+
     public getRange(): string {
         return this.#range;
     }

@@ -1,5 +1,6 @@
 import type { Worksheet } from '../../core/worksheet.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
+import { TableStyle } from '../../worksheet/table-style.ts';
 import { Table } from '../../worksheet/table.ts';
 import { XlsxReader } from '../xlsx-reader.ts';
 import { ReaderPart } from './reader-part.ts';
@@ -47,8 +48,29 @@ export class TableReader extends ReaderPart {
         const totalsRowCount = TableReader.extractXmlAttribute(tableTagAttrs, 'totalsRowCount');
 
         const table = new Table(tableName, tableRange, this.#worksheet);
-        table.showHeader((headerRowCount ?? '') !== '0');
-        table.showTotals((totalsRowCount ?? '') === '1');
+        table.setShowHeaderRow((headerRowCount ?? '') !== '0');
+        table.setShowTotalsRow((totalsRowCount ?? '') === '1');
+
+        // AutoFilter (allowFilter + filter button visibility)
+        const autoFilterMatch = this.#tableXml.match(/<autoFilter\b[^>]*>([\s\S]*?)<\/autoFilter>/);
+        if (autoFilterMatch && autoFilterMatch[1]) {
+            const filterColumns = [...autoFilterMatch[1].matchAll(/<filterColumn\b([^>]*)>/g)];
+            if (filterColumns.length === 0) {
+                table.setAllowFilter(false);
+            } else {
+                for (const filterColumn of filterColumns) {
+                    const attrs = filterColumn[1] ?? '';
+                    const colId = Number.parseInt(TableReader.extractXmlAttribute(attrs, 'colId') ?? '0', 10);
+                    const hidden = TableReader.extractXmlAttribute(attrs, 'hiddenButton') === '1';
+                    const column = table.getColumnByOffset(colId);
+                    if (column !== false) {
+                        column.setShowFilterButton(!hidden);
+                    }
+                }
+            }
+        } else {
+            table.setAllowFilter(false);
+        }
 
         // Columns
         const columnsMatch = this.#tableXml.match(/<tableColumns\b[^>]*>([\s\S]*?)<\/tableColumns>/);
@@ -60,7 +82,24 @@ export class TableReader extends ReaderPart {
             for (const m of columnTags) {
                 const attrs = m[1] ?? '';
                 const colNameRaw = TableReader.extractXmlAttribute(attrs, 'name') ?? `Column${offset + 1}`;
-                table.addColumn(XlsxReader.decodeXmlEntities(colNameRaw));
+                const column = table.addColumn(XlsxReader.decodeXmlEntities(colNameRaw));
+                if (table.getShowTotalsRow()) {
+                    const totalsRowLabel = TableReader.extractXmlAttribute(attrs, 'totalsRowLabel');
+                    if (totalsRowLabel) {
+                        column.setTotalsRowLabel(XlsxReader.decodeXmlEntities(totalsRowLabel));
+                    }
+                    const totalsRowFunction = TableReader.extractXmlAttribute(attrs, 'totalsRowFunction');
+                    if (totalsRowFunction) {
+                        column.setTotalsRowFunction(totalsRowFunction);
+                    }
+                }
+                const fullTag = m[0] ?? '';
+                const formulaMatch = fullTag.match(
+                    /<calculatedColumnFormula[^>]*>([\s\S]*?)<\/calculatedColumnFormula>/,
+                );
+                if (formulaMatch && formulaMatch[1]) {
+                    column.setColumnFormula(XlsxReader.decodeXmlEntities(formulaMatch[1]));
+                }
                 offset++;
             }
         } else {
@@ -73,6 +112,22 @@ export class TableReader extends ReaderPart {
                     table.addColumn(`Column${i + 1}`);
                 }
             }
+        }
+
+        // Table style info
+        const tableStyleMatch = this.#tableXml.match(/<tableStyleInfo\b([^>]*)\/>/);
+        if (tableStyleMatch) {
+            const attrs = tableStyleMatch[1] ?? '';
+            const style = new TableStyle();
+            const theme = TableReader.extractXmlAttribute(attrs, 'name') ?? '';
+            if (theme !== '') {
+                style.setTheme(theme);
+            }
+            style.setShowRowStripes(TableReader.extractXmlAttribute(attrs, 'showRowStripes') === '1');
+            style.setShowColumnStripes(TableReader.extractXmlAttribute(attrs, 'showColumnStripes') === '1');
+            style.setShowFirstColumn(TableReader.extractXmlAttribute(attrs, 'showFirstColumn') === '1');
+            style.setShowLastColumn(TableReader.extractXmlAttribute(attrs, 'showLastColumn') === '1');
+            table.setStyle(style);
         }
 
         return table;

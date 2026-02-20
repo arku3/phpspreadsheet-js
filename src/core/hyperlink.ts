@@ -5,12 +5,14 @@
  */
 export class Hyperlink {
     #url: string;
+    #display: string;
     #location: string;
     #tooltip: string;
 
-    constructor(url: string = '', location: string = '', tooltip: string = '') {
+    constructor(url: string = '', tooltip: string = '') {
         this.#url = url;
-        this.#location = location;
+        this.#display = '';
+        this.#location = '';
         this.#tooltip = tooltip;
     }
 
@@ -44,6 +46,15 @@ export class Hyperlink {
         return this;
     }
 
+    public getDisplay(): string {
+        return this.#display;
+    }
+
+    public setDisplay(display: string): this {
+        this.#display = display;
+        return this;
+    }
+
     /**
      * Get tooltip.
      */
@@ -63,6 +74,19 @@ export class Hyperlink {
      * True if this hyperlink has no target information.
      */
     public isEmpty(): boolean {
-        return this.#url === '' && this.#location === '' && this.#tooltip === '';
+        return this.#url === '' && this.#location === '' && this.#tooltip === '' && this.#display === '';
+    }
+
+    public isInternal(): boolean {
+        return this.#url.startsWith('#') || this.#url.startsWith('sheet://');
+    }
+
+    public getTypeHyperlink(): string {
+        return this.isInternal() ? '' : 'External';
+    }
+
+    public getHashCode(): string {
+        const content = `${this.#url}${this.#tooltip}${this.#display}Hyperlink`;
+        return Bun.hash(content).toString(16);
     }
 }

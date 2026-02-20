@@ -252,10 +252,32 @@ export class BaseDrawing {
 
         const hyperlink = this.getHyperlink();
         if (hyperlink) {
-            drawing.setHyperlink(new Hyperlink(hyperlink.getUrl(), hyperlink.getLocation(), hyperlink.getTooltip()));
+            const newLink = new Hyperlink(hyperlink.getUrl(), hyperlink.getTooltip());
+            newLink.setLocation(hyperlink.getLocation());
+            newLink.setDisplay(hyperlink.getDisplay());
+            drawing.setHyperlink(newLink);
         }
 
         return drawing;
+    }
+
+    public getHashCode(): string {
+        const hyperlink = this.#hyperlink;
+        const content = [
+            this.#name,
+            this.#description,
+            this.#coordinates,
+            this.#offsetX,
+            this.#offsetY,
+            this.#coordinates2,
+            this.#offsetX2,
+            this.#offsetY2,
+            this.#width,
+            this.#height,
+            hyperlink ? hyperlink.getHashCode() : '',
+            'BaseDrawing',
+        ].join('');
+        return Bun.hash(content).toString(16);
     }
 
     static #normalizeCoordinate(cellCoordinate: string): string {

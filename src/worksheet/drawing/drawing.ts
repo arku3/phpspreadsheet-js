@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { Hyperlink } from '../../core/hyperlink.ts';
 import { BaseDrawing } from './base-drawing.ts';
@@ -8,10 +9,19 @@ import { BaseDrawing } from './base-drawing.ts';
  * Stores either a path (file/URL handled later in IO) and/or in-memory image data.
  */
 export class Drawing extends BaseDrawing {
+    public static readonly IMAGE_TYPES_CONVERSION_MAP: Record<string, string> = {
+        gif: 'png',
+        jpeg: 'jpeg',
+        jpg: 'jpeg',
+        png: 'png',
+        bmp: 'png',
+    };
+
     #path: string = '';
     #imageData: Uint8Array | null = null;
     #mimeType: string = '';
     #extension: string = '';
+    #isUrl: boolean = false;
 
     /**
      * Get image path.
@@ -25,7 +35,36 @@ export class Drawing extends BaseDrawing {
      *
      * No validation is performed here; IO layers can validate/extract image bytes later.
      */
-    public setPath(filePath: string, mimeType: string = '', extension: string = ''): this {
+    public setPath(
+        filePath: string,
+        mimeType: string = '',
+        extension: string = '',
+        verifyFile: boolean = true,
+        allowExternal: boolean = true,
+    ): this {
+        this.#isUrl = false;
+        if (/^data:image\/[a-z]+;base64,/.test(filePath)) {
+            this.#path = filePath;
+            this.#mimeType = mimeType;
+            this.#extension = extension !== '' ? extension : this.#inferExtensionFromPath(filePath);
+            return this;
+        }
+
+        if (/^(https?|ftp|file|s3):/.test(filePath)) {
+            if (!allowExternal) {
+                return this;
+            }
+            this.#isUrl = true;
+            this.#path = filePath;
+            this.#mimeType = mimeType;
+            this.#extension = extension !== '' ? extension : this.#inferExtensionFromPath(filePath);
+            return this;
+        }
+
+        if (verifyFile && filePath !== '' && !fs.existsSync(filePath)) {
+            throw new Error(`File ${filePath} not found!`);
+        }
+
         this.#path = filePath;
         this.#mimeType = mimeType;
         this.#extension = extension !== '' ? extension : this.#inferExtensionFromPath(filePath);
@@ -38,6 +77,15 @@ export class Drawing extends BaseDrawing {
     public getFilename(): string {
         if (this.#path === '') return '';
         return path.basename(this.#path);
+    }
+
+    public getIndexedFilename(): string {
+        const hash = Bun.hash(this.#path).toString(16);
+        return `${hash}.${this.getExtension()}`;
+    }
+
+    public getMediaFilename(): string {
+        return `image${this.getImageIndex()}${this.getImageFileExtensionForSave()}`;
     }
 
     /**
@@ -81,6 +129,40 @@ export class Drawing extends BaseDrawing {
         return this.#extension;
     }
 
+    public getIsURL(): boolean {
+        return this.#isUrl;
+    }
+
+    public getImageFileExtensionForSave(): string {
+        const ext = this.getExtension().toLowerCase();
+        const mapped = Drawing.IMAGE_TYPES_CONVERSION_MAP[ext];
+        if (!mapped) {
+            throw new Error('Unsupported image type in comment background. Supported types: PNG, JPEG, BMP, GIF.');
+        }
+        return `.${mapped}`;
+    }
+
+    public getImageMimeType(): string {
+        if (this.#mimeType) {
+            return this.#mimeType;
+        }
+        const ext = this.getImageFileExtensionForSave().slice(1);
+        if (ext === 'png') return 'image/png';
+        if (ext === 'jpeg') return 'image/jpeg';
+        if (ext === 'gif') return 'image/gif';
+        if (ext === 'bmp') return 'image/bmp';
+        return 'image/png';
+    }
+
+    public getImageTypeForSave(): string {
+        return this.getImageMimeType();
+    }
+
+    public override getHashCode(): string {
+        const content = `${this.#path}${super.getHashCode()}Drawing`;
+        return Bun.hash(content).toString(16);
+    }
+
     /**
      * Set file extension.
      */
@@ -109,7 +191,10 @@ export class Drawing extends BaseDrawing {
 
         const hyperlink = this.getHyperlink();
         if (hyperlink) {
-            drawing.setHyperlink(new Hyperlink(hyperlink.getUrl(), hyperlink.getLocation(), hyperlink.getTooltip()));
+            const newLink = new Hyperlink(hyperlink.getUrl(), hyperlink.getTooltip());
+            newLink.setLocation(hyperlink.getLocation());
+            newLink.setDisplay(hyperlink.getDisplay());
+            drawing.setHyperlink(newLink);
         }
 
         if (this.#path) {

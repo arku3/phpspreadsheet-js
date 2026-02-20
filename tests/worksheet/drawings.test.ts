@@ -54,6 +54,7 @@ describe('Worksheet drawings', () => {
         expect(drawing.getName()).toBe('');
         expect(drawing.getDescription()).toBe('');
         expect(drawing.getHyperlink()).toBe(null);
+        expect(drawing.getIsURL()).toBe(false);
     });
 
     test('addDrawing rejects attaching to two worksheets', () => {
@@ -81,10 +82,19 @@ describe('Worksheet drawings', () => {
 
     test('hyperlink can be set and retrieved', () => {
         const drawing = new Drawing();
-        const link = new Hyperlink('https://example.com', '', 'Example');
+        const link = new Hyperlink('https://example.com', 'Example');
+        link.setLocation('');
 
         drawing.setHyperlink(link);
         expect(drawing.getHyperlink()).toBe(link);
         expect(drawing.getHyperlink()?.getUrl()).toBe('https://example.com');
+    });
+
+    test('media filename and hash code follow PHP conventions', () => {
+        const drawing = new Drawing();
+        drawing.setPath('image.png', '', '', false);
+
+        expect(drawing.getMediaFilename()).toMatch(/^image\d+\.png$/);
+        expect(drawing.getHashCode()).not.toBe('');
     });
 });
