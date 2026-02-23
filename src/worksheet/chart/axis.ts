@@ -1,4 +1,6 @@
+import { Font } from '../../style/font';
 import { ChartColor } from './chart-color';
+import { GridLines } from './grid-lines';
 import type { Title } from './title';
 
 export type AxisType = 'catAx' | 'dateAx' | 'valAx' | 'serAx';
@@ -93,37 +95,29 @@ export const TIME_UNIT_DAYS = 'days';
 export const TIME_UNIT_MONTHS = 'months';
 export const TIME_UNIT_YEARS = 'years';
 
-/**
- * AxisGridLines class - represents major or minor gridlines on a chart axis.
- * Simplified version based on PHP GridLines which extends Properties.
- */
-export class AxisGridLines {
-    #lineColor: ChartColor;
+export const DISP_UNITS_HUNDREDS = 'hundreds';
+export const DISP_UNITS_THOUSANDS = 'thousands';
+export const DISP_UNITS_TEN_THOUSANDS = 'tenThousands';
+export const DISP_UNITS_HUNDRED_THOUSANDS = 'hundredThousands';
+export const DISP_UNITS_MILLIONS = 'millions';
+export const DISP_UNITS_TEN_MILLIONS = 'tenMillions';
+export const DISP_UNITS_HUNDRED_MILLIONS = 'hundredMillions';
+export const DISP_UNITS_BILLIONS = 'billions';
+export const DISP_UNITS_TRILLIONS = 'trillions';
+export const TRILLION_INDEX = 1000000000000;
+export const DISP_UNITS_BUILTIN_INT: Record<number, string> = {
+    100: DISP_UNITS_HUNDREDS,
+    1000: DISP_UNITS_THOUSANDS,
+    10000: DISP_UNITS_TEN_THOUSANDS,
+    100000: DISP_UNITS_HUNDRED_THOUSANDS,
+    1000000: DISP_UNITS_MILLIONS,
+    10000000: DISP_UNITS_TEN_MILLIONS,
+    100000000: DISP_UNITS_HUNDRED_MILLIONS,
+    1000000000: DISP_UNITS_BILLIONS,
+    1000000000000: DISP_UNITS_TRILLIONS,
+};
 
-    constructor() {
-        this.#lineColor = new ChartColor();
-    }
-
-    public getLineColor(): ChartColor {
-        return this.#lineColor;
-    }
-
-    public setLineColor(color: ChartColor): this {
-        this.#lineColor = color;
-        return this;
-    }
-
-    public clone(): AxisGridLines {
-        const cloned = new AxisGridLines();
-        cloned.#lineColor = new ChartColor(
-            this.#lineColor.getValue(),
-            this.#lineColor.getAlpha(),
-            this.#lineColor.getType() || undefined,
-            this.#lineColor.getBrightness() || undefined,
-        );
-        return cloned;
-    }
-}
+export { GridLines as AxisGridLines };
 
 /**
  * AxisText class - represents text formatting for axis labels.
@@ -131,8 +125,12 @@ export class AxisGridLines {
  */
 export class AxisText {
     #rotation: number | null = null;
+    #font: Font;
+    #fillColor: ChartColor | null = null;
 
-    constructor() {}
+    constructor() {
+        this.#font = new Font();
+    }
 
     public getRotation(): number | null {
         return this.#rotation;
@@ -143,9 +141,27 @@ export class AxisText {
         return this;
     }
 
+    public getFillColorObject(): ChartColor {
+        if (!this.#fillColor) {
+            this.#fillColor = new ChartColor();
+        }
+        return this.#fillColor;
+    }
+
+    public getFont(): Font {
+        return this.#font;
+    }
+
+    public setFont(font: Font): this {
+        this.#font = font;
+        return this;
+    }
+
     public clone(): AxisText {
         const cloned = new AxisText();
         cloned.#rotation = this.#rotation;
+        cloned.#font = this.#font.clone();
+        cloned.#fillColor = this.#fillColor ? this.#fillColor.clone() : null;
         return cloned;
     }
 }
@@ -193,8 +209,8 @@ export class Axis {
             end: { type: '', size: '', w: '', len: '' },
         },
     };
-    #majorGridlines: AxisGridLines | null = null;
-    #minorGridlines: AxisGridLines | null = null;
+    #majorGridlines: GridLines | null = null;
+    #minorGridlines: GridLines | null = null;
     #title: Title | null = null;
     #axisText: AxisText | null = null;
     #dispUnitsTitle: Title | null = null;
@@ -334,6 +350,10 @@ export class Axis {
         return this.#fillColor;
     }
 
+    public getFillColorObject(): ChartColor {
+        return this.#fillColor;
+    }
+
     public setFillColor(color: ChartColor): this {
         this.#fillColor = color;
         return this;
@@ -398,20 +418,20 @@ export class Axis {
     }
 
     // Gridlines
-    public getMajorGridlines(): AxisGridLines | null {
+    public getMajorGridlines(): GridLines | null {
         return this.#majorGridlines;
     }
 
-    public setMajorGridlines(gridlines: AxisGridLines | null): this {
+    public setMajorGridlines(gridlines: GridLines | null): this {
         this.#majorGridlines = gridlines;
         return this;
     }
 
-    public getMinorGridlines(): AxisGridLines | null {
+    public getMinorGridlines(): GridLines | null {
         return this.#minorGridlines;
     }
 
-    public setMinorGridlines(gridlines: AxisGridLines | null): this {
+    public setMinorGridlines(gridlines: GridLines | null): this {
         this.#minorGridlines = gridlines;
         return this;
     }

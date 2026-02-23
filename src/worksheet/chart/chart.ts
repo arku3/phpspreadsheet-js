@@ -1,11 +1,13 @@
 import type { Worksheet } from '../../core/worksheet.ts';
 import { Color } from '../../style/color.ts';
 import { Font } from '../../style/font.ts';
-import { Coordinate } from '../../utils/coordinate.ts';
 import { Axis } from './axis.ts';
-import type { DataSeries } from './data-series.ts';
+import { ChartColor } from './chart-color.ts';
+import { DEFAULT_EMPTY_AS, VALID_EMPTY_AS, type DataSeries } from './data-series.ts';
 import type { GlowProperties, ShadowProperties, SoftEdgesProperties } from './effects.ts';
+import { GridLines } from './grid-lines.ts';
 import { Legend } from './legend.ts';
+import { PlotArea } from './plot-area.ts';
 import { Title } from './title.ts';
 
 /**
@@ -118,15 +120,17 @@ export interface ChartModel {
  * `chartXmlPath` later when reading chart parts.
  */
 export class Chart {
+    public static readonly DEFAULT_DISPLAY_BLANKS_AS = DEFAULT_EMPTY_AS;
+
     #name: string = '';
 
     #topLeftCell: string = 'A1';
     #topLeftOffsetX: number = 0;
     #topLeftOffsetY: number = 0;
 
-    #bottomRightCell: string | null = null;
-    #bottomRightOffsetX: number = 0;
-    #bottomRightOffsetY: number = 0;
+    #bottomRightCell: string = '';
+    #bottomRightOffsetX: number = 10;
+    #bottomRightOffsetY: number = 10;
 
     #chartXmlPath: string | null = null;
 
@@ -135,6 +139,23 @@ export class Chart {
     #title: Title | null = null;
     #plotArea: DataSeries[] = [];
     #plotAreaLayout: ChartLayout | null = null;
+    #plotAreaObject: PlotArea | null = null;
+
+    #plotVisibleOnly: boolean = true;
+    #displayBlanksAs: string = Chart.DEFAULT_DISPLAY_BLANKS_AS;
+    #xAxisLabel: Title | null = null;
+    #yAxisLabel: Title | null = null;
+    #chartAxisX: Axis = new Axis();
+    #chartAxisY: Axis = new Axis();
+    #majorGridlines: GridLines | null = null;
+    #minorGridlines: GridLines | null = null;
+    #borderLines: GridLines = new GridLines();
+    #fillColor: ChartColor = new ChartColor();
+    #oneCellAnchor: boolean = false;
+    #autoTitleDeleted: boolean = false;
+    #roundedCorners: boolean = false;
+    #renderedWidth: number | null = null;
+    #renderedHeight: number | null = null;
 
     // Chart area styling
     #chartAreaNoFill: boolean | null = null;
@@ -195,6 +216,40 @@ export class Chart {
     // Ownership tracking (set by Worksheet.addChart/removeChart).
     #worksheet: Worksheet | null = null;
 
+    public constructor(
+        name: string = '',
+        title: Title | null = null,
+        legend: Legend | null = null,
+        plotArea: PlotArea | null = null,
+        plotVisibleOnly: boolean = true,
+        displayBlanksAs: string = Chart.DEFAULT_DISPLAY_BLANKS_AS,
+        xAxisLabel: Title | null = null,
+        yAxisLabel: Title | null = null,
+        xAxis: Axis | null = null,
+        yAxis: Axis | null = null,
+        majorGridlines: GridLines | null = null,
+        minorGridlines: GridLines | null = null,
+    ) {
+        this.#name = name;
+        this.#title = title;
+        this.#legend = legend;
+        this.#plotAreaObject = plotArea;
+        this.#plotVisibleOnly = plotVisibleOnly;
+        this.setDisplayBlanksAs(displayBlanksAs);
+        this.#xAxisLabel = xAxisLabel;
+        this.#yAxisLabel = yAxisLabel;
+        this.#chartAxisX = xAxis ?? new Axis();
+        this.#chartAxisY = yAxis ?? new Axis();
+        this.#majorGridlines = majorGridlines;
+        this.#minorGridlines = minorGridlines;
+        if (majorGridlines) {
+            this.#chartAxisY.setMajorGridlines(majorGridlines);
+        }
+        if (minorGridlines) {
+            this.#chartAxisY.setMinorGridlines(minorGridlines);
+        }
+    }
+
     /**
      * Get chart name.
      */
@@ -221,25 +276,83 @@ export class Chart {
         };
     }
 
+    public getTopLeftCell(): string {
+        return this.#topLeftCell;
+    }
+
+    public setTopLeftCell(cellAddress: string): this {
+        this.#topLeftCell = cellAddress;
+        return this;
+    }
+
+    public getTopLeftOffset(): { X: number; Y: number } {
+        return { X: this.#topLeftOffsetX, Y: this.#topLeftOffsetY };
+    }
+
+    public setTopLeftOffset(xOffset: number | null, yOffset: number | null): this {
+        if (xOffset !== null) {
+            this.#topLeftOffsetX = xOffset;
+        }
+        if (yOffset !== null) {
+            this.#topLeftOffsetY = yOffset;
+        }
+        return this;
+    }
+
+    public getTopLeftXOffset(): number {
+        return this.#topLeftOffsetX;
+    }
+
+    public setTopLeftXOffset(xOffset: number): this {
+        this.#topLeftOffsetX = xOffset;
+        return this;
+    }
+
+    public getTopLeftYOffset(): number {
+        return this.#topLeftOffsetY;
+    }
+
+    public setTopLeftYOffset(yOffset: number): this {
+        this.#topLeftOffsetY = yOffset;
+        return this;
+    }
+
     /**
      * Set the top-left chart position.
      */
-    public setTopLeftPosition(position: ChartPosition): this {
-        const normalized = Chart.#normalizePosition(position);
+    public setTopLeftPosition(position: ChartPosition): this;
+    public setTopLeftPosition(cellAddress: string, xOffset?: number | null, yOffset?: number | null): this;
+    public setTopLeftPosition(
+        positionOrCell: ChartPosition | string,
+        xOffset: number | null = null,
+        yOffset: number | null = null,
+    ): this {
+        if (typeof positionOrCell === 'string') {
+            this.#topLeftCell = positionOrCell;
+            if (xOffset !== null) {
+                this.#topLeftOffsetX = xOffset;
+            }
+            if (yOffset !== null) {
+                this.#topLeftOffsetY = yOffset;
+            }
+            return this;
+        }
+
+        const normalized = Chart.#normalizePosition(positionOrCell);
         this.#topLeftCell = normalized.cell;
-        this.#topLeftOffsetX = normalized.offsetX;
-        this.#topLeftOffsetY = normalized.offsetY;
+        if (normalized.offsetX !== undefined) {
+            this.#topLeftOffsetX = normalized.offsetX;
+        }
+        if (normalized.offsetY !== undefined) {
+            this.#topLeftOffsetY = normalized.offsetY;
+        }
         return this;
     }
 
     /**
      * Get the bottom-right chart position (if set).
      */
-    public getBottomRightPosition(): Required<ChartPosition> | null {
-        if (this.#bottomRightCell === null) {
-            return null;
-        }
-
+    public getBottomRightPosition(): Required<ChartPosition> {
         return {
             cell: this.#bottomRightCell,
             offsetX: this.#bottomRightOffsetX,
@@ -247,21 +360,83 @@ export class Chart {
         };
     }
 
+    public getBottomRightCell(): string {
+        return this.#bottomRightCell;
+    }
+
+    public setBottomRightCell(cellAddress: string = ''): this {
+        this.#bottomRightCell = cellAddress;
+        return this;
+    }
+
+    public getBottomRightOffset(): { X: number; Y: number } {
+        return { X: this.#bottomRightOffsetX, Y: this.#bottomRightOffsetY };
+    }
+
+    public setBottomRightOffset(xOffset: number | null, yOffset: number | null): this {
+        if (xOffset !== null) {
+            this.#bottomRightOffsetX = xOffset;
+        }
+        if (yOffset !== null) {
+            this.#bottomRightOffsetY = yOffset;
+        }
+        return this;
+    }
+
+    public getBottomRightXOffset(): number {
+        return this.#bottomRightOffsetX;
+    }
+
+    public setBottomRightXOffset(xOffset: number): this {
+        this.#bottomRightOffsetX = xOffset;
+        return this;
+    }
+
+    public getBottomRightYOffset(): number {
+        return this.#bottomRightOffsetY;
+    }
+
+    public setBottomRightYOffset(yOffset: number): this {
+        this.#bottomRightOffsetY = yOffset;
+        return this;
+    }
+
     /**
      * Set (or clear) the bottom-right chart position.
      */
-    public setBottomRightPosition(position: ChartPosition | null): this {
-        if (position === null) {
-            this.#bottomRightCell = null;
+    public setBottomRightPosition(position: ChartPosition | null): this;
+    public setBottomRightPosition(cellAddress?: string, xOffset?: number | null, yOffset?: number | null): this;
+    public setBottomRightPosition(
+        positionOrCell: ChartPosition | string | null | undefined = '',
+        xOffset: number | null = null,
+        yOffset: number | null = null,
+    ): this {
+        if (positionOrCell === null) {
+            this.#bottomRightCell = '';
             this.#bottomRightOffsetX = 0;
             this.#bottomRightOffsetY = 0;
             return this;
         }
 
-        const normalized = Chart.#normalizePosition(position);
+        if (typeof positionOrCell === 'string') {
+            this.#bottomRightCell = positionOrCell;
+            if (xOffset !== null) {
+                this.#bottomRightOffsetX = xOffset;
+            }
+            if (yOffset !== null) {
+                this.#bottomRightOffsetY = yOffset;
+            }
+            return this;
+        }
+
+        const normalized = Chart.#normalizePosition(positionOrCell);
         this.#bottomRightCell = normalized.cell;
-        this.#bottomRightOffsetX = normalized.offsetX;
-        this.#bottomRightOffsetY = normalized.offsetY;
+        if (normalized.offsetX !== undefined) {
+            this.#bottomRightOffsetX = normalized.offsetX;
+        }
+        if (normalized.offsetY !== undefined) {
+            this.#bottomRightOffsetY = normalized.offsetY;
+        }
         return this;
     }
 
@@ -303,6 +478,24 @@ export class Chart {
      */
     public setTitle(title: Title | null): this {
         this.#title = title;
+        return this;
+    }
+
+    public getXAxisLabel(): Title | null {
+        return this.#xAxisLabel;
+    }
+
+    public setXAxisLabel(label: Title): this {
+        this.#xAxisLabel = label;
+        return this;
+    }
+
+    public getYAxisLabel(): Title | null {
+        return this.#yAxisLabel;
+    }
+
+    public setYAxisLabel(label: Title): this {
+        this.#yAxisLabel = label;
         return this;
     }
 
@@ -537,6 +730,43 @@ export class Chart {
         return this;
     }
 
+    public getPlotAreaObject(): PlotArea | null {
+        return this.#plotAreaObject;
+    }
+
+    public getPlotAreaOrThrow(): PlotArea {
+        if (!this.#plotAreaObject) {
+            throw new Error('Chart has no PlotArea');
+        }
+        return this.#plotAreaObject;
+    }
+
+    public setPlotAreaObject(plotArea: PlotArea): this {
+        this.#plotAreaObject = plotArea;
+        return this;
+    }
+
+    public getPlotVisibleOnly(): boolean {
+        return this.#plotVisibleOnly;
+    }
+
+    public setPlotVisibleOnly(plotVisibleOnly: boolean): this {
+        this.#plotVisibleOnly = plotVisibleOnly;
+        return this;
+    }
+
+    public getDisplayBlanksAs(): string {
+        return this.#displayBlanksAs;
+    }
+
+    public setDisplayBlanksAs(displayBlanksAs: string): this {
+        const normalized = displayBlanksAs.toLowerCase();
+        this.#displayBlanksAs = VALID_EMPTY_AS.includes(normalized as (typeof VALID_EMPTY_AS)[number])
+            ? normalized
+            : Chart.DEFAULT_DISPLAY_BLANKS_AS;
+        return this;
+    }
+
     /**
      * Get plot area layout settings.
      */
@@ -625,6 +855,66 @@ export class Chart {
     public setChartAreaEffects(effects: Effects | null): this {
         this.#chartAreaEffects = effects;
         return this;
+    }
+
+    public getNoFill(): boolean {
+        return this.#chartAreaNoFill ?? false;
+    }
+
+    public setNoFill(noFill: boolean): this {
+        this.#chartAreaNoFill = noFill;
+        return this;
+    }
+
+    public getNoBorder(): boolean {
+        return this.#chartAreaNoBorder ?? false;
+    }
+
+    public setNoBorder(noBorder: boolean): this {
+        this.#chartAreaNoBorder = noBorder;
+        return this;
+    }
+
+    public getRoundedCorners(): boolean {
+        return this.#roundedCorners;
+    }
+
+    public setRoundedCorners(roundedCorners: boolean | null): this {
+        if (roundedCorners !== null) {
+            this.#roundedCorners = roundedCorners;
+        }
+        return this;
+    }
+
+    public getBorderLines(): GridLines {
+        return this.#borderLines;
+    }
+
+    public setBorderLines(borderLines: GridLines): this {
+        this.#borderLines = borderLines;
+        return this;
+    }
+
+    public getFillColor(): ChartColor {
+        return this.#fillColor;
+    }
+
+    public setRenderedWidth(width: number | null): this {
+        this.#renderedWidth = width;
+        return this;
+    }
+
+    public getRenderedWidth(): number | null {
+        return this.#renderedWidth;
+    }
+
+    public setRenderedHeight(height: number | null): this {
+        this.#renderedHeight = height;
+        return this;
+    }
+
+    public getRenderedHeight(): number | null {
+        return this.#renderedHeight;
     }
 
     /**
@@ -732,6 +1022,24 @@ export class Chart {
         return this;
     }
 
+    public getOneCellAnchor(): boolean {
+        return this.#oneCellAnchor;
+    }
+
+    public setOneCellAnchor(oneCellAnchor: boolean): this {
+        this.#oneCellAnchor = oneCellAnchor;
+        return this;
+    }
+
+    public getAutoTitleDeleted(): boolean {
+        return this.#autoTitleDeleted;
+    }
+
+    public setAutoTitleDeleted(autoTitleDeleted: boolean): this {
+        this.#autoTitleDeleted = autoTitleDeleted;
+        return this;
+    }
+
     /**
      * Get the series axis ID for surface charts.
      */
@@ -812,18 +1120,23 @@ export class Chart {
     /**
      * Set the Legend object.
      */
-    public setLegendObject(legend: Legend | null): void {
+    public setLegendObject(legend: Legend | null): this {
         this.#legend = legend;
+        return this;
     }
 
-    /**
-     * Configure legend with a single method.
-     * @param config - Legend configuration object
-     */
-    public setLegend(config: LegendConfig): void {
-        this.#legendPosition = config.position;
-        this.#legendTitle = config.title ?? null;
-        this.#legendOverlay = config.overlay ?? false;
+    public setLegend(legend: Legend): this;
+    public setLegend(config: LegendConfig): this;
+    public setLegend(legendOrConfig: Legend | LegendConfig): this {
+        if (legendOrConfig instanceof Legend) {
+            this.#legend = legendOrConfig;
+            return this;
+        }
+
+        this.#legendPosition = legendOrConfig.position;
+        this.#legendTitle = legendOrConfig.title ?? null;
+        this.#legendOverlay = legendOrConfig.overlay ?? false;
+        return this;
     }
 
     /**
@@ -860,6 +1173,24 @@ export class Chart {
      */
     public setWorksheet(worksheet: Worksheet | null): this {
         this.#worksheet = worksheet;
+        return this;
+    }
+
+    public getChartAxisX(): Axis {
+        return this.#chartAxisX;
+    }
+
+    public setChartAxisX(axis: Axis | null): this {
+        this.#chartAxisX = axis ?? new Axis();
+        return this;
+    }
+
+    public getChartAxisY(): Axis {
+        return this.#chartAxisY;
+    }
+
+    public setChartAxisY(axis: Axis | null): this {
+        this.#chartAxisY = axis ?? new Axis();
         return this;
     }
 
@@ -900,15 +1231,37 @@ export class Chart {
         return this;
     }
 
+    public refresh(): void {
+        if (this.#worksheet && this.#plotAreaObject) {
+            this.#plotAreaObject.refresh(this.#worksheet);
+        }
+    }
+
+    public render(_outputDestination: string | null = null): boolean {
+        return false;
+    }
+
     public clone(): Chart {
-        const chart = new Chart();
+        const chart = new Chart(
+            this.#name,
+            this.#title ? this.#title.clone() : null,
+            this.#legend ? this.#legend.clone() : null,
+            this.#plotAreaObject ? this.#plotAreaObject.clone() : null,
+            this.#plotVisibleOnly,
+            this.#displayBlanksAs,
+            this.#xAxisLabel ? this.#xAxisLabel.clone() : null,
+            this.#yAxisLabel ? this.#yAxisLabel.clone() : null,
+            this.#chartAxisX ? this.#chartAxisX.clone() : null,
+            this.#chartAxisY ? this.#chartAxisY.clone() : null,
+            this.#majorGridlines ? this.#majorGridlines.clone() : null,
+            this.#minorGridlines ? this.#minorGridlines.clone() : null,
+        );
+
         chart
-            .setName(this.getName())
             .setTopLeftPosition(this.getTopLeftPosition())
             .setBottomRightPosition(this.getBottomRightPosition())
             .setChartXmlPath(this.getChartXmlPath())
             .setTitleText(this.getTitleText())
-            .setTitle(this.getTitle())
             .setTitleFont(this.getTitleFont())
             .setXAxisTitle(this.getXAxisTitle())
             .setXAxisTitleFont(this.getXAxisTitleFont())
@@ -939,19 +1292,29 @@ export class Chart {
             .setPerspective(this.getPerspective())
             .setSerAxisId(this.getSerAxisId())
             .setXAxis(this.getXAxis())
-            .setYAxis(this.getYAxis());
+            .setYAxis(this.getYAxis())
+            .setPlotVisibleOnly(this.#plotVisibleOnly)
+            .setDisplayBlanksAs(this.#displayBlanksAs)
+            .setChartAxisX(this.#chartAxisX ? this.#chartAxisX.clone() : null)
+            .setChartAxisY(this.#chartAxisY ? this.#chartAxisY.clone() : null)
+            .setOneCellAnchor(this.#oneCellAnchor)
+            .setAutoTitleDeleted(this.#autoTitleDeleted)
+            .setRoundedCorners(this.#roundedCorners)
+            .setRenderedWidth(this.#renderedWidth)
+            .setRenderedHeight(this.#renderedHeight);
 
-        const legendPosition = this.getLegendPosition();
-        if (legendPosition) {
-            chart.setLegendPosition(legendPosition as LegendPosition);
+        if (this.#xAxisLabel) {
+            chart.setXAxisLabel(this.#xAxisLabel.clone());
         }
-        const legendTitle = this.getLegendTitle();
-        if (legendTitle) {
-            chart.setLegendTitle(legendTitle);
+        if (this.#yAxisLabel) {
+            chart.setYAxisLabel(this.#yAxisLabel.clone());
         }
-        chart.setLegendOverlay(this.getLegendOverlay());
-        chart.setLegendObject(this.getLegend());
+
         chart.setModel(this.getModel());
+        chart.setWorksheet(null);
+
+        chart.#borderLines = this.#borderLines.clone();
+        chart.#fillColor = this.#fillColor.clone();
 
         return chart;
     }
@@ -965,22 +1328,6 @@ export class Chart {
     }
 
     static #normalizeCoordinate(cellCoordinate: string): string {
-        const coordinate = cellCoordinate.toUpperCase();
-        if (Coordinate.coordinateIsRange(coordinate)) {
-            throw new Error('Cell coordinate string can not be a range of cells.');
-        }
-        if (coordinate.includes('!')) {
-            throw new Error('Cell coordinate must not include a worksheet reference.');
-        }
-        if (coordinate.includes('$')) {
-            throw new Error('Cell coordinate string must not be absolute.');
-        }
-        if (coordinate.length === 0) {
-            throw new Error('Cell coordinate can not be zero-length string.');
-        }
-        if (!/^[A-Z]+\d+$/.test(coordinate)) {
-            throw new Error('Cell coordinate string is not a valid A1 reference.');
-        }
-        return coordinate;
+        return cellCoordinate;
     }
 }

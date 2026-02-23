@@ -1,12 +1,15 @@
+import type { Spreadsheet } from '../../core/spreadsheet.ts';
 import { RichText } from '../../rich-text/rich-text.ts';
 import { Font } from '../../style/font.ts';
 import type { ChartLayout } from './chart.ts';
+import type { Layout } from './layout';
 
 /**
  * Chart title class.
  * Represents a chart title which can be a simple string, rich text, or formula-based.
  */
 export class Title {
+    public static readonly TITLE_CELL_REFERENCE = /^(.*)![$]([A-Z]{1,3})[$](\d{1,7})$/i;
     /**
      * Title caption - can be a string, RichText, or array of RichText/string for multi-line titles.
      */
@@ -15,12 +18,12 @@ export class Title {
     /**
      * Cell reference for formula-based titles (e.g., "'Sheet1'!$A$1").
      */
-    #cellReference: string | null = null;
+    #cellReference: string = '';
 
     /**
      * Title layout configuration.
      */
-    #layout: ChartLayout | null = null;
+    #layout: ChartLayout | Layout | null = null;
 
     /**
      * Title font styling.
@@ -41,7 +44,7 @@ export class Title {
      */
     constructor(
         caption: string | RichText | (string | RichText)[] = '',
-        layout: ChartLayout | null = null,
+        layout: ChartLayout | Layout | null = null,
         overlay = false,
     ) {
         this.#caption = caption;
@@ -75,29 +78,14 @@ export class Title {
      *
      * @returns Plain text string
      */
-    public getCaptionText(): string {
-        const caption = this.#caption;
-
-        if (typeof caption === 'string') {
-            return caption;
+    public getCaptionText(spreadsheet: Spreadsheet | null = null): string {
+        if (spreadsheet) {
+            const calculated = this.getCalculatedTitle(spreadsheet);
+            if (calculated !== null) {
+                return calculated;
+            }
         }
-
-        if (caption instanceof RichText) {
-            return caption.getPlainText();
-        }
-
-        if (Array.isArray(caption)) {
-            return caption
-                .map((item) => {
-                    if (item instanceof RichText) {
-                        return item.getPlainText();
-                    }
-                    return String(item);
-                })
-                .join('');
-        }
-
-        return '';
+        return Title.captionToString(this.#caption);
     }
 
     /**
@@ -114,7 +102,7 @@ export class Title {
      *
      * @returns Cell reference string or null
      */
-    public getCellReference(): string | null {
+    public getCellReference(): string {
         return this.#cellReference;
     }
 
@@ -125,7 +113,7 @@ export class Title {
      * @returns this for method chaining
      */
     public setCellReference(cellReference: string | null): this {
-        this.#cellReference = cellReference;
+        this.#cellReference = cellReference ?? '';
         return this;
     }
 
@@ -135,7 +123,7 @@ export class Title {
      * @returns true if cellReference is set
      */
     public isFormulaBased(): boolean {
-        return this.#cellReference !== null && this.#cellReference !== '';
+        return this.#cellReference !== '';
     }
 
     /**
@@ -143,7 +131,7 @@ export class Title {
      *
      * @returns Layout configuration or null
      */
-    public getLayout(): ChartLayout | null {
+    public getLayout(): ChartLayout | Layout | null {
         return this.#layout;
     }
 
@@ -153,7 +141,7 @@ export class Title {
      * @param layout - Layout configuration
      * @returns this for method chaining
      */
-    public setLayout(layout: ChartLayout | null): this {
+    public setLayout(layout: ChartLayout | Layout | null): this {
         this.#layout = layout;
         return this;
     }
@@ -191,5 +179,60 @@ export class Title {
     public setOverlay(overlay: boolean): this {
         this.#overlay = overlay;
         return this;
+    }
+
+    public getCalculatedTitle(spreadsheet: Spreadsheet | null): string | null {
+        if (!spreadsheet) {
+            return null;
+        }
+        const cellReference = this.#cellReference;
+        const match = Title.TITLE_CELL_REFERENCE.exec(cellReference);
+        if (!match) {
+            return null;
+        }
+        const sheetName = match[1]?.replace(/^'(.*)'$/, '$1') ?? '';
+        const column = match[2] ?? '';
+        const row = match[3] ?? '';
+        const worksheet = spreadsheet.getSheetByName(sheetName);
+        if (!worksheet) {
+            return null;
+        }
+        const cell = worksheet.getCell(`${column}${row}`);
+        return cell.getFormattedValue();
+    }
+
+    public clone(): Title {
+        const cloned = new Title(Title.cloneCaption(this.#caption), this.#layout, this.#overlay);
+        cloned.#cellReference = this.#cellReference;
+        cloned.#font = this.#font ? this.#font.clone() : null;
+        return cloned;
+    }
+
+    private static captionToString(caption: string | RichText | (string | RichText)[]): string {
+        if (Array.isArray(caption)) {
+            return caption.map((item) => (typeof item === 'string' ? item : item.getPlainText())).join('');
+        }
+        if (typeof caption === 'string') {
+            return caption;
+        }
+        return caption.getPlainText();
+    }
+
+    private static cloneCaption(
+        caption: string | RichText | (string | RichText)[],
+    ): string | RichText | (string | RichText)[] {
+        if (typeof caption === 'string') {
+            return caption;
+        }
+        if (Array.isArray(caption)) {
+            return caption.map((item) => (typeof item === 'string' ? item : Title.cloneRichText(item)));
+        }
+        return Title.cloneRichText(caption);
+    }
+
+    private static cloneRichText(richText: RichText): RichText {
+        const cloned = new RichText();
+        cloned.setRichTextElements([...richText.getRichTextElements()]);
+        return cloned;
     }
 }

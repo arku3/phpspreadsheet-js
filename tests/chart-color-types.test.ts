@@ -3,7 +3,7 @@ import unzipper from 'unzipper';
 import { Spreadsheet } from '../src/core/spreadsheet.ts';
 import { XlsxReader } from '../src/io/xlsx-reader.ts';
 import { XlsxWriter } from '../src/io/xlsx-writer.ts';
-import { ChartColor } from '../src/worksheet/chart/chart-color.ts';
+import { ChartColor, EXCEL_COLOR_TYPE_SYSTEM } from '../src/worksheet/chart/chart-color.ts';
 import { Chart } from '../src/worksheet/chart/chart.ts';
 import { DataSeriesValues } from '../src/worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../src/worksheet/chart/data-series.ts';
@@ -34,7 +34,10 @@ describe('ChartColor types', () => {
 
         const legend = new Legend();
         legend.setFillColor(new ChartColor('*accent1'));
-        legend.setBorderLines({ color: '!windowText', width: 1, style: 'solid' });
+        const legendBorder = legend.getBorderLines();
+        legendBorder.setLineColorProperties('windowText', null, EXCEL_COLOR_TYPE_SYSTEM);
+        legendBorder.setLineStyleProperty('width', 1);
+        legendBorder.setLineStyleProperty('dash', 'solid');
         chart.setLegendObject(legend);
 
         const series = new DataSeries('bar');

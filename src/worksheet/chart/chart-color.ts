@@ -192,4 +192,14 @@ export class ChartColor {
     public static alphaFromXml(alpha: number | string): number {
         return 100 - Math.floor(Number(alpha) / 1000);
     }
+
+    public clone(): ChartColor {
+        return new ChartColor({
+            value: this.#value,
+            type: this.#type === '' ? undefined : this.#type,
+            alpha: this.#alpha,
+            brightness: this.#brightness,
+            lastClr: this.#lastClr,
+        });
+    }
 }

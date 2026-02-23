@@ -5,6 +5,7 @@
  */
 
 import type { ChartColor } from './chart-color';
+import { Properties } from './properties';
 
 export const TRENDLINE_EXPONENTIAL = 'exp';
 export const TRENDLINE_LINEAR = 'linear';
@@ -12,6 +13,7 @@ export const TRENDLINE_LOGARITHMIC = 'log';
 export const TRENDLINE_POLYNOMIAL = 'poly';
 export const TRENDLINE_POWER = 'power';
 export const TRENDLINE_MOVING_AVERAGE = 'movingAvg';
+export const TRENDLINE_MOVING_AVG = TRENDLINE_MOVING_AVERAGE;
 
 export const TRENDLINE_TYPES = [
     TRENDLINE_EXPONENTIAL,
@@ -24,7 +26,7 @@ export const TRENDLINE_TYPES = [
 
 export type TrendLineType = (typeof TRENDLINE_TYPES)[number];
 
-export class TrendLine {
+export class TrendLine extends Properties {
     #trendLineType: TrendLineType = TRENDLINE_LINEAR;
     #order: number = 2;
     #period: number = 3;
@@ -49,6 +51,7 @@ export class TrendLine {
         intercept: number | null = null,
         name: string | null = null,
     ) {
+        super();
         this.setTrendLineProperties(
             trendLineType,
             order,
@@ -93,18 +96,34 @@ export class TrendLine {
         return this.#displayRSquared;
     }
 
+    public getDispRSqr(): boolean {
+        return this.#displayRSquared;
+    }
+
     public setDisplayRSquared(displayRSquared: boolean): this {
         this.#displayRSquared = displayRSquared;
         return this;
+    }
+
+    public setDispRSqr(displayRSquared: boolean): this {
+        return this.setDisplayRSquared(displayRSquared);
     }
 
     public getDisplayEquation(): boolean {
         return this.#displayEquation;
     }
 
+    public getDispEq(): boolean {
+        return this.#displayEquation;
+    }
+
     public setDisplayEquation(displayEquation: boolean): this {
         this.#displayEquation = displayEquation;
         return this;
+    }
+
+    public setDispEq(displayEquation: boolean): this {
+        return this.setDisplayEquation(displayEquation);
     }
 
     public getName(): string {
@@ -143,8 +162,8 @@ export class TrendLine {
         return this;
     }
 
-    public getLineColor(): ChartColor | null {
-        return this.#lineColor;
+    public override getLineColor(): ChartColor {
+        return this.#lineColor ?? super.getLineColor();
     }
 
     public setLineColor(lineColor: ChartColor | null): this {
@@ -210,5 +229,24 @@ export class TrendLine {
         }
 
         return this;
+    }
+
+    public override clone(): TrendLine {
+        const cloned = new TrendLine(
+            this.#trendLineType,
+            this.#order,
+            this.#period,
+            this.#displayRSquared,
+            this.#displayEquation,
+            this.#backward,
+            this.#forward,
+            this.#intercept,
+            this.#name,
+        );
+        cloned.copyLineStyles(this);
+        cloned.#lineColor = this.#lineColor ? this.#lineColor.clone() : null;
+        cloned.#lineWidth = this.#lineWidth;
+        cloned.#lineStyle = this.#lineStyle;
+        return cloned;
     }
 }

@@ -1,3 +1,4 @@
+import type { Worksheet } from '../../core/worksheet';
 import { DataLabels } from './data-labels';
 import { DataPoint } from './data-point';
 import { DataSeriesValues } from './data-series-values';
@@ -20,7 +21,24 @@ export type ChartType =
     | 'surface3D'
     | 'radar'
     | 'bubble'
-    | 'stock';
+    | 'stock'
+    | 'barChart'
+    | 'bar3DChart'
+    | 'lineChart'
+    | 'line3DChart'
+    | 'areaChart'
+    | 'area3DChart'
+    | 'pieChart'
+    | 'pie3DChart'
+    | 'doughnutChart'
+    | 'donutChart'
+    | 'scatterChart'
+    | 'surfaceChart'
+    | 'surface3DChart'
+    | 'radarChart'
+    | 'bubbleChart'
+    | 'stockChart'
+    | 'candleChart';
 
 /**
  * Grouping types for bar/column charts.
@@ -31,6 +49,45 @@ export type GroupingType = 'clustered' | 'stacked' | 'percentStacked' | 'standar
  * Direction for bar charts (horizontal bars or vertical columns).
  */
 export type DirectionType = 'bar' | 'col' | 'column';
+
+export const TYPE_BARCHART = 'barChart' as const;
+export const TYPE_BARCHART_3D = 'bar3DChart' as const;
+export const TYPE_LINECHART = 'lineChart' as const;
+export const TYPE_LINECHART_3D = 'line3DChart' as const;
+export const TYPE_AREACHART = 'areaChart' as const;
+export const TYPE_AREACHART_3D = 'area3DChart' as const;
+export const TYPE_PIECHART = 'pieChart' as const;
+export const TYPE_PIECHART_3D = 'pie3DChart' as const;
+export const TYPE_DOUGHNUTCHART = 'doughnutChart' as const;
+export const TYPE_DONUTCHART = 'donutChart' as const;
+export const TYPE_SCATTERCHART = 'scatterChart' as const;
+export const TYPE_SURFACECHART = 'surfaceChart' as const;
+export const TYPE_SURFACECHART_3D = 'surface3DChart' as const;
+export const TYPE_RADARCHART = 'radarChart' as const;
+export const TYPE_BUBBLECHART = 'bubbleChart' as const;
+export const TYPE_STOCKCHART = 'stockChart' as const;
+export const TYPE_CANDLECHART = 'candleChart' as const;
+
+export const GROUPING_CLUSTERED = 'clustered' as const;
+export const GROUPING_STACKED = 'stacked' as const;
+export const GROUPING_PERCENT_STACKED = 'percentStacked' as const;
+export const GROUPING_STANDARD = 'standard' as const;
+
+export const DIRECTION_BAR = 'bar' as const;
+export const DIRECTION_HORIZONTAL = 'bar' as const;
+export const DIRECTION_COL = 'col' as const;
+export const DIRECTION_COLUMN = 'column' as const;
+
+export const STYLE_LINEMARKER = 'lineMarker' as const;
+export const STYLE_SMOOTHMARKER = 'smoothMarker' as const;
+export const STYLE_MARKER = 'marker' as const;
+export const STYLE_FILLED = 'filled' as const;
+
+export const EMPTY_AS_GAP = 'gap' as const;
+export const EMPTY_AS_ZERO = 'zero' as const;
+export const EMPTY_AS_SPAN = 'span' as const;
+export const DEFAULT_EMPTY_AS = EMPTY_AS_GAP;
+export const VALID_EMPTY_AS = [EMPTY_AS_GAP, EMPTY_AS_ZERO, EMPTY_AS_SPAN] as const;
 
 /**
  * Line style for line charts.
@@ -73,7 +130,7 @@ export type MarkerSymbol =
  * A chart can have multiple data series (e.g., multiple lines in a line chart).
  */
 export class DataSeries {
-    #plotType: ChartType;
+    #plotType: ChartType | null;
     #grouping: GroupingType | null;
     #direction: DirectionType;
     #plotOrder: number[];
@@ -83,6 +140,7 @@ export class DataSeries {
     #plotValues: DataSeriesValues[];
     #smoothLine: boolean;
     #plotBubbleSizes: DataSeriesValues[];
+    #plotStyle: string | null = null;
 
     // Per-data-point styling
     #plotPoints: DataPoint[];
@@ -114,7 +172,7 @@ export class DataSeries {
      * @param lineStyle - Line style for the series
      */
     constructor(
-        plotType: ChartType,
+        plotType: ChartType | null = null,
         grouping: GroupingType | null = null,
         plotOrder: number[] = [],
         plotLabel: DataSeriesValues[] = [],
@@ -123,6 +181,7 @@ export class DataSeries {
         direction: DirectionType | null = null,
         smoothLine: boolean = false,
         lineStyle: LineStyle | null = null,
+        plotStyle: string | null = null,
     ) {
         this.#plotType = plotType;
         this.#grouping = grouping;
@@ -144,6 +203,7 @@ export class DataSeries {
         this.#direction = direction ?? 'col';
         this.#smoothLine = smoothLine;
         this.#lineStyle = lineStyle;
+        this.#plotStyle = plotStyle;
         this.#plotBubbleSizes = [];
         this.#plotPoints = [];
 
@@ -160,21 +220,26 @@ export class DataSeries {
     /**
      * Get the chart/plot type.
      */
-    getPlotType(): ChartType {
+    getPlotType(): ChartType | null {
         return this.#plotType;
     }
 
     /**
      * Set the chart/plot type.
      */
-    setPlotType(plotType: ChartType): void {
+    setPlotType(plotType: ChartType): this {
         this.#plotType = plotType;
+        return this;
     }
 
     /**
      * Get the grouping type (for bar/column charts).
      */
     getGrouping(): GroupingType | null {
+        return this.#grouping;
+    }
+
+    getPlotGrouping(): GroupingType | null {
         return this.#grouping;
     }
 
@@ -185,10 +250,19 @@ export class DataSeries {
         this.#grouping = grouping;
     }
 
+    setPlotGrouping(grouping: GroupingType): this {
+        this.#grouping = grouping;
+        return this;
+    }
+
     /**
      * Get the direction (bar=horizontal, col/column=vertical).
      */
     getDirection(): DirectionType {
+        return this.#direction;
+    }
+
+    getPlotDirection(): DirectionType {
         return this.#direction;
     }
 
@@ -197,6 +271,11 @@ export class DataSeries {
      */
     setDirection(direction: DirectionType | null): void {
         this.#direction = direction ?? 'col';
+    }
+
+    setPlotDirection(direction: DirectionType): this {
+        this.#direction = direction;
+        return this;
     }
 
     /**
@@ -261,6 +340,15 @@ export class DataSeries {
         this.#lineStyle = lineStyle;
     }
 
+    getPlotStyle(): string | null {
+        return this.#plotStyle;
+    }
+
+    setPlotStyle(plotStyle: string | null): this {
+        this.#plotStyle = plotStyle;
+        return this;
+    }
+
     /**
      * Check if line should be smooth (for line charts).
      */
@@ -275,6 +363,18 @@ export class DataSeries {
         this.#smoothLine = smooth;
     }
 
+    refresh(worksheet: Worksheet): void {
+        for (const plotValue of this.#plotValues) {
+            plotValue.refresh(worksheet, true);
+        }
+        for (const plotLabel of this.#plotLabel) {
+            plotLabel.refresh(worksheet, true);
+        }
+        for (const plotCategory of this.#plotCategory) {
+            plotCategory.refresh(worksheet, false);
+        }
+    }
+
     /**
      * Get the plot labels.
      */
@@ -287,25 +387,27 @@ export class DataSeries {
      * @param index - The index to look up
      * @returns The plot label at the index, or undefined if not found
      */
-    getPlotLabelByIndex(index: number): DataSeriesValues | undefined {
+    getPlotLabelByIndex(index: number): DataSeriesValues | false {
         if (index in this.#plotLabel) {
-            return this.#plotLabel[index];
+            return this.#plotLabel[index]!;
         }
-        return undefined;
+        return false;
     }
 
     /**
      * Set the plot labels.
      */
-    setPlotLabels(plotLabels: DataSeriesValues[]): void {
+    setPlotLabels(plotLabels: DataSeriesValues[]): this {
         this.#plotLabel = plotLabels;
+        return this;
     }
 
     /**
      * Add a plot label.
      */
-    addPlotLabel(plotLabel: DataSeriesValues): void {
+    addPlotLabel(plotLabel: DataSeriesValues): this {
         this.#plotLabel.push(plotLabel);
+        return this;
     }
 
     /**
@@ -320,30 +422,32 @@ export class DataSeries {
      * @param index - The index to look up
      * @returns The plot category at the index, or undefined if not found
      */
-    getPlotCategoryByIndex(index: number): DataSeriesValues | undefined {
+    getPlotCategoryByIndex(index: number): DataSeriesValues | false {
         if (index in this.#plotCategory) {
-            return this.#plotCategory[index];
+            return this.#plotCategory[index]!;
         }
         // Also check if there's a value at the numeric position in keys
         const keys = Object.keys(this.#plotCategory).map(Number);
         if (keys.length > index && index >= 0) {
-            return this.#plotCategory[keys[index]!];
+            return this.#plotCategory[keys[index]!] ?? false;
         }
-        return undefined;
+        return false;
     }
 
     /**
      * Set the plot categories.
      */
-    setPlotCategories(plotCategories: DataSeriesValues[]): void {
+    setPlotCategories(plotCategories: DataSeriesValues[]): this {
         this.#plotCategory = plotCategories;
+        return this;
     }
 
     /**
      * Add a plot category.
      */
-    addPlotCategory(plotCategory: DataSeriesValues): void {
+    addPlotCategory(plotCategory: DataSeriesValues): this {
         this.#plotCategory.push(plotCategory);
+        return this;
     }
 
     /**
@@ -356,15 +460,17 @@ export class DataSeries {
     /**
      * Set the plot values.
      */
-    setPlotValues(plotValues: DataSeriesValues[]): void {
+    setPlotValues(plotValues: DataSeriesValues[]): this {
         this.#plotValues = plotValues;
+        return this;
     }
 
     /**
      * Add plot values to the series.
      */
-    addPlotValues(plotValues: DataSeriesValues): void {
+    addPlotValues(plotValues: DataSeriesValues): this {
         this.#plotValues.push(plotValues);
+        return this;
     }
 
     /**
@@ -377,8 +483,9 @@ export class DataSeries {
     /**
      * Set the bubble sizes.
      */
-    setPlotBubbleSizes(plotBubbleSizes: DataSeriesValues[]): void {
+    setPlotBubbleSizes(plotBubbleSizes: DataSeriesValues[]): this {
         this.#plotBubbleSizes = plotBubbleSizes;
+        return this;
     }
 
     /**
@@ -401,11 +508,11 @@ export class DataSeries {
      * @param index - The index to look up
      * @returns The plot values at the index, or undefined if not found
      */
-    getPlotValuesByIndex(index: number): DataSeriesValues | undefined {
+    getPlotValuesByIndex(index: number): DataSeriesValues | false {
         if (index in this.#plotValues) {
-            return this.#plotValues[index];
+            return this.#plotValues[index]!;
         }
-        return undefined;
+        return false;
     }
 
     /**
@@ -566,5 +673,38 @@ export class DataSeries {
      */
     clearPlotPoints(): void {
         this.#plotPoints = [];
+    }
+
+    clone(): DataSeries {
+        const cloned = new DataSeries(
+            this.#plotType,
+            this.#grouping,
+            [...this.#plotOrder],
+            this.#plotLabel,
+            this.#plotCategory.map((category) => category.clone()),
+            this.#plotValues.map((value) => value.clone()),
+            this.#direction,
+            this.#smoothLine,
+            this.#lineStyle,
+            this.#plotStyle,
+        );
+
+        cloned.setPlotBubbleSizes(this.#plotBubbleSizes.map((bubble) => bubble.clone()));
+        if (this.#fillColor !== null) {
+            cloned.setFillColor(this.#fillColor);
+        }
+        if (this.#lineColor !== null) {
+            cloned.setLineColor(this.#lineColor);
+        }
+        if (this.#borderColor !== null) {
+            cloned.setBorderColor(this.#borderColor);
+        }
+        cloned.setLineWidth(this.#lineWidth);
+        cloned.setMarkerSymbol(this.#markerSymbol);
+        cloned.setMarkerSize(this.#markerSize);
+        cloned.setDataLabels(this.#dataLabels);
+        cloned.setPlotPoints([...this.#plotPoints]);
+
+        return cloned;
     }
 }

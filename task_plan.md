@@ -20,7 +20,7 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
 ## Phase 2: Worksheet Extras Parity
 - [x] Tables: add `Table/Column`, `TableStyle`, `TableDxfsStyle` and align table APIs.
 - [x] Drawings: add `MemoryDrawing`, `HeaderFooterDrawing` and complete BaseDrawing/Drawing APIs.
-- [ ] Charts: add `Layout`, `Properties`, `AxisText` and align chart/axis/data-series/legend/title APIs.
+- [x] Charts: add `Layout`, `Properties`, `AxisText` and align chart/axis/data-series/legend/title APIs.
 - [x] AutoFilter/HeaderFooter: align range input types, add image APIs, clone behavior, return types.
 
 ## Phase 3: Style Parity

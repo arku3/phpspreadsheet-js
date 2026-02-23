@@ -102,6 +102,7 @@
 - DataSeriesValues: missing data values storage/refresh APIs, fill colors, scatter/bubble options.
 - TrendLine: constant naming (`TRENDLINE_MOVING_AVERAGE` vs `TRENDLINE_MOVING_AVG`), method name differences (`getDispRSqr` vs `getDisplayRSquared`, `getDispEq` vs `getDisplayEquation`).
 - Title/Legend: missing calculated title logic, position XL APIs, legend text, border/fill color APIs; position mapping differs.
+- Status: completed parity for Chart/Axis/DataSeries/DataSeriesValues/TrendLine/Title/Legend, added Layout/Properties/GridLines, and updated XLSX reader/writer/test coverage accordingly.
 
 ## Phase 3: Style Parity Findings
 ### Missing PHP Style Modules

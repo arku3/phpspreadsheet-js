@@ -8,6 +8,7 @@ import { DataLabels } from '../../worksheet/chart/data-labels.ts';
 import type { DataSeriesValues } from '../../worksheet/chart/data-series-values.ts';
 import type { DataSeries, LineStyle } from '../../worksheet/chart/data-series.ts';
 import type { Axis } from '../../worksheet/chart/index.ts';
+import type { Layout } from '../../worksheet/chart/layout.ts';
 import { Title } from '../../worksheet/chart/title.ts';
 import { TrendLine, TRENDLINE_MOVING_AVERAGE, TRENDLINE_POLYNOMIAL } from '../../worksheet/chart/trend-line.ts';
 
@@ -746,7 +747,7 @@ function writePlotAreaProperties(parent: any, chart: Chart): void {
 /**
  * Write plot area layout configuration.
  */
-function writePlotAreaLayout(parent: any, layout: ChartLayout | null): void {
+function writePlotAreaLayout(parent: any, layout: ChartLayout | Layout | null): void {
     if (!layout) {
         parent.ele('c:layout');
         return;
@@ -755,30 +756,37 @@ function writePlotAreaLayout(parent: any, layout: ChartLayout | null): void {
     const layoutElement = parent.ele('c:layout');
     const manualLayout = layoutElement.ele('c:manualLayout');
 
-    if (layout.layoutTarget) {
-        manualLayout.ele('c:layoutTarget', { val: layout.layoutTarget });
+    const layoutTarget = 'getLayoutTarget' in layout ? layout.getLayoutTarget() : (layout.layoutTarget ?? null);
+    if (layoutTarget) {
+        manualLayout.ele('c:layoutTarget', { val: layoutTarget });
     }
-    if (layout.xMode) {
-        manualLayout.ele('c:xMode', { val: layout.xMode });
+    const xMode = 'getXMode' in layout ? layout.getXMode() : (layout.xMode ?? null);
+    if (xMode) {
+        manualLayout.ele('c:xMode', { val: xMode });
     }
-    if (layout.yMode) {
-        manualLayout.ele('c:yMode', { val: layout.yMode });
+    const yMode = 'getYMode' in layout ? layout.getYMode() : (layout.yMode ?? null);
+    if (yMode) {
+        manualLayout.ele('c:yMode', { val: yMode });
     }
-    if (layout.x !== null && layout.x !== undefined) {
-        manualLayout.ele('c:x', { val: String(layout.x) });
+    const x = 'getXPosition' in layout ? layout.getXPosition() : layout.x;
+    if (x !== null && x !== undefined) {
+        manualLayout.ele('c:x', { val: String(x) });
     }
-    if (layout.y !== null && layout.y !== undefined) {
-        manualLayout.ele('c:y', { val: String(layout.y) });
+    const y = 'getYPosition' in layout ? layout.getYPosition() : layout.y;
+    if (y !== null && y !== undefined) {
+        manualLayout.ele('c:y', { val: String(y) });
     }
-    if (layout.w !== null && layout.w !== undefined) {
-        manualLayout.ele('c:w', { val: String(layout.w) });
+    const w = 'getWidth' in layout ? layout.getWidth() : layout.w;
+    if (w !== null && w !== undefined) {
+        manualLayout.ele('c:w', { val: String(w) });
     }
-    if (layout.h !== null && layout.h !== undefined) {
-        manualLayout.ele('c:h', { val: String(layout.h) });
+    const h = 'getHeight' in layout ? layout.getHeight() : layout.h;
+    if (h !== null && h !== undefined) {
+        manualLayout.ele('c:h', { val: String(h) });
     }
 }
 
-function writeTitleLayout(parent: any, layout: ChartLayout | null): void {
+function writeTitleLayout(parent: any, layout: ChartLayout | Layout | null): void {
     if (!layout) {
         parent.ele('c:layout');
         return;
@@ -787,26 +795,33 @@ function writeTitleLayout(parent: any, layout: ChartLayout | null): void {
     const layoutElement = parent.ele('c:layout');
     const manualLayout = layoutElement.ele('c:manualLayout');
 
-    if (layout.layoutTarget) {
-        manualLayout.ele('c:layoutTarget', { val: layout.layoutTarget });
+    const layoutTarget = 'getLayoutTarget' in layout ? layout.getLayoutTarget() : (layout.layoutTarget ?? null);
+    if (layoutTarget) {
+        manualLayout.ele('c:layoutTarget', { val: layoutTarget });
     }
-    if (layout.xMode) {
-        manualLayout.ele('c:xMode', { val: layout.xMode });
+    const xMode = 'getXMode' in layout ? layout.getXMode() : (layout.xMode ?? null);
+    if (xMode) {
+        manualLayout.ele('c:xMode', { val: xMode });
     }
-    if (layout.yMode) {
-        manualLayout.ele('c:yMode', { val: layout.yMode });
+    const yMode = 'getYMode' in layout ? layout.getYMode() : (layout.yMode ?? null);
+    if (yMode) {
+        manualLayout.ele('c:yMode', { val: yMode });
     }
-    if (layout.x !== null && layout.x !== undefined) {
-        manualLayout.ele('c:x', { val: String(layout.x) });
+    const x = 'getXPosition' in layout ? layout.getXPosition() : layout.x;
+    if (x !== null && x !== undefined) {
+        manualLayout.ele('c:x', { val: String(x) });
     }
-    if (layout.y !== null && layout.y !== undefined) {
-        manualLayout.ele('c:y', { val: String(layout.y) });
+    const y = 'getYPosition' in layout ? layout.getYPosition() : layout.y;
+    if (y !== null && y !== undefined) {
+        manualLayout.ele('c:y', { val: String(y) });
     }
-    if (layout.w !== null && layout.w !== undefined) {
-        manualLayout.ele('c:w', { val: String(layout.w) });
+    const w = 'getWidth' in layout ? layout.getWidth() : layout.w;
+    if (w !== null && w !== undefined) {
+        manualLayout.ele('c:w', { val: String(w) });
     }
-    if (layout.h !== null && layout.h !== undefined) {
-        manualLayout.ele('c:h', { val: String(layout.h) });
+    const h = 'getHeight' in layout ? layout.getHeight() : layout.h;
+    if (h !== null && h !== undefined) {
+        manualLayout.ele('c:h', { val: String(h) });
     }
 }
 
@@ -986,7 +1001,7 @@ function groupSeriesByPlotType(dataSeriesList: DataSeries[]): Map<string, DataSe
     const groups = new Map<string, DataSeries[]>();
 
     for (const series of dataSeriesList) {
-        const plotType = series.getPlotType();
+        const plotType = series.getPlotType() ?? 'bar';
         if (!groups.has(plotType)) {
             groups.set(plotType, []);
         }
@@ -1114,7 +1129,7 @@ function writeDataSeriesElement(
     seriesIndex: number,
     worksheet: Worksheet | null = null,
 ): void {
-    const plotType = dataSeries.getPlotType();
+    const plotType = dataSeries.getPlotType() ?? 'bar';
     const lineStyle = dataSeries.getLineStyle();
 
     // Write the data series
@@ -1586,8 +1601,10 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
         if (legendObject) {
             const fillColor = legendObject.getFillColor();
             const borderLines = legendObject.getBorderLines();
-            const borderColor = borderLines.color ? chartColorFromLegendValue(borderLines.color) : null;
-            const hasBorder = borderColor || borderLines.width || borderLines.style;
+            const borderColor = borderLines.getLineColor();
+            const borderWidth = borderLines.getLineStyleProperty('width');
+            const borderStyle = borderLines.getLineStyleProperty('dash');
+            const hasBorder = (borderColor && borderColor.isUsable()) || borderWidth || borderStyle;
             if (fillColor || hasBorder) {
                 const spPr = legend.ele('c:spPr');
                 if (fillColor && fillColor.isUsable()) {
@@ -1596,16 +1613,17 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
                 }
                 if (hasBorder) {
                     const lineAttrs: Record<string, string> = {};
-                    if (borderLines.width !== null && borderLines.width !== undefined && borderLines.width > 0) {
-                        lineAttrs.w = String(borderLines.width * 12700);
+                    const borderWidthValue = borderWidth === null ? null : Number(borderWidth);
+                    if (borderWidthValue !== null && Number.isFinite(borderWidthValue) && borderWidthValue > 0) {
+                        lineAttrs.w = String(borderWidthValue * 12700);
                     }
                     const ln = spPr.ele('a:ln', lineAttrs);
                     if (borderColor && borderColor.isUsable()) {
                         const solidFill = ln.ele('a:solidFill');
                         writeChartColor(solidFill, borderColor, false);
                     }
-                    if (borderLines.style) {
-                        ln.ele('a:prstDash', { val: borderLines.style });
+                    if (typeof borderStyle === 'string' && borderStyle) {
+                        ln.ele('a:prstDash', { val: borderStyle });
                     }
                 }
             }
@@ -1645,8 +1663,8 @@ export const writeChartXml = (chart: Chart, worksheet?: Worksheet): string => {
         legend.ele('c:overlay', { val: overlay });
     }
 
-    chartElement.ele('c:plotVisOnly', { val: '1' });
-    chartElement.ele('c:dispBlanksAs', { val: 'gap' });
+    chartElement.ele('c:plotVisOnly', { val: chart.getPlotVisibleOnly() ? '1' : '0' });
+    chartElement.ele('c:dispBlanksAs', { val: chart.getDisplayBlanksAs() });
     chartElement.ele('c:showDLblsOverMax', { val: '0' });
 
     return root.end({ prettyPrint: true });

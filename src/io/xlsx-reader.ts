@@ -31,12 +31,8 @@ import { DataLabels, type DataLabelPosition } from '../worksheet/chart/data-labe
 import { DataPoint } from '../worksheet/chart/data-point.ts';
 import { DataSeriesValues } from '../worksheet/chart/data-series-values.ts';
 import { DataSeries } from '../worksheet/chart/data-series.ts';
-import {
-    GridLines,
-    type GlowProperties,
-    type ShadowProperties,
-    type SoftEdgesProperties,
-} from '../worksheet/chart/grid-lines.ts';
+import type { GlowProperties, ShadowProperties, SoftEdgesProperties } from '../worksheet/chart/effects.ts';
+import { GridLines } from '../worksheet/chart/grid-lines.ts';
 import { Legend } from '../worksheet/chart/legend.ts';
 import { Title } from '../worksheet/chart/title.ts';
 import { TrendLine, type TrendLineType } from '../worksheet/chart/trend-line.ts';
@@ -2371,7 +2367,8 @@ export class XlsxReader implements IReader {
                 const shadowAttrs = shadowMatch[1] ?? '';
                 const shadowInner = shadowMatch[2] ?? '';
 
-                shadow = { effect: shadowType };
+                const shadowValue: ShadowProperties = { effect: shadowType, size: {} };
+                shadow = shadowValue;
 
                 const blurAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'blurRad');
                 if (blurAttr) {
@@ -2412,29 +2409,32 @@ export class XlsxReader implements IReader {
                 const kxAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'kx');
                 const kyAttr = XlsxReader.#extractXmlAttribute(shadowAttrs, 'ky');
 
-                shadow.size = {};
                 if (sxAttr) {
                     const sx = Number(sxAttr) / 100000;
                     if (!Number.isNaN(sx)) {
-                        shadow.size.sx = sx;
+                        shadowValue.size = shadowValue.size ?? {};
+                        shadowValue.size.sx = sx;
                     }
                 }
                 if (syAttr) {
                     const sy = Number(syAttr) / 100000;
                     if (!Number.isNaN(sy)) {
-                        shadow.size.sy = sy;
+                        shadowValue.size = shadowValue.size ?? {};
+                        shadowValue.size.sy = sy;
                     }
                 }
                 if (kxAttr) {
                     const kx = Number(kxAttr) / 60000;
                     if (!Number.isNaN(kx)) {
-                        shadow.size.kx = kx;
+                        shadowValue.size = shadowValue.size ?? {};
+                        shadowValue.size.kx = kx;
                     }
                 }
                 if (kyAttr) {
                     const ky = Number(kyAttr) / 60000;
                     if (!Number.isNaN(ky)) {
-                        shadow.size.ky = ky;
+                        shadowValue.size = shadowValue.size ?? {};
+                        shadowValue.size.ky = ky;
                     }
                 }
 
@@ -2588,13 +2588,13 @@ export class XlsxReader implements IReader {
                     if (widthAttr) {
                         const width = Number(widthAttr) / 12700;
                         if (!Number.isNaN(width)) {
-                            borderLines.width = width;
+                            borderLines.setLineStyleProperty('width', width);
                         }
                     }
 
                     const prstDashMatch = lineInner.match(/<a:prstDash\b[^>]*\bval="([^"]*)"/);
                     if (prstDashMatch && prstDashMatch[1]) {
-                        borderLines.style = prstDashMatch[1];
+                        borderLines.setLineStyleProperty('dash', prstDashMatch[1]);
                     }
 
                     const lineColor = XlsxReader.#parseChartColor(lineInner);
@@ -2602,13 +2602,7 @@ export class XlsxReader implements IReader {
                         const colorValue = lineColor.getValue();
                         const colorType = lineColor.getType();
                         if (colorValue) {
-                            if (colorType === EXCEL_COLOR_TYPE_SCHEME) {
-                                borderLines.color = `*${colorValue}`;
-                            } else if (colorType === EXCEL_COLOR_TYPE_STANDARD) {
-                                borderLines.color = `/${colorValue}`;
-                            } else {
-                                borderLines.color = colorValue;
-                            }
+                            borderLines.setLineColorProperties(colorValue, lineColor.getAlpha(), colorType);
                         }
                     }
                     legendObject.setBorderLines(borderLines);

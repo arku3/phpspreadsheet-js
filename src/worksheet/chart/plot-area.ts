@@ -1,7 +1,9 @@
+import type { Worksheet } from '../../core/worksheet';
 import type { ChartLayout } from './chart';
 import type { ChartColor } from './chart-color';
 import { DataSeries } from './data-series';
 import type { DataSeriesValues } from './data-series-values';
+import type { Layout } from './layout';
 
 /**
  * Gradient fill stop for plot area background.
@@ -27,7 +29,9 @@ export class PlotArea {
     #gapWidth: number | null = null;
     #upBars: unknown | null = null;
     #downBars: unknown | null = null;
-    #layout: ChartLayout | null = null;
+    #layout: ChartLayout | Layout | null = null;
+    #useUpBars: boolean = false;
+    #useDownBars: boolean = false;
 
     /**
      * Create a new PlotArea.
@@ -35,7 +39,7 @@ export class PlotArea {
      * @param layout - Optional layout configuration
      * @param plotSeries - Array of data series
      */
-    constructor(layout: ChartLayout | null = null, plotSeries: DataSeries[] = []) {
+    constructor(layout: ChartLayout | Layout | null = null, plotSeries: DataSeries[] = []) {
         this.#layout = layout;
         this.#plotSeries = plotSeries;
     }
@@ -43,14 +47,14 @@ export class PlotArea {
     /**
      * Get the layout configuration.
      */
-    getLayout(): ChartLayout | null {
+    getLayout(): ChartLayout | Layout | null {
         return this.#layout;
     }
 
     /**
      * Set the layout configuration.
      */
-    setLayout(layout: ChartLayout | null): this {
+    setLayout(layout: ChartLayout | Layout | null): this {
         this.#layout = layout;
         return this;
     }
@@ -59,6 +63,10 @@ export class PlotArea {
      * Get the plot series (data series groups).
      */
     getPlotSeries(): DataSeries[] {
+        return this.#plotSeries;
+    }
+
+    getPlotGroup(): DataSeries[] {
         return this.#plotSeries;
     }
 
@@ -97,10 +105,16 @@ export class PlotArea {
      * @throws Error if index is out of bounds
      */
     getPlotGroupByIndex(index: number): DataSeries {
-        if (index < 0 || index >= this.#plotSeries.length) {
-            throw new Error(`Plot group index ${index} is out of bounds`);
+        if (this.#plotSeries[index]) {
+            return this.#plotSeries[index]!;
         }
-        return this.#plotSeries[index]!;
+        return new DataSeries(null, null, [index]);
+    }
+
+    public refresh(worksheet: Worksheet): void {
+        for (const plot of this.#plotSeries) {
+            plot.refresh(worksheet);
+        }
     }
 
     /**
@@ -124,8 +138,8 @@ export class PlotArea {
      * @param index - The index of the category
      * @returns The DataSeriesValues at the specified index, or undefined if not found
      */
-    getPlotCategoriesByIndex(index: number): DataSeriesValues | undefined {
-        return this.#plotCategories[index];
+    getPlotCategoriesByIndex(index: number): DataSeriesValues | false {
+        return this.#plotCategories[index] ?? false;
     }
 
     /**
@@ -242,6 +256,24 @@ export class PlotArea {
         return this;
     }
 
+    getUseUpBars(): boolean {
+        return this.#useUpBars;
+    }
+
+    setUseUpBars(useUpBars: boolean): this {
+        this.#useUpBars = useUpBars;
+        return this;
+    }
+
+    getUseDownBars(): boolean {
+        return this.#useDownBars;
+    }
+
+    setUseDownBars(useDownBars: boolean): this {
+        this.#useDownBars = useDownBars;
+        return this;
+    }
+
     /**
      * Add a data series to the plot area.
      */
@@ -254,51 +286,13 @@ export class PlotArea {
      * Create a deep clone of this PlotArea.
      */
     clone(): PlotArea {
+        const clonedLayout = PlotArea.cloneLayout(this.#layout);
         const cloned = new PlotArea(
-            this.#layout ? { ...this.#layout } : null,
-            this.#plotSeries.map((series) => {
-                // Create a new DataSeries with the same properties
-                // Since DataSeries doesn't have a clone method, we rely on the constructor
-                const newSeries = new DataSeries(
-                    series.getPlotType(),
-                    series.getGrouping(),
-                    series.getPlotOrder(),
-                    series.getPlotLabels(),
-                    series.getPlotCategories(),
-                    series.getPlotValues(),
-                    series.getDirection(),
-                    series.getSmoothLine(),
-                    series.getLineStyle(),
-                );
-                // Copy additional properties
-                if (series.getPlotBubbleSizes().length > 0) {
-                    newSeries.setPlotBubbleSizes(series.getPlotBubbleSizes());
-                }
-                const fillColor = series.getFillColor();
-                if (fillColor) {
-                    newSeries.setFillColor(fillColor);
-                }
-                const lineColor = series.getLineColor();
-                if (lineColor) {
-                    newSeries.setLineColor(lineColor);
-                }
-                const borderColor = series.getBorderColor();
-                if (borderColor) {
-                    newSeries.setBorderColor(borderColor);
-                }
-                newSeries.setLineWidth(series.getLineWidth());
-                if (series.getMarkerSymbol()) {
-                    newSeries.setMarkerSymbol(series.getMarkerSymbol());
-                }
-                newSeries.setMarkerSize(series.getMarkerSize());
-                if (series.getDataLabels()) {
-                    newSeries.setDataLabels(series.getDataLabels());
-                }
-                return newSeries;
-            }),
+            clonedLayout,
+            this.#plotSeries.map((series) => series.clone()),
         );
 
-        cloned.setPlotCategories([...this.#plotCategories]);
+        cloned.setPlotCategories(this.#plotCategories.map((category) => category.clone()));
         cloned.setPlotVisibleOnly(this.#plotVisibleOnly);
         cloned.setNoFill(this.#noFill);
         cloned.setGradientFillStops([...this.#gradientFillStops]);
@@ -306,7 +300,19 @@ export class PlotArea {
         cloned.setGapWidth(this.#gapWidth);
         cloned.setUpBars(this.#upBars);
         cloned.setDownBars(this.#downBars);
+        cloned.setUseUpBars(this.#useUpBars);
+        cloned.setUseDownBars(this.#useDownBars);
 
         return cloned;
+    }
+
+    private static cloneLayout(layout: ChartLayout | Layout | null): ChartLayout | Layout | null {
+        if (!layout) {
+            return null;
+        }
+        if (typeof (layout as Layout).clone === 'function') {
+            return (layout as Layout).clone();
+        }
+        return { ...layout };
     }
 }

@@ -10,12 +10,9 @@ export { Title } from './title';
 export { TrendLine } from './trend-line';
 export { GridLines } from './grid-lines';
 export { EffectProperties } from './effects';
-export type {
-    ShadowProperties,
-    GlowProperties,
-    SoftEdgesProperties,
-    LineStyleProperties as GridLinesLineStyleProperties,
-} from './grid-lines';
+export { Layout } from './layout';
+export { Properties } from './properties';
+export type { ShadowProperties, LineStyleProperties as GridLinesLineStyleProperties } from './properties';
 export type {
     ShadowProperties as EffectShadowProperties,
     GlowProperties as EffectGlowProperties,
@@ -24,6 +21,7 @@ export type {
 export type { PlotAreaGradientStop } from './plot-area';
 export { Axis, AxisGridLines, AxisText } from './axis';
 export type { ChartType, GroupingType, DirectionType, LineStyle } from './data-series';
+export type { LegendLayout } from './legend';
 export type {
     Effects,
     ChartLayout,
@@ -58,9 +56,47 @@ export {
     TRENDLINE_LOGARITHMIC,
     TRENDLINE_POLYNOMIAL,
     TRENDLINE_POWER,
+    TRENDLINE_MOVING_AVG,
     TRENDLINE_MOVING_AVERAGE,
     TRENDLINE_TYPES,
 } from './trend-line';
+export {
+    TYPE_BARCHART,
+    TYPE_BARCHART_3D,
+    TYPE_LINECHART,
+    TYPE_LINECHART_3D,
+    TYPE_AREACHART,
+    TYPE_AREACHART_3D,
+    TYPE_PIECHART,
+    TYPE_PIECHART_3D,
+    TYPE_DOUGHNUTCHART,
+    TYPE_DONUTCHART,
+    TYPE_SCATTERCHART,
+    TYPE_SURFACECHART,
+    TYPE_SURFACECHART_3D,
+    TYPE_RADARCHART,
+    TYPE_BUBBLECHART,
+    TYPE_STOCKCHART,
+    TYPE_CANDLECHART,
+    GROUPING_CLUSTERED,
+    GROUPING_STACKED,
+    GROUPING_PERCENT_STACKED,
+    GROUPING_STANDARD,
+    DIRECTION_BAR,
+    DIRECTION_HORIZONTAL,
+    DIRECTION_COL,
+    DIRECTION_COLUMN,
+    STYLE_LINEMARKER,
+    STYLE_SMOOTHMARKER,
+    STYLE_MARKER,
+    STYLE_FILLED,
+    EMPTY_AS_GAP,
+    EMPTY_AS_ZERO,
+    EMPTY_AS_SPAN,
+    DEFAULT_EMPTY_AS,
+    VALID_EMPTY_AS,
+} from './data-series';
+export { DATASERIES_TYPE_NUMBER, DATASERIES_TYPE_STRING } from './data-series-values';
 export {
     AXIS_TYPE_CATEGORY,
     AXIS_TYPE_DATE,
@@ -93,4 +129,27 @@ export {
     TIME_UNIT_DAYS,
     TIME_UNIT_MONTHS,
     TIME_UNIT_YEARS,
+    DISP_UNITS_HUNDREDS,
+    DISP_UNITS_THOUSANDS,
+    DISP_UNITS_TEN_THOUSANDS,
+    DISP_UNITS_HUNDRED_THOUSANDS,
+    DISP_UNITS_MILLIONS,
+    DISP_UNITS_TEN_MILLIONS,
+    DISP_UNITS_HUNDRED_MILLIONS,
+    DISP_UNITS_BILLIONS,
+    DISP_UNITS_TRILLIONS,
+    TRILLION_INDEX,
+    DISP_UNITS_BUILTIN_INT,
 } from './axis';
+export {
+    XL_LEGEND_POSITION_BOTTOM,
+    XL_LEGEND_POSITION_CORNER,
+    XL_LEGEND_POSITION_CUSTOM,
+    XL_LEGEND_POSITION_LEFT,
+    XL_LEGEND_POSITION_RIGHT,
+    XL_LEGEND_POSITION_TOP,
+    POSITION_XLREF,
+    LEGEND_POSITION_TO_CONFIG,
+    CONFIG_TO_LEGEND_POSITION,
+    VALID_POSITIONS,
+} from './legend';

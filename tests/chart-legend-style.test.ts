@@ -37,7 +37,10 @@ describe('Chart legend styling', () => {
 
         const legend = new Legend();
         legend.setFillColor(new ChartColor('FF0000'));
-        legend.setBorderLines({ color: '#00FF00', width: 1.5, style: 'dash' });
+        const borderLines = legend.getBorderLines();
+        borderLines.setLineColorProperties('00FF00');
+        borderLines.setLineStyleProperty('width', 1.5);
+        borderLines.setLineStyleProperty('dash', 'dash');
         chart.setLegendObject(legend);
 
         const series = new DataSeries('bar');
@@ -77,7 +80,10 @@ describe('Chart legend styling', () => {
 
         const legend = new Legend();
         legend.setFillColor(new ChartColor('FF0000'));
-        legend.setBorderLines({ color: '#00FF00', width: 1.5, style: 'dash' });
+        const borderLines = legend.getBorderLines();
+        borderLines.setLineColorProperties('00FF00');
+        borderLines.setLineStyleProperty('width', 1.5);
+        borderLines.setLineStyleProperty('dash', 'dash');
         const legendFont = new Font();
         legendFont.setName('Calibri');
         legendFont.setSize(11);
@@ -105,10 +111,10 @@ describe('Chart legend styling', () => {
         const readLegend = readChart.getLegend();
         expect(readLegend).toBeDefined();
         expect(readLegend?.getFillColor()?.getValue()).toBe('FF0000');
-        const borderLines = readLegend?.getBorderLines();
-        expect(borderLines?.color).toBe('00FF00');
-        expect(borderLines?.width).toBeCloseTo(1.5);
-        expect(borderLines?.style).toBe('dash');
+        const readBorderLines = readLegend?.getBorderLines();
+        expect(readBorderLines?.getLineColor()?.getValue()).toBe('00FF00');
+        expect(Number(readBorderLines?.getLineStyleProperty('width'))).toBeCloseTo(1.5);
+        expect(readBorderLines?.getLineStyleProperty('dash')).toBe('dash');
         expect(readLegend?.getTextFont()?.getName()).toBe('Calibri');
         expect(readLegend?.getTextFont()?.getSize()).toBe(11);
         expect(readLegend?.getTextFont()?.getBold()).toBe(true);
