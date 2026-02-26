@@ -91,12 +91,16 @@ export class StructuredReference {
         // Simple column/row resolution
         // Handles: [Column], [#All], [#Data], [#Headers], [#Totals], [@Column]
 
+        const tableSheet = table.getWorksheet();
+        if (!tableSheet) {
+            return '#REF!';
+        }
+
         if (reference.includes('[@') || reference.includes('[#This Row]')) {
             // Current row reference
-            const cellRef = this.resolveRowReference(reference, table, cellRow1);
+            const cellRef = this.resolveRowReference(reference, table, tableSheet, cellRow1);
             if (cellRef === '#REF!') return cellRef;
 
-            const tableSheet = table.getWorksheet();
             if (tableSheet !== worksheet) {
                 return `'${tableSheet.getTitle()}'!${cellRef}`;
             }
@@ -104,10 +108,17 @@ export class StructuredReference {
             return cellRef;
         }
 
-        const rangeRef = this.resolveColumnReference(reference, table, headerRow, firstDataRow, lastDataRow, totalsRow);
+        const rangeRef = this.resolveColumnReference(
+            reference,
+            table,
+            tableSheet,
+            headerRow,
+            firstDataRow,
+            lastDataRow,
+            totalsRow,
+        );
         if (rangeRef === '#REF!') return rangeRef;
 
-        const tableSheet = table.getWorksheet();
         if (tableSheet !== worksheet) {
             return `'${tableSheet.getTitle()}'!${rangeRef}`;
         }
@@ -115,7 +126,7 @@ export class StructuredReference {
         return rangeRef;
     }
 
-    private resolveRowReference(reference: string, table: Table, row: number): string {
+    private resolveRowReference(reference: string, table: Table, worksheet: Worksheet, row: number): string {
         // Supports [@Column] and [[#This Row],[Column]]
 
         const extractTopLevelGroups = (text: string): string[] => {
@@ -151,10 +162,13 @@ export class StructuredReference {
         const atMatch = working.match(/\[@([^\]]+)\]/);
         if (atMatch?.[1]) {
             const colName = atMatch[1].trim();
-            const column = table.getColumn(colName);
-            if (!column) return '#REF!';
-            const [[minCol]] = table.getRangeBoundaries();
-            return Coordinate.stringFromCoordinate(minCol + column.getIndex(), row);
+            const columns = StructuredReference.getColumnsForColumnReference(table, worksheet);
+            for (const [columnId, columnName] of columns) {
+                if (StructuredReference.shouldColumnBeIncluded(colName, columnName)) {
+                    return `${columnId}${row}`;
+                }
+            }
+            return '#REF!';
         }
 
         // General case: find the first non-# group, drilling into nested brackets.
@@ -183,17 +197,19 @@ export class StructuredReference {
         colName = colName.trim();
         if (!colName) return '#REF!';
 
-        const column = table.getColumn(colName);
-        if (!column) return '#REF!';
-
-        const [[minCol]] = table.getRangeBoundaries();
-        const colIndex = minCol + column.getIndex();
-        return Coordinate.stringFromCoordinate(colIndex, row);
+        const columns = StructuredReference.getColumnsForColumnReference(table, worksheet);
+        for (const [columnId, columnName] of columns) {
+            if (StructuredReference.shouldColumnBeIncluded(colName, columnName)) {
+                return `${columnId}${row}`;
+            }
+        }
+        return '#REF!';
     }
 
     private resolveColumnReference(
         reference: string,
         table: Table,
+        worksheet: Worksheet,
         headerRow: number | null,
         firstDataRow: number,
         lastDataRow: number,
@@ -226,12 +242,13 @@ export class StructuredReference {
         const colNameMatch = reference.match(/\[([^#@\]]+)\]/);
         if (colNameMatch && colNameMatch[1]) {
             const colName = colNameMatch[1];
-            const column = table.getColumn(colName);
-            if (column) {
-                const targetCol = minCol + column.getIndex();
-                const start = Coordinate.stringFromCoordinate(targetCol, startRow);
-                const end = Coordinate.stringFromCoordinate(targetCol, endRow);
-                return start === end ? start : `${start}:${end}`;
+            const columns = StructuredReference.getColumnsForColumnReference(table, worksheet);
+            for (const [columnId, columnName] of columns) {
+                if (StructuredReference.shouldColumnBeIncluded(colName, columnName)) {
+                    const start = `${columnId}${startRow}`;
+                    const end = `${columnId}${endRow}`;
+                    return start === end ? start : `${start}:${end}`;
+                }
             }
         }
 
@@ -239,5 +256,28 @@ export class StructuredReference {
         const startCoord = Coordinate.stringFromCoordinate(minCol, startRow);
         const endCoord = Coordinate.stringFromCoordinate(maxCol, endRow);
         return `${startCoord}:${endCoord}`;
+    }
+
+    private static shouldColumnBeIncluded(columnName: string, tableColumnName: string): boolean {
+        if (columnName === '') {
+            return true;
+        }
+        return columnName.toLowerCase() === tableColumnName.toLowerCase();
+    }
+
+    private static getColumnsForColumnReference(table: Table, worksheet: Worksheet): Map<string, string> {
+        const columns = new Map<string, string>();
+        const range = table.getRange();
+        if (!range) {
+            return columns;
+        }
+        const [[startCol, startRow], [endCol]] = table.getRangeBoundaries();
+        for (let columnOffset = 0; columnOffset <= endCol - startCol; columnOffset += 1) {
+            const columnId = Coordinate.stringFromColumnIndex(startCol + columnOffset);
+            const cell = worksheet.getCellOrNull(`${columnId}${startRow}`);
+            const headerValue = cell ? String(cell.getValue()) : '';
+            columns.set(columnId, headerValue);
+        }
+        return columns;
     }
 }

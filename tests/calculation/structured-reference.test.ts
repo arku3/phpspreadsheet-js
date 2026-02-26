@@ -24,7 +24,7 @@ describe('Structured References', () => {
         sheet.setCellValue('B3', 20);
 
         // Create Table
-        const table = new Table('Sales', 'A1:B3', sheet);
+        const table = new Table('A1:B3', 'Sales', sheet);
         table.addColumn('Product');
         table.addColumn('Price');
         sheet.addTable(table);
@@ -53,7 +53,7 @@ describe('Structured References', () => {
         sheet.setCellValue('B3', 20);
 
         // Create Table
-        const table = new Table('Sales', 'A1:B3', sheet);
+        const table = new Table('A1:B3', 'Sales', sheet);
         table.addColumn('Product');
         table.addColumn('Price');
         sheet.addTable(table);
@@ -75,7 +75,7 @@ describe('Structured References', () => {
         sheet.setCellValue('A3', 20);
         sheet.setCellValue('A4', 30);
 
-        const table = new Table('Table1', 'A1:A4', sheet);
+        const table = new Table('A1:A4', 'Table1', sheet);
         table.addColumn('Val');
         sheet.addTable(table);
 
@@ -92,7 +92,7 @@ describe('Structured References', () => {
         sheet.setCellValue('A3', 200);
         sheet.setCellValue('A4', 'Total');
 
-        const table = new Table('Table2', 'A1:A4', sheet);
+        const table = new Table('A1:A4', 'Table2', sheet);
         table.addColumn('Header');
         table.showTotals(true);
         sheet.addTable(table);

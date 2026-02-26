@@ -47,7 +47,7 @@ export class TableReader extends ReaderPart {
         const headerRowCount = TableReader.extractXmlAttribute(tableTagAttrs, 'headerRowCount');
         const totalsRowCount = TableReader.extractXmlAttribute(tableTagAttrs, 'totalsRowCount');
 
-        const table = new Table(tableName, tableRange, this.#worksheet);
+        const table = new Table(tableRange, tableName, this.#worksheet);
         table.setShowHeaderRow((headerRowCount ?? '') !== '0');
         table.setShowTotalsRow((totalsRowCount ?? '') === '1');
 
@@ -63,9 +63,7 @@ export class TableReader extends ReaderPart {
                     const colId = Number.parseInt(TableReader.extractXmlAttribute(attrs, 'colId') ?? '0', 10);
                     const hidden = TableReader.extractXmlAttribute(attrs, 'hiddenButton') === '1';
                     const column = table.getColumnByOffset(colId);
-                    if (column !== false) {
-                        column.setShowFilterButton(!hidden);
-                    }
+                    column.setShowFilterButton(!hidden);
                 }
             }
         } else {

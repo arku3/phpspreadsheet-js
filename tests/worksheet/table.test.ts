@@ -8,13 +8,13 @@ describe('Table', () => {
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
 
-        const table = new Table('Table1', 'A1:B2', sheet);
+        const table = new Table('A1:B2', 'Table1', sheet);
         sheet.addTable(table);
 
         expect(() => table.setName('')).toThrow();
         expect(() => table.setName('A1')).toThrow();
 
-        const other = new Table('Other', 'C1:D2', sheet);
+        const other = new Table('C1:D2', 'Other', sheet);
         sheet.addTable(other);
         expect(() => other.setName('Table1')).toThrow();
     });
@@ -25,7 +25,7 @@ describe('Table', () => {
         sheet.setCellValue('A1', 'Header');
         sheet.setCellValue('A5', 'Data');
 
-        const table = new Table('Table1', 'A1:A1', sheet);
+        const table = new Table('A1:A1', 'Table1', sheet);
         table.setRangeToMaxRow();
         expect(table.getRange()).toBe('A1:A5');
     });
@@ -33,7 +33,7 @@ describe('Table', () => {
     test('table style flags set correctly', () => {
         const spreadsheet = new Spreadsheet();
         const sheet = spreadsheet.getActiveSheet();
-        const table = new Table('Table1', 'A1:B2', sheet);
+        const table = new Table('A1:B2', 'Table1', sheet);
 
         const style = new TableStyle();
         style.setTheme(TableStyle.TABLE_STYLE_LIGHT1);

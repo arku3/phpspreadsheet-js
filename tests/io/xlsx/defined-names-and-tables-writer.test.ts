@@ -44,7 +44,7 @@ describe('XlsxWriter: definedNames + tables', () => {
         sheet.getCell('A2').setValue('Widget');
         sheet.getCell('B2').setValue(10);
 
-        const table = new Table('MyTable', 'A1:B2', sheet);
+        const table = new Table('A1:B2', 'MyTable', sheet);
         sheet.addTable(table);
 
         const bytes = await new XlsxWriter(spreadsheet).writeBuffer();

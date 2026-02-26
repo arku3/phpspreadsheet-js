@@ -68,7 +68,7 @@ export class TableStyle {
     #theme: string = 'TableStyleMedium2';
     #showFirstColumn: boolean = false;
     #showLastColumn: boolean = false;
-    #showRowStripes: boolean = true;
+    #showRowStripes: boolean = false;
     #showColumnStripes: boolean = false;
     #tableStyle: TableDxfsStyle | null = null;
     #table: Table | null = null;
