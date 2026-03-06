@@ -249,7 +249,7 @@ export class Theme extends WriterPart {
 
         for (const key of keys) {
             const el = parent.ele(`a:${key}`);
-            const val = themeColors[keys.indexOf(key)];
+            const val = themeColors[key];
             if (mapping[key]) {
                 el.ele('a:sysClr', { val: mapping[key], lastClr: val || '000000' });
             } else {

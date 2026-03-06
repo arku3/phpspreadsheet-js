@@ -64,6 +64,8 @@ export class CellMatcher {
         switch (conditional.getConditionType()) {
             case Conditional.CONDITION_CELLIS:
                 return this.processOperatorComparison(conditional);
+            case Conditional.CONDITION_COLORSCALE:
+                return this.processColorScale(conditional);
             case Conditional.CONDITION_DUPLICATES:
             case Conditional.CONDITION_UNIQUE:
                 return this.processDuplicatesComparison(conditional);
@@ -81,6 +83,15 @@ export class CellMatcher {
             default:
                 return false;
         }
+    }
+
+    protected processColorScale(conditional: Conditional): boolean {
+        const colorScale = conditional.getColorScale();
+        if (!colorScale || !colorScale.colorScaleReadyForUse()) {
+            return false;
+        }
+        const value = this.cell.getCalculatedValue();
+        return typeof value === 'number' && Number.isFinite(value);
     }
 
     protected wrapValue(value: any): string | number {

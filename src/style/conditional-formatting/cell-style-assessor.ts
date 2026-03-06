@@ -24,7 +24,7 @@ export class CellStyleAssessor {
         for (const conditional of conditionalStyles) {
             if (this.cellMatcher.evaluateConditional(conditional)) {
                 // Merge the conditional style into the base style
-                this.styleMerger.mergeStyle(conditional.getStyle());
+                this.styleMerger.mergeStyle(conditional.getStyle(this.cell.getValue()));
 
                 if (conditional.getStopIfTrue()) {
                     break;
@@ -33,5 +33,27 @@ export class CellStyleAssessor {
         }
 
         return this.styleMerger.getStyle();
+    }
+
+    public matchConditionsReturnNullIfNoneMatched(
+        conditionalStyles: Conditional[],
+        cellData: string,
+        stopAtFirstMatch: boolean = false,
+    ): Style | null {
+        let matched = false;
+        const numeric = Number(cellData);
+        for (const conditional of conditionalStyles) {
+            if (this.cellMatcher.evaluateConditional(conditional)) {
+                matched = true;
+                this.styleMerger.mergeStyle(conditional.getStyle(numeric));
+                if (conditional.getStopIfTrue() || stopAtFirstMatch) {
+                    break;
+                }
+            }
+        }
+        if (matched) {
+            return this.styleMerger.getStyle();
+        }
+        return null;
     }
 }

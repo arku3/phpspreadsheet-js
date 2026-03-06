@@ -60,14 +60,14 @@ export class Style extends Supervisor {
     /**
      * Create a new Style.
      */
-    constructor(isSupervisor: boolean = false) {
+    constructor(isSupervisor: boolean = false, isConditional: boolean = false) {
         super(isSupervisor);
-        this.#font = new Font(isSupervisor);
-        this.#fill = new Fill(isSupervisor);
+        this.#font = new Font(isSupervisor, isConditional);
+        this.#fill = new Fill(isSupervisor, isConditional);
         this.#borders = new Borders(isSupervisor);
-        this.#alignment = new Alignment(isSupervisor);
-        this.#numberFormat = new NumberFormat(isSupervisor);
-        this.#protection = new Protection();
+        this.#alignment = new Alignment(isSupervisor, isConditional);
+        this.#numberFormat = new NumberFormat(isSupervisor, isConditional);
+        this.#protection = new Protection(isSupervisor, isConditional);
 
         if (isSupervisor) {
             this.#font.bindParent(this);
@@ -75,6 +75,7 @@ export class Style extends Supervisor {
             this.#borders.bindParent(this);
             this.#alignment.bindParent(this);
             this.#numberFormat.bindParent(this);
+            this.#protection.bindParent(this);
         }
     }
 

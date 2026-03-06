@@ -73,6 +73,7 @@ export class Font extends Supervisor {
     #underline: string = Font.UNDERLINE_NONE;
     #strikethrough: boolean = false;
     #color: Color;
+    #autoColor: boolean = false;
     #scheme: string = '';
 
     // Chart and theme-specific font properties
@@ -83,9 +84,19 @@ export class Font extends Supervisor {
     #baseLine: number = 0;
     #strikeType: string = '';
 
-    constructor(isSupervisor: boolean = false) {
+    constructor(isSupervisor: boolean = false, isConditional: boolean = false) {
         super(isSupervisor);
-        this.#color = new Color(Color.COLOR_BLACK, isSupervisor);
+        if (isConditional) {
+            this.#name = '';
+            this.#size = 0;
+            this.#bold = false;
+            this.#italic = false;
+            this.#superscript = false;
+            this.#subscript = false;
+            this.#underline = '';
+            this.#strikethrough = false;
+        }
+        this.#color = new Color(Color.COLOR_BLACK, isSupervisor, isConditional);
         // Bind for both supervisor and non-supervisor so Color knows its parent property.
         // Non-supervisor Color is still used by the supervisor chain for reading values.
         this.#color.bindParent(this, 'color');
@@ -264,6 +275,29 @@ export class Font extends Supervisor {
         return this;
     }
 
+    public getAutoColor(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getAutoColor();
+        }
+        return this.#autoColor;
+    }
+
+    public setAutoColor(autoColor: boolean): this {
+        if (this.isSupervisor) {
+            const styleArray = this.getStyleArray({ autoColor });
+            this.parent!.applyFromArray(styleArray);
+        } else {
+            this.#autoColor = autoColor;
+        }
+        return this;
+    }
+
+    public setHyperlinkTheme(): this {
+        this.getColor().setHyperlinkTheme();
+        this.setUnderline(Font.UNDERLINE_SINGLE);
+        return this;
+    }
+
     public getScheme(): string {
         if (this.isSupervisor) {
             return this.getSharedComponent().getScheme();
@@ -421,6 +455,9 @@ export class Font extends Supervisor {
         if (styleArray.color !== undefined && typeof styleArray.color === 'object') {
             this.getColor().applyFromArray(styleArray.color as { rgb?: string; argb?: string; theme?: number });
         }
+        if (styleArray.autoColor !== undefined) {
+            this.setAutoColor(Boolean(styleArray.autoColor));
+        }
         if (styleArray.size !== undefined) {
             this.setSize(Number(styleArray.size));
         }
@@ -473,6 +510,7 @@ export class Font extends Supervisor {
                     this.#complexScript +
                     this.#baseLine +
                     this.#strikeType +
+                    (this.#autoColor ? 't' : 'f') +
                     'Font',
             )
             .digest('hex');
@@ -499,6 +537,7 @@ export class Font extends Supervisor {
         clone.#complexScript = this.#complexScript;
         clone.#baseLine = this.#baseLine;
         clone.#strikeType = this.#strikeType;
+        clone.#autoColor = this.#autoColor;
         return clone;
     }
 

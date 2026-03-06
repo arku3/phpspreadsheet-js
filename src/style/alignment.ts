@@ -34,17 +34,17 @@ export class Alignment extends Supervisor {
     /**
      * Horizontal alignment.
      */
-    #horizontal: string = Alignment.HORIZONTAL_GENERAL;
+    #horizontal: string | null = Alignment.HORIZONTAL_GENERAL;
 
     /**
      * Vertical alignment.
      */
-    #vertical: string = Alignment.VERTICAL_BOTTOM;
+    #vertical: string | null = Alignment.VERTICAL_BOTTOM;
 
     /**
      * Text rotation.
      */
-    #textRotation: number = 0;
+    #textRotation: number | null = 0;
 
     /**
      * Wrap text.
@@ -69,10 +69,16 @@ export class Alignment extends Supervisor {
     /**
      * Justify last line.
      */
-    #justifyLastLine: boolean = false;
+    #justifyLastLine: boolean | null = false;
 
-    constructor(isSupervisor: boolean = false) {
+    constructor(isSupervisor: boolean = false, isConditional: boolean = false) {
         super(isSupervisor);
+        if (isConditional) {
+            this.#horizontal = null;
+            this.#vertical = null;
+            this.#textRotation = null;
+            this.#justifyLastLine = null;
+        }
     }
 
     /**
@@ -95,7 +101,7 @@ export class Alignment extends Supervisor {
     /**
      * Get horizontal.
      */
-    public getHorizontal(): string {
+    public getHorizontal(): string | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getHorizontal();
         }
@@ -105,7 +111,7 @@ export class Alignment extends Supervisor {
     /**
      * Set horizontal.
      */
-    public setHorizontal(horizontal: string): this {
+    public setHorizontal(horizontal: string | null): this {
         if (this.isSupervisor) {
             const styleArray = this.getStyleArray({ horizontal: horizontal });
             (this.parent as any).applyFromArray(styleArray);
@@ -118,7 +124,7 @@ export class Alignment extends Supervisor {
     /**
      * Get vertical.
      */
-    public getVertical(): string {
+    public getVertical(): string | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getVertical();
         }
@@ -128,7 +134,7 @@ export class Alignment extends Supervisor {
     /**
      * Set vertical.
      */
-    public setVertical(vertical: string): this {
+    public setVertical(vertical: string | null): this {
         if (this.isSupervisor) {
             const styleArray = this.getStyleArray({ vertical: vertical });
             (this.parent as any).applyFromArray(styleArray);
@@ -141,7 +147,7 @@ export class Alignment extends Supervisor {
     /**
      * Get text rotation.
      */
-    public getTextRotation(): number {
+    public getTextRotation(): number | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getTextRotation();
         }
@@ -151,7 +157,16 @@ export class Alignment extends Supervisor {
     /**
      * Set text rotation.
      */
-    public setTextRotation(rotation: number): this {
+    public setTextRotation(rotation: number | null): this {
+        if (rotation === null) {
+            if (this.isSupervisor) {
+                const styleArray = this.getStyleArray({ textRotation: null });
+                (this.parent as any).applyFromArray(styleArray);
+            } else {
+                this.#textRotation = null;
+            }
+            return this;
+        }
         if (!Number.isFinite(rotation) || !Number.isInteger(rotation)) {
             throw new Error('Text rotation should be a value between -90 and 90.');
         }
@@ -270,7 +285,7 @@ export class Alignment extends Supervisor {
     /**
      * Get justify last line.
      */
-    public getJustifyLastLine(): boolean {
+    public getJustifyLastLine(): boolean | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getJustifyLastLine();
         }
@@ -280,7 +295,7 @@ export class Alignment extends Supervisor {
     /**
      * Set justify last line.
      */
-    public setJustifyLastLine(justifyLastLine: boolean): this {
+    public setJustifyLastLine(justifyLastLine: boolean | null): this {
         if (this.isSupervisor) {
             const styleArray = this.getStyleArray({ justifyLastLine: justifyLastLine });
             (this.parent as any).applyFromArray(styleArray);
@@ -343,13 +358,13 @@ export class Alignment extends Supervisor {
         return createHash('md5')
             .update(
                 this.#horizontal +
+                    (this.#justifyLastLine === null ? 'null' : this.#justifyLastLine ? 't' : 'f') +
                     this.#vertical +
                     this.#textRotation +
                     (this.#wrapText ? 't' : 'f') +
                     (this.#shrinkToFit ? 't' : 'f') +
                     this.#indent +
                     this.#readOrder +
-                    (this.#justifyLastLine ? 't' : 'f') +
                     'Alignment',
             )
             .digest('hex');

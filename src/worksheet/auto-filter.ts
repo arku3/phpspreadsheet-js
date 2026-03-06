@@ -41,7 +41,7 @@ export class AutoFilter {
         return this.#range;
     }
 
-    public setRange(range: string = ''): this {
+    public setRange(range: string | number[] = ''): this {
         this.#evaluated = false;
 
         if (range === '') {
@@ -50,12 +50,27 @@ export class AutoFilter {
             return this;
         }
 
-        // Basic validation: must contain ':'
-        if (!range.includes(':')) {
-            throw new Error(`${range} is an invalid range for AutoFilter`);
+        let rangeString = '';
+        if (Array.isArray(range)) {
+            if (range.length === 2) {
+                rangeString = Coordinate.stringFromCoordinate(Number(range[0]), Number(range[1]));
+            } else if (range.length === 4) {
+                const start = Coordinate.stringFromCoordinate(Number(range[0]), Number(range[1]));
+                const end = Coordinate.stringFromCoordinate(Number(range[2]), Number(range[3]));
+                rangeString = `${start}:${end}`;
+            } else {
+                throw new Error('AutoFilter range array must have 2 or 4 entries.');
+            }
+        } else {
+            rangeString = range;
         }
 
-        this.#range = range.toUpperCase();
+        const split = rangeString.split('!');
+        const normalized = (split[1] ?? split[0] ?? '').toUpperCase();
+        if (/^[0-9]+$/.test(normalized) || /^[A-Z]+$/.test(normalized)) {
+            throw new Error(`${rangeString} is an invalid range for AutoFilter`);
+        }
+        this.#range = normalized;
 
         // Discard any column rules that are no longer valid within this range
         const [rangeStart, rangeEnd] = Coordinate.rangeBoundaries(this.#range);
@@ -203,11 +218,8 @@ export class AutoFilter {
 
         const worksheet = this.#worksheet;
         let [[startColumn, startRow], [endColumn, endRow]] = Coordinate.rangeBoundaries(this.#range);
-
-        if (startRow === endRow) {
-            endRow = this.#autoExtendRange(worksheet, startRow, startColumn, endColumn);
-            this.#range = `${Coordinate.stringFromColumnIndex(startColumn)}${startRow}:${Coordinate.stringFromColumnIndex(endColumn)}${endRow}`;
-        }
+        endRow = this.#autoExtendRange(worksheet, startRow, endRow, startColumn, endColumn);
+        this.#range = `${Coordinate.stringFromColumnIndex(startColumn)}${startRow}:${Coordinate.stringFromColumnIndex(endColumn)}${endRow}`;
 
         const headerDimension = worksheet.getRowDimension(startRow);
         headerDimension.setVisible(true);
@@ -263,49 +275,79 @@ export class AutoFilter {
         const rules = column.getRules();
 
         if (filterType === Column.AUTOFILTER_FILTERTYPE_FILTER) {
-            const filterValues = new Set<string>();
-            const dateTimeSet = new Set<string>();
-            const dateSet = new Set<string>();
-            const timeSet = new Set<string>();
-
+            let ruleType: string | null = null;
+            const ruleValues: unknown[] = [];
             for (const rule of rules) {
-                if (rule.getRuleType() === Rule.AUTOFILTER_RULETYPE_FILTER) {
-                    filterValues.add(String(rule.getValue()));
-                } else if (rule.getRuleType() === Rule.AUTOFILTER_RULETYPE_DATEGROUP) {
-                    this.#collectDateGroupValues(rule, dateSet, timeSet, dateTimeSet);
-                }
+                ruleType = rule.getRuleType();
+                ruleValues.push(rule.getValue());
             }
 
-            const allowBlanks = Boolean(column.getAttribute('blank'));
+            const ruleDataSet = ruleValues.filter((value) => value);
+            const blanks = ruleValues.length !== ruleDataSet.length;
 
-            return (value: unknown): boolean => {
-                if (this.#isEmpty(value)) {
-                    return allowBlanks;
+            if (ruleType === Rule.AUTOFILTER_RULETYPE_FILTER) {
+                return (value: unknown): boolean =>
+                    AutoFilter.#filterTestInSimpleDataSet(value, {
+                        filterValues: ruleDataSet.map((v) => String(v)),
+                        blanks,
+                    });
+            }
+            if (ruleType) {
+                const argumentsSet = {
+                    date: [] as string[],
+                    time: [] as string[],
+                    dateTime: [] as string[],
+                };
+                for (const ruleValue of ruleDataSet) {
+                    if (typeof ruleValue !== 'object' || ruleValue === null) {
+                        continue;
+                    }
+                    const value = ruleValue as Record<string, number>;
+                    const year = value.year ? String(value.year).padStart(4, '0') : '';
+                    const month = value.month ? String(value.month).padStart(2, '0') : '';
+                    const day = value.day ? String(value.day).padStart(2, '0') : '';
+                    const hour = value.hour ? String(value.hour).padStart(2, '0') : '';
+                    const minute = value.minute ? String(value.minute).padStart(2, '0') : '';
+                    const second = value.second ? String(value.second).padStart(2, '0') : '';
+                    const date = `${year}${month}${day}`;
+                    const time = `${hour}${minute}${second}`;
+                    const dateTime = `${date}${time}`;
+                    if (date !== '') argumentsSet.date.push(date);
+                    if (time !== '') argumentsSet.time.push(time);
+                    if (dateTime !== '') argumentsSet.dateTime.push(dateTime);
                 }
-
-                if (dateSet.size > 0 || timeSet.size > 0 || dateTimeSet.size > 0) {
-                    return this.#matchesDateGroup(value, dateSet, timeSet, dateTimeSet);
-                }
-
-                if (filterValues.size === 0) {
-                    return true;
-                }
-
-                const candidate = this.#stringValue(value);
-                return filterValues.has(candidate);
-            };
+                argumentsSet.date = argumentsSet.date.filter(Boolean);
+                argumentsSet.time = argumentsSet.time.filter(Boolean);
+                argumentsSet.dateTime = argumentsSet.dateTime.filter(Boolean);
+                return (value: unknown): boolean =>
+                    AutoFilter.#filterTestInDateGroupSet(value, {
+                        filterValues: argumentsSet,
+                        blanks,
+                    });
+            }
         }
 
         if (filterType === Column.AUTOFILTER_FILTERTYPE_CUSTOMFILTER) {
-            const joinAnd = column.getJoin() === Column.AUTOFILTER_COLUMN_JOIN_AND;
-            return (value: unknown): boolean => {
-                if (rules.length === 0) {
-                    return true;
+            const ruleValues: { operator: string; value: string | number }[] = [];
+            let customRuleForBlanks = true;
+            for (const rule of rules) {
+                let ruleValue = rule.getValue();
+                if (!Array.isArray(ruleValue) && typeof ruleValue !== 'number') {
+                    const wildcard = this.#wildcardToRegex(String(ruleValue));
+                    if (wildcard.trim() === '') {
+                        customRuleForBlanks = true;
+                    }
+                    ruleValue = wildcard.trim();
                 }
-
-                const results = rules.map((rule) => this.#matchesCustomRule(value, rule));
-                return joinAnd ? results.every(Boolean) : results.some(Boolean);
-            };
+                ruleValues.push({ operator: rule.getOperator(), value: ruleValue as string | number });
+            }
+            const join = column.getJoin();
+            return (value: unknown): boolean =>
+                AutoFilter.#filterTestInCustomDataSet(value, {
+                    filterRules: ruleValues,
+                    join,
+                    customRuleForBlanks,
+                });
         }
 
         if (filterType === Column.AUTOFILTER_FILTERTYPE_DYNAMICFILTER) {
@@ -319,48 +361,30 @@ export class AutoFilter {
                 grouping === Rule.AUTOFILTER_RULETYPE_DYNAMIC_ABOVEAVERAGE ||
                 grouping === Rule.AUTOFILTER_RULETYPE_DYNAMIC_BELOWAVERAGE
             ) {
-                const values = this.#collectNumericValues(worksheet, columnIndex, startRow, endRow);
-                if (values.length === 0) {
-                    return () => false;
+                const averageFormula = `=AVERAGE(${Coordinate.stringFromColumnIndex(columnIndex)}${startRow}:${Coordinate.stringFromColumnIndex(columnIndex)}${endRow})`;
+                const calculation = worksheet.getParent()?.getCalculationEngine();
+                let average = calculation?.calculateFormula(averageFormula, worksheet) ?? null;
+                while (Array.isArray(average)) {
+                    average = average.pop();
                 }
-                const average = values.reduce((sum, val) => sum + val, 0) / values.length;
-                return (value: unknown): boolean => {
-                    const numericValue = this.#numericValue(value);
-                    if (numericValue === null) {
-                        return false;
-                    }
-                    return grouping === Rule.AUTOFILTER_RULETYPE_DYNAMIC_ABOVEAVERAGE
-                        ? numericValue > average
-                        : numericValue < average;
-                };
+                const operator =
+                    grouping === Rule.AUTOFILTER_RULETYPE_DYNAMIC_ABOVEAVERAGE
+                        ? Rule.AUTOFILTER_COLUMN_RULE_GREATERTHAN
+                        : Rule.AUTOFILTER_COLUMN_RULE_LESSTHAN;
+                return (value: unknown): boolean =>
+                    AutoFilter.#filterTestInCustomDataSet(value, {
+                        filterRules: [{ operator, value: Number(average) }],
+                        join: Column.AUTOFILTER_COLUMN_JOIN_OR,
+                    });
             }
 
             const periodMonths = this.#periodMonthsForGrouping(grouping);
             if (periodMonths !== null) {
-                return (value: unknown): boolean => {
-                    const dateValue = this.#excelDateValue(value);
-                    if (dateValue === null) {
-                        return false;
-                    }
-                    const date = this.#excelDateToJsDate(dateValue);
-                    return periodMonths.has(date.getUTCMonth() + 1);
-                };
+                return (value: unknown): boolean => AutoFilter.#filterTestInPeriodDateSet(value, [...periodMonths]);
             }
 
-            const range = this.#dynamicDateRange(grouping);
-            if (!range) {
-                return null;
-            }
-            column.setAttribute('val', range.start);
-            column.setAttribute('maxVal', range.end);
-
-            return (value: unknown): boolean => {
-                const numericValue = this.#excelDateValue(value);
-                if (numericValue === null) {
-                    return false;
-                }
-                return numericValue >= range.start && numericValue < range.end;
-            };
+            const rangeRule = this.#dynamicFilterDateRange(grouping, column);
+            return (value: unknown): boolean => AutoFilter.#filterTestInCustomDataSet(value, rangeRule.arguments);
         }
 
         if (filterType === Column.AUTOFILTER_FILTERTYPE_TOPTENFILTER) {
@@ -368,64 +392,61 @@ export class AutoFilter {
             if (!rule) {
                 return null;
             }
-
-            const values = this.#collectNumericValues(worksheet, columnIndex, startRow, endRow);
-            if (values.length === 0) {
+            const dataRowCount = endRow - startRow + 1;
+            let ruleValue = rule.getValue();
+            const ruleOperator = rule.getOperator();
+            const ruleType = rule.getGrouping();
+            if (typeof ruleValue === 'number' && ruleOperator === Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_PERCENT) {
+                ruleValue = Math.floor(ruleValue * (dataRowCount / 100));
+            }
+            if (!Array.isArray(ruleValue) && Number(ruleValue) < 1) {
+                ruleValue = 1;
+            }
+            if (!Array.isArray(ruleValue) && Number(ruleValue) > 500) {
+                ruleValue = 500;
+            }
+            const maxVal = this.#calculateTopTenValue(
+                Coordinate.stringFromColumnIndex(columnIndex),
+                startRow + 1,
+                endRow,
+                ruleType,
+                ruleValue,
+            );
+            if (maxVal === null || Number.isNaN(Number(maxVal))) {
                 return () => false;
             }
-
-            const count =
-                rule.getOperator() === Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_PERCENT
-                    ? Math.max(1, Math.ceil(values.length * (Number(rule.getValue()) / 100)))
-                    : Math.max(1, Math.floor(Number(rule.getValue())));
-            const isTop = rule.getGrouping() !== Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_BOTTOM;
-            const sorted = values.slice().sort((a, b) => a - b);
-            const thresholdIndex = isTop ? Math.max(0, sorted.length - count) : Math.min(sorted.length - 1, count - 1);
-            const threshold = sorted[thresholdIndex]!;
-
-            column.setAttribute('maxVal', threshold);
-
-            return (value: unknown): boolean => {
-                const numericValue = this.#numericValue(value);
-                if (numericValue === null) {
-                    return false;
-                }
-                return isTop ? numericValue >= threshold : numericValue <= threshold;
-            };
+            const operator =
+                ruleType === Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_TOP
+                    ? Rule.AUTOFILTER_COLUMN_RULE_GREATERTHANOREQUAL
+                    : Rule.AUTOFILTER_COLUMN_RULE_LESSTHANOREQUAL;
+            column.setAttribute('maxVal', maxVal);
+            return (value: unknown): boolean =>
+                AutoFilter.#filterTestInCustomDataSet(value, {
+                    filterRules: [{ operator, value: maxVal }],
+                    join: Column.AUTOFILTER_COLUMN_JOIN_OR,
+                });
         }
 
         return null;
     }
 
-    #autoExtendRange(worksheet: Worksheet, startRow: number, startColumn: number, endColumn: number): number {
-        const cells = worksheet.getCellCollection().getCells();
-        const rowsWithData = new Set<number>();
-        let maxRow = startRow;
-        for (const cell of cells) {
-            const row = cell.getRow();
-            if (row <= startRow) {
-                continue;
-            }
-            const col = cell.getColumnIndex() + 1;
-            if (col >= startColumn && col <= endColumn) {
-                rowsWithData.add(row);
-                if (row > maxRow) {
-                    maxRow = row;
-                }
-            }
+    #autoExtendRange(
+        worksheet: Worksheet,
+        startRow: number,
+        endRow: number,
+        startColumn: number,
+        endColumn: number,
+    ): number {
+        if (startRow !== endRow) {
+            return endRow;
         }
-
-        if (rowsWithData.size === 0) {
-            return startRow;
-        }
-
-        for (let row = startRow + 1; row <= maxRow; row++) {
-            if (!rowsWithData.has(row)) {
+        const highestRow = worksheet.getHighestRow();
+        for (let row = startRow + 1; row <= highestRow; row++) {
+            if (this.#rowIsEmpty(worksheet, row, startColumn, endColumn)) {
                 return row - 1;
             }
         }
-
-        return maxRow;
+        return highestRow;
     }
 
     #collectNumericValues(worksheet: Worksheet, columnIndex: number, startRow: number, endRow: number): number[] {
@@ -445,12 +466,14 @@ export class AutoFilter {
     }
 
     #matchesCustomRule(value: unknown, rule: Rule): boolean {
+        return this.#matchesCustomRuleValue(value, rule.getOperator(), rule.getValue());
+    }
+
+    #matchesCustomRuleValue(value: unknown, operator: string, ruleValue: unknown): boolean {
         if (this.#isEmpty(value)) {
-            return this.#isEmpty(rule.getValue());
+            return this.#isEmpty(ruleValue);
         }
 
-        const operator = rule.getOperator();
-        const ruleValue = rule.getValue();
         if (typeof ruleValue === 'string' && this.#containsWildcard(ruleValue)) {
             const candidate = this.#stringValue(value);
             return this.#matchWildcard(candidate, ruleValue);
@@ -469,9 +492,7 @@ export class AutoFilter {
         const comparison =
             typeof value === 'number' && typeof ruleValue === 'number'
                 ? value - ruleValue
-                : String(value).localeCompare(String(ruleValue), undefined, {
-                      sensitivity: 'accent',
-                  });
+                : this.#compareStrings(String(value), String(ruleValue));
 
         switch (operator) {
             case Rule.AUTOFILTER_COLUMN_RULE_NOTEQUAL:
@@ -774,5 +795,238 @@ export class AutoFilter {
             .replace(/\?/g, '.');
         const regex = new RegExp(`^${regexPattern}$`, 'i');
         return regex.test(value);
+    }
+
+    #wildcardToRegex(value: string): string {
+        return value
+            .replace(/([.+^${}()|[\]\\])/g, '\\$1')
+            .replace(/~([*?~])/g, '$1')
+            .replace(/\*/g, '.*')
+            .replace(/\?/g, '.');
+    }
+
+    #compareStrings(value: string, ruleValue: string): number {
+        return value.localeCompare(ruleValue, undefined, { sensitivity: 'accent' });
+    }
+
+    static #filterTestInSimpleDataSet(
+        cellValue: unknown,
+        dataSet: { blanks: boolean; filterValues: string[] },
+    ): boolean {
+        if (cellValue === '' || cellValue === null || cellValue === undefined) {
+            return dataSet.blanks;
+        }
+        return dataSet.filterValues.includes(String(cellValue));
+    }
+
+    static #filterTestInDateGroupSet(
+        cellValue: unknown,
+        dataSet: { blanks: boolean; filterValues: { date: string[]; time: string[]; dateTime: string[] } },
+    ): boolean {
+        if (cellValue === '' || cellValue === null || cellValue === undefined) {
+            return dataSet.blanks;
+        }
+        const numericValue = typeof cellValue === 'number' ? cellValue : Number(cellValue);
+        if (!Number.isFinite(numericValue)) {
+            return false;
+        }
+        const date = AutoFilter.#excelDateToJsDateStatic(numericValue);
+        let dtVal = '';
+        let dateSet = dataSet.filterValues.dateTime;
+        if (numericValue < 1) {
+            dtVal = `${String(date.getUTCHours()).padStart(2, '0')}${String(date.getUTCMinutes()).padStart(2, '0')}${String(
+                date.getUTCSeconds(),
+            ).padStart(2, '0')}`;
+            dateSet = dataSet.filterValues.time;
+        } else if (numericValue === Math.floor(numericValue)) {
+            dtVal = `${date.getUTCFullYear().toString().padStart(4, '0')}${String(date.getUTCMonth() + 1).padStart(2, '0')}${String(
+                date.getUTCDate(),
+            ).padStart(2, '0')}`;
+            dateSet = dataSet.filterValues.date;
+        } else {
+            dtVal = `${date.getUTCFullYear().toString().padStart(4, '0')}${String(date.getUTCMonth() + 1).padStart(2, '0')}${String(
+                date.getUTCDate(),
+            ).padStart(
+                2,
+                '0',
+            )}${String(date.getUTCHours()).padStart(2, '0')}${String(date.getUTCMinutes()).padStart(2, '0')}${String(
+                date.getUTCSeconds(),
+            ).padStart(2, '0')}`;
+            dateSet = dataSet.filterValues.dateTime;
+        }
+        return dateSet.some((dateValue) => dtVal.startsWith(dateValue));
+    }
+
+    static #filterTestInCustomDataSet(
+        cellValue: unknown,
+        ruleSet: {
+            filterRules: { operator: string; value: string | number }[];
+            join: string;
+            customRuleForBlanks?: boolean;
+        },
+    ): boolean {
+        if (!ruleSet.customRuleForBlanks) {
+            if (cellValue === '' || cellValue === null || cellValue === undefined) {
+                return false;
+            }
+        }
+        let returnVal = ruleSet.join === Column.AUTOFILTER_COLUMN_JOIN_AND;
+        for (const rule of ruleSet.filterRules) {
+            const ruleValue = rule.value;
+            const operator = rule.operator;
+            let retVal = false;
+            if (typeof ruleValue === 'number' || (typeof ruleValue === 'string' && !Number.isNaN(Number(ruleValue)))) {
+                const numericTest = typeof cellValue === 'number' || !Number.isNaN(Number(cellValue));
+                const numericCell = Number(cellValue);
+                const numericRule = Number(ruleValue);
+                switch (operator) {
+                    case Rule.AUTOFILTER_COLUMN_RULE_EQUAL:
+                        retVal = numericTest && numericCell === numericRule;
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_NOTEQUAL:
+                        retVal = !numericTest || numericCell !== numericRule;
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_GREATERTHAN:
+                        retVal = numericTest && numericCell > numericRule;
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_GREATERTHANOREQUAL:
+                        retVal = numericTest && numericCell >= numericRule;
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_LESSTHAN:
+                        retVal = numericTest && numericCell < numericRule;
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_LESSTHANOREQUAL:
+                        retVal = numericTest && numericCell <= numericRule;
+                        break;
+                }
+            } else if (ruleValue === '') {
+                retVal =
+                    operator === Rule.AUTOFILTER_COLUMN_RULE_EQUAL
+                        ? cellValue === '' || cellValue === null || cellValue === undefined
+                        : operator === Rule.AUTOFILTER_COLUMN_RULE_NOTEQUAL
+                          ? cellValue !== ''
+                          : true;
+            } else {
+                const cellValueString = String(cellValue ?? '');
+                const regex = new RegExp(`^${ruleValue}$`, 'i');
+                switch (operator) {
+                    case Rule.AUTOFILTER_COLUMN_RULE_EQUAL:
+                        retVal = regex.test(cellValueString);
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_NOTEQUAL:
+                        retVal = !regex.test(cellValueString);
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_GREATERTHAN:
+                        retVal =
+                            cellValueString.localeCompare(String(ruleValue), undefined, { sensitivity: 'accent' }) > 0;
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_GREATERTHANOREQUAL:
+                        retVal =
+                            cellValueString.localeCompare(String(ruleValue), undefined, { sensitivity: 'accent' }) >= 0;
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_LESSTHAN:
+                        retVal =
+                            cellValueString.localeCompare(String(ruleValue), undefined, { sensitivity: 'accent' }) < 0;
+                        break;
+                    case Rule.AUTOFILTER_COLUMN_RULE_LESSTHANOREQUAL:
+                        retVal =
+                            cellValueString.localeCompare(String(ruleValue), undefined, { sensitivity: 'accent' }) <= 0;
+                        break;
+                }
+            }
+            if (ruleSet.join === Column.AUTOFILTER_COLUMN_JOIN_OR) {
+                returnVal = returnVal || retVal;
+                if (returnVal) {
+                    return returnVal;
+                }
+            } else {
+                returnVal = returnVal && retVal;
+            }
+        }
+        return returnVal;
+    }
+
+    static #filterTestInPeriodDateSet(cellValue: unknown, monthSet: number[]): boolean {
+        if (cellValue === '' || cellValue === null || cellValue === undefined) {
+            return false;
+        }
+        if (typeof cellValue === 'number') {
+            const dateObject = AutoFilter.#excelDateToJsDateStatic(cellValue);
+            const dateValue = dateObject.getUTCMonth() + 1;
+            return monthSet.includes(dateValue);
+        }
+        return false;
+    }
+
+    #dynamicFilterDateRange(
+        grouping: string,
+        column: Column,
+    ): {
+        method: 'filterTestInCustomDataSet';
+        arguments: { filterRules: { operator: string; value: number }[]; join: string };
+    } {
+        const range = this.#dynamicDateRange(grouping);
+        if (!range) {
+            return {
+                method: 'filterTestInCustomDataSet',
+                arguments: { filterRules: [], join: Column.AUTOFILTER_COLUMN_JOIN_AND },
+            };
+        }
+        column.setAttributes({ val: range.start, maxVal: range.end });
+        const ruleValues = [
+            { operator: Rule.AUTOFILTER_COLUMN_RULE_GREATERTHANOREQUAL, value: range.start },
+            { operator: Rule.AUTOFILTER_COLUMN_RULE_LESSTHAN, value: range.end },
+        ];
+        return {
+            method: 'filterTestInCustomDataSet',
+            arguments: { filterRules: ruleValues, join: Column.AUTOFILTER_COLUMN_JOIN_AND },
+        };
+    }
+
+    #calculateTopTenValue(
+        columnId: string,
+        startRow: number,
+        endRow: number,
+        ruleType: string | null,
+        ruleValue: unknown,
+    ): number | null {
+        if (!this.#worksheet) {
+            return null;
+        }
+        const range = `${columnId}${startRow}:${columnId}${endRow}`;
+        const dataValues = this.#worksheet
+            .rangeToArray(range, null, true, false)
+            .flat()
+            .filter((value: unknown) => value !== null && value !== '');
+        if (ruleType === Rule.AUTOFILTER_COLUMN_RULE_TOPTEN_TOP) {
+            dataValues.sort((a: unknown, b: unknown) => Number(b) - Number(a));
+        } else {
+            dataValues.sort((a: unknown, b: unknown) => Number(a) - Number(b));
+        }
+        const numericRule = typeof ruleValue === 'number' ? ruleValue : Number(ruleValue);
+        if (!Number.isFinite(numericRule)) {
+            return null;
+        }
+        const slice = dataValues.slice(0, numericRule);
+        const retVal = slice.pop();
+        return typeof retVal === 'number' ? retVal : Number(retVal);
+    }
+
+    #rowIsEmpty(worksheet: Worksheet, row: number, startColumn: number, endColumn: number): boolean {
+        for (let col = startColumn; col <= endColumn; col++) {
+            const coordinate = `${Coordinate.stringFromColumnIndex(col)}${row}`;
+            const cell = worksheet.getCellCollection().get(coordinate);
+            const value = cell ? cell.getValue() : null;
+            if (!(value === null || value === '')) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    static #excelDateToJsDateStatic(serial: number): Date {
+        const base = Date.UTC(1899, 11, 30);
+        const adjustedSerial = serial >= 60 ? serial - 1 : serial;
+        return new Date(base + adjustedSerial * 86400000);
     }
 }

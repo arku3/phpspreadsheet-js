@@ -2,6 +2,7 @@ import { Conditional } from '../../conditional.ts';
 import { Style } from '../../style.ts';
 
 export interface WizardInterface {
+    fromConditional?(conditional: Conditional, cellRange?: string): WizardInterface;
     getCellRange(): string;
     setCellRange(cellRange: string): void;
     getStyle(): Style;

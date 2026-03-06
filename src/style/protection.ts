@@ -12,15 +12,19 @@ export class Protection extends Supervisor {
     /**
      * Locked.
      */
-    #locked: string = Protection.PROTECTION_INHERIT;
+    #locked: string | null = null;
 
     /**
      * Hidden.
      */
-    #hidden: string = Protection.PROTECTION_INHERIT;
+    #hidden: string | null = null;
 
-    constructor(isSupervisor: boolean = false) {
+    constructor(isSupervisor: boolean = false, isConditional: boolean = false) {
         super(isSupervisor);
+        if (!isConditional) {
+            this.#locked = Protection.PROTECTION_INHERIT;
+            this.#hidden = Protection.PROTECTION_INHERIT;
+        }
     }
 
     /**
@@ -43,7 +47,7 @@ export class Protection extends Supervisor {
     /**
      * Get locked.
      */
-    public getLocked(): string {
+    public getLocked(): string | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getLocked();
         }
@@ -65,7 +69,7 @@ export class Protection extends Supervisor {
     /**
      * Get hidden.
      */
-    public getHidden(): string {
+    public getHidden(): string | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getHidden();
         }
@@ -111,7 +115,7 @@ export class Protection extends Supervisor {
             return this.getSharedComponent().getHashCode();
         }
         return createHash('md5')
-            .update(this.#locked + this.#hidden + 'Protection')
+            .update((this.#locked ?? '') + (this.#hidden ?? '') + 'Protection')
             .digest('hex');
     }
 }

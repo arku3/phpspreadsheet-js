@@ -88,4 +88,15 @@ export class DateValue extends WizardAbstract implements WizardInterface {
 
         return conditional;
     }
+
+    public static fromConditional(conditional: Conditional, cellRange: string = 'A1'): DateValue {
+        const wizard = new DateValue(cellRange);
+        wizard.setStyle(conditional.getStyle());
+        wizard.setStopIfTrue(conditional.getStopIfTrue());
+        const text = conditional.getText();
+        if (text) {
+            wizard.setOperator(text);
+        }
+        return wizard;
+    }
 }

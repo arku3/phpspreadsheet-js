@@ -79,6 +79,9 @@ for (let i = 0; i < CONTROL_CHARACTERS_KEYS.length; i++) {
     CONTROL_CHAR_MAP.set(CONTROL_CHARACTERS_KEYS[i]!, CONTROL_CHARACTERS_VALUES[i]!);
 }
 
+let decimalSeparator = '.';
+let thousandsSeparator = ',';
+
 /**
  * Convert control characters from PHP/Excel to OOXML format.
  *
@@ -156,4 +159,20 @@ export function formatNumber(numericValue: number | string | null): string {
 
     // Convert to string and ensure decimal point is used
     return String(num);
+}
+
+export function getDecimalSeparator(): string {
+    return decimalSeparator;
+}
+
+export function setDecimalSeparator(separator: string | null | undefined): void {
+    decimalSeparator = separator && separator.length > 0 ? separator : '.';
+}
+
+export function getThousandsSeparator(): string {
+    return thousandsSeparator;
+}
+
+export function setThousandsSeparator(separator: string | null | undefined): void {
+    thousandsSeparator = separator && separator.length > 0 ? separator : ',';
 }

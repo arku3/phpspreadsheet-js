@@ -48,4 +48,10 @@ export class ConditionalFormatValueObject {
         this.#greaterThanOrEqual = greaterThanOrEqual;
         return this;
     }
+
+    public clone(): ConditionalFormatValueObject {
+        const cloned = new ConditionalFormatValueObject(this.#type, this.#value, this.#cellFormula);
+        cloned.setGreaterThanOrEqual(this.#greaterThanOrEqual);
+        return cloned;
+    }
 }

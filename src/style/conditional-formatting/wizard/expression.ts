@@ -29,4 +29,13 @@ export class Expression extends WizardAbstract implements WizardInterface {
 
         return conditional;
     }
+
+    public static fromConditional(conditional: Conditional, cellRange: string = 'A1'): Expression {
+        const wizard = new Expression(cellRange);
+        wizard.setStyle(conditional.getStyle());
+        wizard.setStopIfTrue(conditional.getStopIfTrue());
+        const conditions = conditional.getConditions();
+        wizard.expression(String(conditions[0] ?? ''));
+        return wizard;
+    }
 }

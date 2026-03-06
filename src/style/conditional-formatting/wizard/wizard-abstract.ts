@@ -57,13 +57,39 @@ export abstract class WizardAbstract {
      * Ported from PHP's cellConditionCheck.
      */
     protected cellConditionCheck(condition: string): string {
-        // Simple port: replace relative references based on reference cell
-        // In a real implementation, we'd use the FormulaParser or a more robust regex
-        // For now, we follow the PHP logic of adjusting based on top-left of range
+        const rowAdjustment = this.referenceRow - 1;
+        const columnAdjustment = this.referenceColumn - 1;
+        const regexp = /((?:'[^']+'|[A-Za-z0-9_]+)!|)(\$?[A-Z]{1,3}\$?\d+)/g;
 
-        // Note: Calculation.CALCULATION_REGEXP_CELLREF_RELATIVE is not exposed in TS yet.
-        // We will use a simplified approach or implement the regex here.
-        return condition;
+        return condition.replace(regexp, (_match, worksheetRef: string, cellRef: string) => {
+            const adjustedCell = this.conditionCellAdjustment(cellRef, rowAdjustment, columnAdjustment);
+            return `${worksheetRef}${adjustedCell}`;
+        });
+    }
+
+    protected conditionCellAdjustment(cellAddress: string, rowAdjustment: number, columnAdjustment: number): string {
+        const match = cellAddress.match(/^(\$?)([A-Z]{1,3})(\$?)(\d+)$/);
+        if (!match) {
+            return cellAddress;
+        }
+        const [, colDollar, colLetters, rowDollar, rowDigits] = match;
+
+        let colIndex = Coordinate.columnIndexFromString(colLetters ?? 'A');
+        let rowIndex = Number(rowDigits ?? '1');
+
+        if (colDollar !== '$') {
+            colIndex -= columnAdjustment;
+        }
+        if (rowDollar !== '$') {
+            rowIndex -= rowAdjustment;
+        }
+
+        colIndex = Math.max(1, colIndex);
+        rowIndex = Math.max(1, rowIndex);
+
+        const resultColumn = `${colDollar}${Coordinate.stringFromColumnIndex(colIndex)}`;
+        const resultRow = `${rowDollar}${rowIndex}`;
+        return `${resultColumn}${resultRow}`;
     }
 
     protected adjustConditionsForCellReferences(conditions: (string | number)[]): (string | number)[] {

@@ -9,6 +9,8 @@ export class ConditionalDataBar {
     #maximumConditionalFormatValueObject: ConditionalFormatValueObject | null = null;
     #color: string = '';
 
+    #conditionalFormattingRuleExt: unknown | null = null;
+
     // TODO: support for conditionalFormattingRuleExt
 
     public getShowValue(): boolean | null {
@@ -49,5 +51,30 @@ export class ConditionalDataBar {
     public setColor(color: string): this {
         this.#color = color;
         return this;
+    }
+
+    public getConditionalFormattingRuleExt(): unknown | null {
+        return this.#conditionalFormattingRuleExt;
+    }
+
+    public setConditionalFormattingRuleExt(conditionalFormattingRuleExt: unknown | null): this {
+        this.#conditionalFormattingRuleExt = conditionalFormattingRuleExt;
+        return this;
+    }
+
+    public clone(): ConditionalDataBar {
+        const cloned = new ConditionalDataBar();
+        if (this.#showValue !== null) {
+            cloned.setShowValue(this.#showValue);
+        }
+        if (this.#minimumConditionalFormatValueObject) {
+            cloned.setMinimumConditionalFormatValueObject(this.#minimumConditionalFormatValueObject.clone());
+        }
+        if (this.#maximumConditionalFormatValueObject) {
+            cloned.setMaximumConditionalFormatValueObject(this.#maximumConditionalFormatValueObject.clone());
+        }
+        cloned.setColor(this.#color);
+        cloned.setConditionalFormattingRuleExt(this.#conditionalFormattingRuleExt);
+        return cloned;
     }
 }

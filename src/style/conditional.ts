@@ -53,7 +53,30 @@ export class Conditional {
     public static readonly OPERATOR_LESSTHAN = 'lessThan';
     public static readonly OPERATOR_LESSTHANOREQUAL = 'lessThanOrEqual';
     public static readonly OPERATOR_NOTBETWEEN = 'notBetween';
-    public static readonly OPERATOR_NOTCONTAINSTEXT = 'notContainsText';
+    public static readonly OPERATOR_NOTCONTAINS = 'notContains';
+    public static readonly OPERATOR_NOTCONTAINSTEXT = Conditional.OPERATOR_NOTCONTAINS;
+
+    public static readonly CONDITION_TYPES = [
+        Conditional.CONDITION_NONE,
+        Conditional.CONDITION_BEGINSWITH,
+        Conditional.CONDITION_CELLIS,
+        Conditional.CONDITION_CONTAINSBLANKS,
+        Conditional.CONDITION_CONTAINSERRORS,
+        Conditional.CONDITION_CONTAINSTEXT,
+        Conditional.CONDITION_EXPRESSION,
+        Conditional.CONDITION_ENDSWITH,
+        Conditional.CONDITION_NOTCONTAINSBLANKS,
+        Conditional.CONDITION_NOTCONTAINSERRORS,
+        Conditional.CONDITION_NOTCONTAINSTEXT,
+        Conditional.CONDITION_TIMEPERIOD,
+        Conditional.CONDITION_DUPLICATES,
+        Conditional.CONDITION_UNIQUE,
+        Conditional.CONDITION_COLORSCALE,
+        Conditional.CONDITION_DATABAR,
+        Conditional.CONDITION_ICONSET,
+        Conditional.CONDITION_ABVAVERAGE,
+        Conditional.CONDITION_TOP10,
+    ] as const;
     public static readonly OPERATOR_NOTEQUAL = 'notEqual';
 
     #conditionType: string = Conditional.CONDITION_NONE;
@@ -70,7 +93,7 @@ export class Conditional {
     #iconSet: ConditionalIconSet | null = null;
 
     constructor() {
-        this.#style = new Style(false);
+        this.#style = new Style(false, true);
     }
 
     public getConditionType(): string {
@@ -126,7 +149,18 @@ export class Conditional {
         return this;
     }
 
-    public getStyle(): Style {
+    public getStyle(cellData: unknown = null): Style {
+        if (
+            this.#conditionType === Conditional.CONDITION_COLORSCALE &&
+            this.#colorScale &&
+            this.#colorScale.colorScaleReadyForUse() &&
+            typeof cellData === 'number'
+        ) {
+            const style = new Style(false, true);
+            style.getFill().setFillType('solid');
+            style.getFill().getStartColor().setARGB(this.#colorScale.getColorForValue(cellData));
+            return style;
+        }
         return this.#style;
     }
 
@@ -190,12 +224,13 @@ export class Conditional {
                     this.#operatorType +
                     this.#conditions.join(';') +
                     this.#style.getHashCode() +
-                    (this.#dataBar ? 'dataBar' : '') +
-                    (this.#colorScale ? 'colorScale' : '') +
-                    (this.#iconSet ? 'iconSet' : '') +
                     'Conditional',
             )
             .digest('hex');
+    }
+
+    public static isValidConditionType(type: string): boolean {
+        return Conditional.CONDITION_TYPES.includes(type as (typeof Conditional.CONDITION_TYPES)[number]);
     }
 
     /**
@@ -211,9 +246,21 @@ export class Conditional {
         clone.#style = this.#style.clone();
         clone.#priority = this.#priority;
         clone.#noFormatSet = this.#noFormatSet;
-        clone.#dataBar = this.#dataBar; // TODO: deep clone if needed
-        clone.#colorScale = this.#colorScale; // TODO: deep clone if needed
-        clone.#iconSet = this.#iconSet; // TODO: deep clone if needed
+        clone.#dataBar = this.#dataBar ? Conditional.cloneObject(this.#dataBar) : null;
+        clone.#colorScale = this.#colorScale ? Conditional.cloneObject(this.#colorScale) : null;
+        clone.#iconSet = this.#iconSet ? Conditional.cloneObject(this.#iconSet) : null;
         return clone;
+    }
+
+    private static cloneObject<T>(value: T): T {
+        if (value && typeof value === 'object') {
+            const cloned = Object.create(Object.getPrototypeOf(value));
+            for (const [key, inner] of Object.entries(value as Record<string, unknown>)) {
+                (cloned as Record<string, unknown>)[key] =
+                    inner && typeof inner === 'object' ? Conditional.cloneObject(inner) : inner;
+            }
+            return cloned as T;
+        }
+        return value;
     }
 }

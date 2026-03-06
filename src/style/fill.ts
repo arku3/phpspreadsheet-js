@@ -49,13 +49,18 @@ export class Fill extends Supervisor {
      */
     #endColor: Color;
 
+    #colorChanged: boolean = false;
+
     /**
      * Create a new Fill.
      */
-    constructor(isSupervisor: boolean = false) {
+    constructor(isSupervisor: boolean = false, isConditional: boolean = false) {
         super(isSupervisor);
-        this.#startColor = new Color(Color.COLOR_WHITE, isSupervisor);
-        this.#endColor = new Color(Color.COLOR_BLACK, isSupervisor);
+        if (isConditional) {
+            this.#fillType = '';
+        }
+        this.#startColor = new Color(Color.COLOR_WHITE, isSupervisor, isConditional);
+        this.#endColor = new Color(Color.COLOR_BLACK, isSupervisor, isConditional);
         // Bind for both supervisor and non-supervisor so Color can resolve shared components.
         this.#startColor.bindParent(this, 'startColor');
         this.#endColor.bindParent(this, 'endColor');
@@ -144,6 +149,7 @@ export class Fill extends Supervisor {
             });
             (this.parent as any).applyFromArray(styleArray);
         } else {
+            this.#colorChanged = true;
             this.#startColor = color;
         }
         return this;
@@ -169,9 +175,17 @@ export class Fill extends Supervisor {
             });
             (this.parent as any).applyFromArray(styleArray);
         } else {
+            this.#colorChanged = true;
             this.#endColor = color;
         }
         return this;
+    }
+
+    public getColorsChanged(): boolean {
+        if (this.isSupervisor) {
+            return this.getSharedComponent().getColorsChanged();
+        }
+        return this.#colorChanged || this.#startColor.getHasChanged() || this.#endColor.getHasChanged();
     }
 
     /**
@@ -220,6 +234,7 @@ export class Fill extends Supervisor {
                     this.#rotation +
                     (this.#fillType !== Fill.FILL_NONE ? this.#startColor.getHashCode() : '') +
                     (this.#fillType !== Fill.FILL_NONE ? this.#endColor.getHashCode() : '') +
+                    String(this.getColorsChanged()) +
                     'Fill',
             )
             .digest('hex');

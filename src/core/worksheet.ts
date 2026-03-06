@@ -1348,7 +1348,7 @@ export class Worksheet {
             const columnWidth = Font.calculateColumnWidth(
                 cellFont,
                 cellValue,
-                alignment.getTextRotation(),
+                alignment.getTextRotation() ?? 0,
                 defaultFont,
                 filterAdjustment,
                 indentAdjustment,

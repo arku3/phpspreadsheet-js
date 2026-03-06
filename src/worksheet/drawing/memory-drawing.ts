@@ -28,6 +28,16 @@ export class MemoryDrawing extends BaseDrawing {
 
     public setImageResource(resource: unknown): this {
         this.#imageResource = resource;
+        const image = resource as { width?: number; height?: number } | null;
+        if (image?.width && image?.height) {
+            this.setImageDimensions(image.width, image.height);
+        }
+        if (resource instanceof Uint8Array) {
+            const info = MemoryDrawing.detectImageInfo(resource);
+            if (info) {
+                this.setImageDimensions(info.width, info.height, info.type);
+            }
+        }
         return this;
     }
 
@@ -53,6 +63,55 @@ export class MemoryDrawing extends BaseDrawing {
         return this.#uniqueName;
     }
 
+    public setUniqueName(uniqueName: string): this {
+        this.#uniqueName = uniqueName;
+        return this;
+    }
+
+    public getIndexedFilename(): string {
+        return `${this.#uniqueName}${this.getImageIndex()}.${this.getImageFileExtensionForSave(false)}`;
+    }
+
+    public getImageFileExtensionForSave(includeDot: boolean = true): string {
+        const mimeType = this.getMimeType();
+        const extension = mimeType.includes('/') ? (mimeType.split('/')[1] ?? 'png') : 'png';
+        return includeDot ? `.${extension}` : extension;
+    }
+
+    public override getHashCode(): string {
+        const content = `${this.#renderingFunction}${this.#mimeType}${this.#uniqueName}${super.getHashCode()}MemoryDrawing`;
+        return Bun.hash(content).toString(16);
+    }
+
+    public static fromString(contents: string): MemoryDrawing {
+        const drawing = new MemoryDrawing();
+        const buffer = Buffer.from(contents, 'binary');
+        const info = (
+            BaseDrawing as unknown as { detectImageInfo?: (data: Uint8Array) => { type: number } | null }
+        ).detectImageInfo?.(buffer);
+        if (info?.type === BaseDrawing.IMAGETYPE_JPEG) {
+            drawing.setRenderingFunction(MemoryDrawing.RENDERING_JPEG);
+            drawing.setMimeType(MemoryDrawing.MIMETYPE_JPEG);
+        } else if (info?.type === BaseDrawing.IMAGETYPE_GIF) {
+            drawing.setRenderingFunction(MemoryDrawing.RENDERING_GIF);
+            drawing.setMimeType(MemoryDrawing.MIMETYPE_GIF);
+        } else {
+            drawing.setRenderingFunction(MemoryDrawing.RENDERING_PNG);
+            drawing.setMimeType(MemoryDrawing.MIMETYPE_PNG);
+        }
+        drawing.setImageDimensions(
+            (info as { width?: number })?.width ?? 0,
+            (info as { height?: number })?.height ?? 0,
+            (info as { type?: number })?.type ?? BaseDrawing.IMAGETYPE_UNKNOWN,
+        );
+        drawing.setImageResource(buffer);
+        return drawing;
+    }
+
+    public static fromStream(stream: Uint8Array): MemoryDrawing {
+        return MemoryDrawing.fromString(Buffer.from(stream).toString('binary'));
+    }
+
     public override clone(): MemoryDrawing {
         const drawing = new MemoryDrawing();
         drawing
@@ -65,6 +124,7 @@ export class MemoryDrawing extends BaseDrawing {
             .setHeight(this.getHeight())
             .setRenderingFunction(this.#renderingFunction)
             .setMimeType(this.#mimeType)
+            .setUniqueName(this.#uniqueName)
             .setImageResource(this.#imageResource);
 
         if (this.getCoordinates2()) {

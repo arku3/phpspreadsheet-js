@@ -1,6 +1,6 @@
 import { Conditional } from '../../conditional.ts';
-import { Wizard } from '../wizard.ts';
 import { WizardAbstract } from './wizard-abstract.ts';
+import { WIZARD_VALUE_TYPE_LITERAL } from './wizard-constants.ts';
 import { type WizardInterface } from './wizard-interface.ts';
 
 export class TextValue extends WizardAbstract implements WizardInterface {
@@ -20,31 +20,39 @@ export class TextValue extends WizardAbstract implements WizardInterface {
 
     protected operator: string = '';
     protected operand: string = '';
-    protected operandValueType: string = Wizard.VALUE_TYPE_LITERAL;
+    protected operandValueType: string = WIZARD_VALUE_TYPE_LITERAL;
 
     constructor(cellRange: string) {
         super(cellRange);
     }
 
-    public contains(value: string, operandValueType: string = Wizard.VALUE_TYPE_LITERAL): this {
+    public contains(value: string, operandValueType: string = WIZARD_VALUE_TYPE_LITERAL): this {
         this.setOperator(Conditional.OPERATOR_CONTAINSTEXT);
         this.setOperand(value, operandValueType);
         return this;
     }
 
-    public doesNotContain(value: string, operandValueType: string = Wizard.VALUE_TYPE_LITERAL): this {
+    public doesNotContain(value: string, operandValueType: string = WIZARD_VALUE_TYPE_LITERAL): this {
         this.setOperator('notContains');
         this.setOperand(value, operandValueType);
         return this;
     }
 
-    public beginsWith(value: string, operandValueType: string = Wizard.VALUE_TYPE_LITERAL): this {
+    public doesntContain(value: string, operandValueType: string = WIZARD_VALUE_TYPE_LITERAL): this {
+        return this.doesNotContain(value, operandValueType);
+    }
+
+    public beginsWith(value: string, operandValueType: string = WIZARD_VALUE_TYPE_LITERAL): this {
         this.setOperator(Conditional.OPERATOR_BEGINSWITH);
         this.setOperand(value, operandValueType);
         return this;
     }
 
-    public endsWith(value: string, operandValueType: string = Wizard.VALUE_TYPE_LITERAL): this {
+    public startsWith(value: string, operandValueType: string = WIZARD_VALUE_TYPE_LITERAL): this {
+        return this.beginsWith(value, operandValueType);
+    }
+
+    public endsWith(value: string, operandValueType: string = WIZARD_VALUE_TYPE_LITERAL): this {
         this.setOperator(Conditional.OPERATOR_ENDSWITH);
         this.setOperand(value, operandValueType);
         return this;
@@ -57,7 +65,7 @@ export class TextValue extends WizardAbstract implements WizardInterface {
         this.operator = operator;
     }
 
-    protected setOperand(operand: string, operandValueType: string = Wizard.VALUE_TYPE_LITERAL): void {
+    protected setOperand(operand: string, operandValueType: string = WIZARD_VALUE_TYPE_LITERAL): void {
         this.operand = operand;
         this.operandValueType = operandValueType;
     }
@@ -68,7 +76,7 @@ export class TextValue extends WizardAbstract implements WizardInterface {
 
     protected getExpression(): string {
         const operand =
-            this.operandValueType === Wizard.VALUE_TYPE_LITERAL
+            this.operandValueType === WIZARD_VALUE_TYPE_LITERAL
                 ? this.wrapValue(this.operand)
                 : this.cellConditionCheck(this.operand);
 
@@ -88,12 +96,33 @@ export class TextValue extends WizardAbstract implements WizardInterface {
         conditional.setConditionType(TextValue.OPERATORS[this.operator]!);
         conditional.setOperatorType(this.operator);
         conditional.setText(
-            this.operandValueType !== Wizard.VALUE_TYPE_LITERAL ? this.cellConditionCheck(this.operand) : this.operand,
+            this.operandValueType !== WIZARD_VALUE_TYPE_LITERAL ? this.cellConditionCheck(this.operand) : this.operand,
         );
         conditional.setConditions([expression]);
         conditional.setStyle(this.getStyle());
         conditional.setStopIfTrue(this.getStopIfTrue());
 
         return conditional;
+    }
+
+    public static fromConditional(conditional: Conditional, cellRange: string = 'A1'): TextValue {
+        const wizard = new TextValue(cellRange);
+        wizard.setStyle(conditional.getStyle());
+        wizard.setStopIfTrue(conditional.getStopIfTrue());
+        const operator = conditional.getOperatorType();
+        const text = conditional.getText();
+        if (text !== null) {
+            wizard.setOperand(text, WIZARD_VALUE_TYPE_LITERAL);
+        }
+        if (operator === Conditional.OPERATOR_CONTAINSTEXT) {
+            wizard.setOperator(Conditional.OPERATOR_CONTAINSTEXT);
+        } else if (operator === Conditional.OPERATOR_BEGINSWITH) {
+            wizard.setOperator(Conditional.OPERATOR_BEGINSWITH);
+        } else if (operator === Conditional.OPERATOR_ENDSWITH) {
+            wizard.setOperator(Conditional.OPERATOR_ENDSWITH);
+        } else {
+            wizard.setOperator('notContains');
+        }
+        return wizard;
     }
 }

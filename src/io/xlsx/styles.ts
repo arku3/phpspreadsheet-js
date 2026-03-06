@@ -248,8 +248,9 @@ export class Styles extends WriterPart {
         const al = xf.ele('alignment');
         if (align.getHorizontal()) al.att('horizontal', align.getHorizontal()!);
         if (align.getVertical()) al.att('vertical', align.getVertical()!);
-        if (align.getTextRotation() !== 0) {
-            const textRotation = align.getTextRotation() >= 0 ? align.getTextRotation() : 90 - align.getTextRotation();
+        const textRotationValue = align.getTextRotation();
+        if (textRotationValue !== null && textRotationValue !== 0) {
+            const textRotation = textRotationValue >= 0 ? textRotationValue : 90 - textRotationValue;
             al.att('textRotation', textRotation);
         }
         if (align.getWrapText()) al.att('wrapText', 'true');

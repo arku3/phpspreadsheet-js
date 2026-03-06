@@ -144,6 +144,21 @@
 - `toFormattedString` is static in PHP; JS instance method only.
 - `setBuiltInFormatCode` should also set formatCode; JS only sets builtIn code.
 - Hash mismatch: PHP includes built-in format code; JS does not.
+- Progress update:
+  - `NumberFormat` now uses PHP-style system date/time tokens (`[$-F800]`, `[$-x-sysdate]`, `[$-F400]`, `[$-x-systime]`) and converts them case-insensitively during extended format lookup.
+  - Built-in registry was corrected for key PHP/Excel ids: `14 => m/d/yyyy`, `22 => m/d/yyyy h:mm`, `47 => mm:ss.0`.
+  - `DATE_TIME_OR_DATETIME_ARRAY` / `TIME_OR_DATETIME_ARRAY` now include the broader PHP date/time family used for style parity checks.
+  - `src/style/number-formatter.ts` was expanded to handle semicolon sections, numeric condition selection, text `@` substitution, percentages, fractions, scientific notation, trailing-comma scaling, quoted literals, and basic Excel serial date/time rendering.
+  - Additional formatter parity landed for date/time-heavy paths: textual month names (`mmm`/`mmmm`/`mmmmm`), uppercase masks, padded elapsed tokens (`[hh]`, `[mm]`, `[ss]`), fractional-second rounding/carry, early-1900 serial behavior, callback color passthrough, and `lessFloatPrecision` for `General`.
+  - Currency/accounting token preservation improved: formats such as `[$USD-409]#,##0.00` and `[$€]#,##0.00` now keep their visible currency token in formatted output instead of dropping it.
+  - More locale-specific built-in registry values now match PHP for ids `50`, `53`, `55`, `59`-`62`, and `67`-`70` (including Thai `t...` formats).
+  - Complex numeric masks with embedded separators now work for common cases (for example `000-000` formatting `123456` as `123-456`) instead of appending literals in the wrong place.
+  - Formatter callback color output now resolves indexed tags like `[Color 10]` through the BIFF8 palette, matching PHP-style callback behavior (`#008000` for color index 10).
+  - Numeric and percentage masks now keep optional `?` spacing in output (for example `??0` and `0.0?%`) instead of collapsing those placeholders entirely.
+  - Complex-mask support now covers more PHP-style multi-block formats, including decimal-split masks such as `000-00-00.00-0` and escaped multi-dot masks such as `000\.00\.00\.00\.00`.
+  - Added `StringHelper`-style decimal/thousands separator overrides in TS and wired number/scientific/general formatting through separator adjustment, allowing PHP-like locale-style output changes.
+  - Fixed a complex-mask gap where single-block decimal submasks were left as literal zeros; TS now matches PHP for cases like `000 0.0` with `97.15` and `0 000.000000` with `-2.7e-5`.
+  - Remaining known gap: formatter parity is still partial versus PHP helper classes (`Formatter`, `BaseFormatter`, `PercentageFormatter`, `FractionFormatter`, `DateFormatter`) and likely misses locale-specific and complex-mask edge cases.
 
 ### Conditional Formatting (`src/style/conditional*.ts` vs `Style/Conditional*.php`)
 - Missing `Conditional::isValidConditionType`, `Conditional::getStyle($cellData)` handling for color scales.

@@ -25,6 +25,18 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
 
 ## Phase 3: Style Parity
 - [ ] Implement missing NumberFormat formatter/wizard classes and built-in registry.
+  - [x] Align `NumberFormat` built-in registry for key Excel/PHP ids (`14`, `22`, `47`) and system date/time token conversion.
+  - [x] Expand `toFormattedString` runtime handling for sections, text `@`, percentages, fractions, scientific formats, scaling commas, quoted literals, and date/time paths.
+  - [x] Add more PHP-like date/time parity for textual month tokens, uppercase masks, elapsed `[hh]/[mm]/[ss]`, fractional-second rounding, early-1900 serial handling, callback color propagation, and `lessFloatPrecision`.
+  - [x] Preserve currency tokens like `[$USD-409]` and `[$€]` during numeric formatting.
+  - [x] Align more locale-specific built-in format ids (`50`, `53`, `55`, `59`-`62`, `67`-`70`) with PHP.
+  - [x] Support PHP-like complex numeric masks with embedded separators such as `000-000`.
+  - [x] Resolve `[Color n]` formatter tags to BIFF8 palette colors for callback formatting.
+  - [x] Preserve `?` placeholder spacing in numeric and percentage masks.
+  - [x] Extend complex-mask parity for multi-block decimal formats like `000-00-00.00-0` and `000\.00\.00\.00\.00`.
+  - [x] Add PHP-like decimal/thousands separator overrides for formatted numeric output.
+  - [x] Fix complex-mask spillover for single-block decimal submasks and scientific-to-plain-string cases.
+  - [ ] Finish remaining NumberFormat parity gaps in formatter edge cases and helper-class coverage.
 - [ ] Align conditional formatting (rule evaluation, color scale/data bar/icon set APIs, wizard factories, cell matcher).
 - [ ] Fix hash code mismatches (Alignment, Color, Fill, NumberFormat, Font).
 - [ ] Align Theme/Color logic and hyperlink theme behavior.

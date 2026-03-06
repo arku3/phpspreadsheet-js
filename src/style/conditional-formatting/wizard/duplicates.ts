@@ -28,4 +28,12 @@ export class Duplicates extends WizardAbstract implements WizardInterface {
 
         return conditional;
     }
+
+    public static fromConditional(conditional: Conditional, cellRange: string = 'A1'): Duplicates {
+        const inverse = conditional.getConditionType() === Conditional.CONDITION_UNIQUE;
+        const wizard = new Duplicates(cellRange, inverse);
+        wizard.setStyle(conditional.getStyle());
+        wizard.setStopIfTrue(conditional.getStopIfTrue());
+        return wizard;
+    }
 }

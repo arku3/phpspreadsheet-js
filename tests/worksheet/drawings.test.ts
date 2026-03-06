@@ -92,7 +92,10 @@ describe('Worksheet drawings', () => {
 
     test('media filename and hash code follow PHP conventions', () => {
         const drawing = new Drawing();
-        drawing.setPath('image.png', '', '', false);
+        drawing.setPath(
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6hB9GkAAAAASUVORK5CYII=',
+            false,
+        );
 
         expect(drawing.getMediaFilename()).toMatch(/^image\d+\.png$/);
         expect(drawing.getHashCode()).not.toBe('');

@@ -89,13 +89,28 @@ export class Color extends Supervisor {
         56: 'FF333333', //  Standard Colour #56
     };
 
+    private static readonly THEME_INDEX_KEYS = [
+        'lt1',
+        'dk1',
+        'lt2',
+        'dk2',
+        'accent1',
+        'accent2',
+        'accent3',
+        'accent4',
+        'accent5',
+        'accent6',
+        'hlink',
+        'folHlink',
+    ] as const;
+
     #argb: string;
     #theme: number = -1;
     #hasChanged: boolean = false;
 
-    constructor(colorValue: string = Color.COLOR_BLACK, isSupervisor: boolean = false) {
+    constructor(colorValue: string = Color.COLOR_BLACK, isSupervisor: boolean = false, isConditional: boolean = false) {
         super(isSupervisor);
-        this.#argb = this.validateColor(colorValue);
+        this.#argb = isConditional ? '' : this.validateColor(colorValue);
     }
 
     /**
@@ -168,6 +183,7 @@ export class Color extends Supervisor {
             const styleArray = this.getStyleArray({ argb: colorValue, theme: -1 });
             this.getActiveSheet().getStyle(this.getSelectedCells()).applyFromArray(styleArray);
         } else {
+            this.#hasChanged = true;
             this.#theme = -1;
             this.#argb = this.validateColor(colorValue);
         }
@@ -189,14 +205,15 @@ export class Color extends Supervisor {
             return null;
         }
 
-        let themeColors: string[] = [];
+        let themeColors: Record<string, string> = {};
         const spreadsheet = (this.parent as any)?.getActiveSheet()?.getParent() || (this.parent as any)?.getParent();
         if (spreadsheet) {
             themeColors = spreadsheet.getTheme().getThemeColors();
         }
 
-        if (themeColors[this.#theme]) {
-            return themeColors[this.#theme]!;
+        const key = Color.THEME_INDEX_KEYS[this.#theme];
+        if (key && themeColors[key]) {
+            return themeColors[key]!;
         }
 
         return null;
@@ -279,9 +296,12 @@ export class Color extends Supervisor {
      * @returns This color for method chaining
      */
     public setHyperlinkTheme(): this {
-        // Standard hyperlink blue color
-        this.setARGB('FF0563C1');
-        this.setTheme(10); // Hyperlink theme index
+        const spreadsheet =
+            (this.parent as any)?.getActiveSheet?.()?.getParent?.() || (this.parent as any)?.getParent?.();
+        const themeColors: Record<string, string> = spreadsheet?.getTheme?.().getThemeColors?.() ?? {};
+        const hyperlinkColor = themeColors.hlink ? `FF${themeColors.hlink}` : 'FF0563C1';
+        this.setARGB(hyperlinkColor);
+        this.setTheme(10);
         return this;
     }
 
@@ -320,7 +340,7 @@ export class Color extends Supervisor {
             return this.getSharedComponent().getHashCode();
         }
         return createHash('md5')
-            .update(this.#argb + this.#theme + this.#hasChanged + 'Color')
+            .update(this.#argb + this.#theme + 'Color')
             .digest('hex');
     }
 

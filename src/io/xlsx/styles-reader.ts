@@ -288,8 +288,7 @@ export class StylesReader extends ReaderPart {
             if (formatCode) {
                 style.getNumberFormat().setFormatCode(formatCode);
             } else if (numFmtId < 164) {
-                // Built-in format - use General as default for now
-                style.getNumberFormat().setFormatCode('General');
+                style.getNumberFormat().setBuiltInFormatCode(numFmtId);
             }
         }
 
