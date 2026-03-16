@@ -56,6 +56,13 @@ export class Blanks extends WizardAbstract implements WizardInterface {
     }
 
     public static fromConditional(conditional: Conditional, cellRange: string = 'A1'): Blanks {
+        if (
+            conditional.getConditionType() !== Conditional.CONDITION_CONTAINSBLANKS &&
+            conditional.getConditionType() !== Conditional.CONDITION_NOTCONTAINSBLANKS
+        ) {
+            throw new Error('Conditional is not a Blanks CF Rule conditional');
+        }
+
         const inverse = conditional.getConditionType() === Conditional.CONDITION_CONTAINSBLANKS;
         const wizard = new Blanks(cellRange, inverse);
         wizard.setStyle(conditional.getStyle());

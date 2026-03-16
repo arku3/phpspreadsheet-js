@@ -69,16 +69,36 @@ export class NumberFormatter {
         if (sections.length === 1 && this.containsUnquotedToken(sections[0]!, '@')) {
             return this.applyTextSection(sections[0]!, value);
         }
-        if (sections.length >= 4) {
-            return this.applyTextSection(sections[3]!, value);
-        }
         return value;
     }
 
     private static applyTextSection(section: string, value: string): string {
         const cleanedSection = this.cleanSection(section);
-        const substituted = this.replaceOutsideQuotes(cleanedSection, /@/g, () => value);
-        return this.stripFormattingLiterals(substituted);
+        let result = '';
+        let inQuotes = false;
+
+        for (let index = 0; index < cleanedSection.length; index++) {
+            const char = cleanedSection[index]!;
+            if (char === '"') {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (char === '\\') {
+                result += cleanedSection[index + 1] ?? '';
+                index += 1;
+                continue;
+            }
+
+            if (!inQuotes && char === '@') {
+                result += value;
+                continue;
+            }
+
+            result += char;
+        }
+
+        return result;
     }
 
     private static selectNumericSection(
@@ -86,39 +106,41 @@ export class NumberFormatter {
         format: string,
     ): { section: string; value: number; color: string } {
         const sections = this.splitSections(format);
-
-        for (const section of sections) {
-            const condition = this.extractCondition(section);
-            if (condition && this.matchesCondition(value, condition)) {
-                return { section, value, color: this.extractColor(section) };
-            }
-        }
+        const colors = sections.map((section) => this.extractColor(section));
+        const conditions = sections.map((section) => this.extractCondition(section));
 
         if (sections.length <= 1) {
             const section = sections[0] ?? format;
-            return { section, value, color: this.extractColor(section) };
+            return { section, value, color: colors[0] ?? '' };
         }
         if (sections.length === 2) {
-            const section = value < 0 ? sections[1]! : sections[0]!;
-            return { section, value: value < 0 ? Math.abs(value) : value, color: this.extractColor(section) };
+            const firstMatches = this.matchesCondition(value, conditions[0] ?? null, '>=', 0);
+            const section = firstMatches ? sections[0]! : sections[1]!;
+            const color = firstMatches ? (colors[0] ?? '') : (colors[1] ?? '');
+            return { section, value: Math.abs(value), color };
         }
-        if (value > 0) {
-            return { section: sections[0]!, value, color: this.extractColor(sections[0]!) };
+
+        const firstMatches = this.matchesCondition(value, conditions[0] ?? null, '>', 0);
+        if (firstMatches) {
+            return { section: sections[0]!, value: Math.abs(value), color: colors[0] ?? '' };
         }
-        if (value < 0) {
-            return { section: sections[1]!, value: Math.abs(value), color: this.extractColor(sections[1]!) };
+
+        const secondMatches = this.matchesCondition(value, conditions[1] ?? null, '<', 0);
+        if (secondMatches) {
+            return { section: sections[1]!, value: Math.abs(value), color: colors[1] ?? '' };
         }
-        return { section: sections[2]!, value, color: this.extractColor(sections[2]!) };
+
+        return { section: sections[2]!, value: Math.abs(value), color: colors[2] ?? '' };
     }
 
     private static extractColor(section: string): string {
-        const match = section.match(/\[((?:BLACK|BLUE|CYAN|GREEN|MAGENTA|RED|WHITE|YELLOW)|COLOR\s+\d+)\]/i);
+        const match = section.match(/\[((?:BLACK|BLUE|CYAN|GREEN|MAGENTA|RED|WHITE|YELLOW)|COLOR\s*\d+)\]/i);
         const color = match?.[1];
         if (!color) {
             return '';
         }
 
-        const indexedMatch = color.match(/^COLOR\s+(\d+)$/i);
+        const indexedMatch = color.match(/^COLOR\s*(\d+)$/i);
         if (!indexedMatch) {
             return color;
         }
@@ -138,20 +160,27 @@ export class NumberFormatter {
         };
     }
 
-    private static matchesCondition(value: number, condition: { operator: string; operand: number }): boolean {
-        switch (condition.operator) {
+    private static matchesCondition(
+        value: number,
+        condition: { operator: string; operand: number } | null,
+        defaultOperator: string = '>=',
+        defaultOperand: number = 0,
+    ): boolean {
+        const resolvedCondition = condition ?? { operator: defaultOperator, operand: defaultOperand };
+
+        switch (resolvedCondition.operator) {
             case '<':
-                return value < condition.operand;
+                return value < resolvedCondition.operand;
             case '<=':
-                return value <= condition.operand;
+                return value <= resolvedCondition.operand;
             case '>':
-                return value > condition.operand;
+                return value > resolvedCondition.operand;
             case '>=':
-                return value >= condition.operand;
+                return value >= resolvedCondition.operand;
             case '=':
-                return value === condition.operand;
+                return value === resolvedCondition.operand;
             case '<>':
-                return value !== condition.operand;
+                return value !== resolvedCondition.operand;
             default:
                 return false;
         }
@@ -159,20 +188,19 @@ export class NumberFormatter {
 
     private static cleanSection(section: string): string {
         return section
-            .replace(/\[(?:BLACK|BLUE|CYAN|GREEN|MAGENTA|RED|WHITE|YELLOW|COLOR\s+\d+)\]/gi, '')
+            .replace(/\[(?:BLACK|BLUE|CYAN|GREEN|MAGENTA|RED|WHITE|YELLOW|COLOR\s*\d+)\]/gi, '')
             .replace(/\[(?:<=|>=|<>|=|<|>)-?\d+(?:\.\d+)?\]/g, '')
-            .replace(/_./g, ' ')
-            .replace(/\*(.)/g, '$1')
-            .trim();
+            .replace(/_.?/g, ' ')
+            .replace(/\*(.)/g, '$1');
     }
 
     private static isDateTimeFormat(format: string): boolean {
-        const loweredFormat = this.stripFormattingLiterals(this.stripLocaleTokens(format)).toLowerCase();
+        const loweredFormat = this.stripQuotedAndEscapedLiterals(this.stripLocaleTokens(format)).toLowerCase();
         if (/\[(?:h+|m+|s+)\]/.test(loweredFormat)) {
             return true;
         }
 
-        const bare = this.stripFormattingLiterals(
+        const bare = this.stripQuotedAndEscapedLiterals(
             this.stripBracketExpressions(this.stripLocaleTokens(format)),
         ).toLowerCase();
         if (!/[dhyms]/.test(bare)) {
@@ -195,12 +223,10 @@ export class NumberFormatter {
     }
 
     private static formatPercentage(value: number, format: string): string {
-        const bare = this.stripFormattingLiterals(this.stripBracketExpressions(this.stripLocaleTokens(format))).replace(
-            /%/g,
-            '',
-        );
-        const decimals = this.countDecimalPlaces(bare);
-        return `${this.applyNumberMask(value * 100, bare, false, decimals)}%`;
+        const bare = this.stripFormattingLiterals(this.stripBracketExpressions(this.stripLocaleTokens(format)));
+        const analysisFormat = this.stripQuotedAndEscapedLiterals(bare).replace(/%/g, '');
+        const decimals = this.countDecimalPlaces(analysisFormat);
+        return this.applyNumberMask(value * 100, bare, analysisFormat, false, decimals);
     }
 
     private static formatScientific(value: number, format: string): string {
@@ -259,6 +285,7 @@ export class NumberFormatter {
     private static formatNumeric(value: number, format: string, lessFloatPrecision: boolean): string {
         const bare = this.stripLocaleTokens(this.stripBracketExpressions(format));
         const literalOnly = this.stripFormattingLiterals(bare);
+        const analysisFormat = this.stripQuotedAndEscapedLiterals(bare);
         if (literalOnly === 'General') {
             return this.formatGeneral(value, lessFloatPrecision);
         }
@@ -269,34 +296,65 @@ export class NumberFormatter {
         const normalizedFormat = this.normalizeCurrencyTokens(format);
         const maskFormat = this.normalizeCurrencyTokens(bare);
         const { scaledValue, scaledFormat } = this.scaleValue(value, maskFormat);
-        const thousands = /[#0?],[#0?]/.test(this.stripFormattingLiterals(scaledFormat));
-        const decimals = this.countDecimalPlaces(this.stripFormattingLiterals(scaledFormat));
-        return this.applyNumberMask(scaledValue, normalizedFormat, thousands, decimals);
+        const analysisScaledFormat = this.stripQuotedAndEscapedLiterals(scaledFormat);
+        const thousands = /[#0?],[#0?]/.test(analysisScaledFormat);
+        const decimals = this.countDecimalPlaces(analysisScaledFormat);
+        return this.applyNumberMask(scaledValue, normalizedFormat, analysisFormat, thousands, decimals);
     }
 
-    private static applyNumberMask(value: number, format: string, thousands: boolean, decimals: number): string {
+    private static applyNumberMask(
+        value: number,
+        format: string,
+        analysisFormat: string,
+        thousands: boolean,
+        decimals: number,
+    ): string {
         const sign = value < 0 ? '-' : '';
         const absolute = Math.abs(value);
 
         const literalFormat = this.stripLocaleTokens(format);
         const cleaned = this.stripFormattingLiterals(literalFormat);
-        if (this.requiresComplexNumberMask(cleaned)) {
-            return sign + this.applyComplexNumberMask(absolute, cleaned.replace(/[#?]/g, '0'));
+        if (this.requiresComplexNumberMask(analysisFormat)) {
+            const formattedComplex = this.applyComplexNumberMask(absolute, analysisFormat.replace(/[#?]/g, '0'));
+            const result = this.replaceLastToken(cleaned, analysisFormat, formattedComplex);
+
+            if (!sign) {
+                return result;
+            }
+
+            if (/^[^0-9#?]+/.test(cleaned)) {
+                return result.replace(/^([^0-9]+)/, `$1${sign}`);
+            }
+
+            return sign + result;
         }
 
-        const numberToken = cleaned.match(/[#,0?]+(?:\.[#,0?]+)?/);
+        const numberToken = analysisFormat.match(/[#,0?]+(?:\.[#,0?]+)?/);
         if (!numberToken) {
             return sign + cleaned.replace(/\?/g, '');
         }
 
         const resultNumber = this.formatMaskedNumber(absolute, numberToken[0], thousands, decimals);
-        let result = cleaned.replace(numberToken[0], resultNumber);
-        result = result.replace(/(^|\D)0\./, '$1.');
-        return this.adjustSeparators(sign + result);
+        let result = this.replaceLastToken(this.stripFormattingLiterals(literalFormat), numberToken[0], resultNumber);
+        if (this.shouldStripLeadingZero(numberToken[0])) {
+            result = result.replace(/(^|\D)0\./, '$1.');
+        }
+
+        const adjustedResult = this.adjustSeparators(result);
+        if (!sign) {
+            return adjustedResult;
+        }
+
+        if (/^[^0-9#?]+/.test(cleaned)) {
+            return adjustedResult.replace(/^([^0-9]+)/, `$1${sign}`);
+        }
+
+        return sign + adjustedResult;
     }
 
     private static formatMaskedNumber(value: number, token: string, thousands: boolean, decimals: number): string {
-        let rendered = value.toFixed(decimals);
+        const roundedValue = this.roundHalfUp(value, decimals);
+        let rendered = roundedValue.toFixed(decimals);
         const [integerMask = '', decimalMask = ''] = token.split('.');
 
         if (thousands) {
@@ -306,39 +364,70 @@ export class NumberFormatter {
         }
 
         const [integerPart = '', decimalPart = ''] = rendered.split('.');
-        const formattedInteger = this.formatIntegerMask(integerPart, integerMask);
+        let formattedInteger = this.formatIntegerMask(integerPart, integerMask);
+        if (
+            integerMask.replace(/,/g, '') === '?' &&
+            Number(integerPart.replace(/,/g, '') || '0') === 0 &&
+            decimalMask
+        ) {
+            formattedInteger = '';
+        }
         const formattedDecimal = this.formatDecimalMask(decimalPart, decimalMask);
 
         return formattedDecimal ? `${formattedInteger}.${formattedDecimal}` : formattedInteger;
     }
 
     private static formatIntegerMask(integerPart: string, integerMask: string): string {
+        const normalizedMask = integerMask.replace(/,/g, '');
+        if (/^0+$/.test(normalizedMask)) {
+            return integerPart.replace(/,/g, '').padStart(normalizedMask.length, '0');
+        }
+
         if (!integerMask.includes('?')) {
             return integerPart;
         }
 
         const digitSource = integerPart.replace(/,/g, '');
-        const mask = integerMask.replace(/,/g, '');
-        let digitIndex = digitSource.length - 1;
+        const optionalOnlyMask = !/[0#]/.test(integerMask.replace(/,/g, ''));
+        const normalizedDigitSource = optionalOnlyMask && Number(digitSource || '0') === 0 ? '' : digitSource;
+        let digitIndex = normalizedDigitSource.length - 1;
         let result = '';
 
-        for (let index = mask.length - 1; index >= 0; index--) {
-            const placeholder = mask[index]!;
-            if (digitIndex >= 0) {
-                result = `${digitSource[digitIndex]!}${result}`;
-                digitIndex -= 1;
+        for (let index = integerMask.length - 1; index >= 0; index--) {
+            const placeholder = integerMask[index]!;
+            if (placeholder === '?' || placeholder === '0' || placeholder === '#') {
+                if (digitIndex >= 0) {
+                    result = `${normalizedDigitSource[digitIndex]!}${result}`;
+                    digitIndex -= 1;
+                    continue;
+                }
+
+                if (placeholder === '?') {
+                    result = ` ${result}`;
+                } else if (placeholder === '0') {
+                    result = `0${result}`;
+                }
+
                 continue;
             }
 
-            if (placeholder === '?') {
-                result = ` ${result}`;
-            } else if (placeholder === '0') {
-                result = `0${result}`;
+            if (placeholder === ',') {
+                if (digitIndex >= 0 && /\d/.test(result)) {
+                    result = `,${result}`;
+                }
+
+                continue;
             }
+
+            result = `${placeholder}${result}`;
         }
 
         if (digitIndex >= 0) {
-            result = `${digitSource.slice(0, digitIndex + 1)}${result}`;
+            result = `${normalizedDigitSource.slice(0, digitIndex + 1)}${result}`;
+        }
+
+        if (integerMask.includes(',') && !result.includes(',')) {
+            result = result.trimStart();
         }
 
         return result || '0';
@@ -377,7 +466,16 @@ export class NumberFormatter {
     }
 
     private static applyComplexNumberMask(value: number, mask: string): string {
-        return this.applyComplexNumberMaskInternal(value, mask, true);
+        if (Math.abs(value) >= 1e18) {
+            return this.numberToPlainString(value);
+        }
+
+        let adjustedValue = value;
+        if (Number.isInteger(value) && (mask.match(/\./g)?.length ?? 0) === 1) {
+            adjustedValue *= Math.pow(10, mask.split('.')[1]?.length ?? 0);
+        }
+
+        return this.applyComplexNumberMaskInternal(adjustedValue, mask, true);
     }
 
     private static applyComplexNumberMaskInternal(value: number | string, mask: string, splitOnPoint: boolean): string {
@@ -410,8 +508,9 @@ export class NumberFormatter {
         }
 
         let digits = number;
-        if (digits.length < mask.length) {
-            digits = digits.padStart(mask.length, '0');
+        const placeholderCount = (mask.match(/0/g) ?? []).length;
+        if (digits.length < placeholderCount) {
+            digits = digits.padStart(placeholderCount, '0');
         }
 
         return `${sign}${this.processComplexNumberFormatMask(digits, mask)}`;
@@ -465,10 +564,24 @@ export class NumberFormatter {
         if (masks.length <= 2) {
             const decimalMask = masks[1] ?? '';
             const decimalPlaces = (decimalMask.match(/0/g) ?? []).length;
-            return Number(value.toFixed(decimalPlaces));
+            return this.roundHalfUp(value, decimalPlaces);
         }
 
         return value;
+    }
+
+    private static shouldStripLeadingZero(token: string): boolean {
+        const integerMask = (token.split('.')[0] ?? '').replace(/,/g, '');
+        return integerMask.includes('#') || integerMask.includes('?') ? !integerMask.includes('0') : false;
+    }
+
+    private static roundHalfUp(value: number, decimals: number): number {
+        if (decimals <= 0) {
+            return Math.sign(value) * Math.round(Math.abs(value) + Number.EPSILON);
+        }
+
+        const factor = Math.pow(10, decimals);
+        return (Math.sign(value) * Math.round(Math.abs(value) * factor + Number.EPSILON)) / factor;
     }
 
     private static numberToPlainString(value: number): string {
@@ -522,7 +635,12 @@ export class NumberFormatter {
         if (Math.abs(value) >= 1e-10 && Math.abs(value) < 1e10) {
             return this.adjustSeparators(value.toPrecision(10).replace(/(?:\.0+|(?:(\.[0-9]*?)0+))$/, '$1'));
         }
-        return this.adjustSeparators(value.toExponential(6).replace('e', 'E'));
+
+        const exponential = value.toExponential(6).replace('e', 'E');
+        const trimmed = exponential
+            .replace(/(\.\d*?[1-9])0+(E[+-]?\d+)$/u, '$1$2')
+            .replace(/\.0+(E[+-]?\d+)$/u, '.0$1');
+        return this.adjustSeparators(trimmed);
     }
 
     private static scaleValue(value: number, format: string): { scaledValue: number; scaledFormat: string } {
@@ -769,6 +887,30 @@ export class NumberFormatter {
         return format.replace(/\[\$-[^\]]+\]/gi, '');
     }
 
+    private static stripQuotedAndEscapedLiterals(format: string): string {
+        let result = '';
+        let inQuotes = false;
+
+        for (let index = 0; index < format.length; index++) {
+            const char = format[index]!;
+            if (char === '"') {
+                inQuotes = !inQuotes;
+                continue;
+            }
+
+            if (char === '\\') {
+                index += 1;
+                continue;
+            }
+
+            if (!inQuotes) {
+                result += char;
+            }
+        }
+
+        return result;
+    }
+
     private static normalizeCurrencyTokens(format: string): string {
         return format.replace(/\[\$([^\]]*)\]/g, (_match, token: string) => {
             const symbol = token.split('-')[0] ?? '';
@@ -785,6 +927,10 @@ export class NumberFormatter {
         let inQuotes = false;
         for (let i = 0; i < format.length; i++) {
             const char = format[i]!;
+            if (char === '\\') {
+                i += 1;
+                continue;
+            }
             if (char === '"') {
                 inQuotes = !inQuotes;
             } else if (!inQuotes && format.startsWith(token, i)) {
@@ -813,6 +959,15 @@ export class NumberFormatter {
                 return segment.value.replace(pattern, replacement);
             })
             .join('');
+    }
+
+    private static replaceLastToken(format: string, token: string, replacement: string): string {
+        const index = format.lastIndexOf(token);
+        if (index < 0) {
+            return format;
+        }
+
+        return `${format.slice(0, index)}${replacement}${format.slice(index + token.length)}`;
     }
 
     private static getFractionDecimalPortion(value: number): string {
@@ -856,6 +1011,12 @@ export class NumberFormatter {
         let inQuotes = false;
         for (let index = 0; index < format.length; index++) {
             const char = format[index]!;
+            if (char === '\\') {
+                current += char;
+                current += format[index + 1] ?? '';
+                index += 1;
+                continue;
+            }
             if (char === '"') {
                 inQuotes = !inQuotes;
                 current += char;

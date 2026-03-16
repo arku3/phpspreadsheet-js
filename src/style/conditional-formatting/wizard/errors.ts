@@ -46,6 +46,13 @@ export class Errors extends WizardAbstract implements WizardInterface {
     }
 
     public static fromConditional(conditional: Conditional, cellRange: string = 'A1'): Errors {
+        if (
+            conditional.getConditionType() !== Conditional.CONDITION_CONTAINSERRORS &&
+            conditional.getConditionType() !== Conditional.CONDITION_NOTCONTAINSERRORS
+        ) {
+            throw new Error('Conditional is not an Errors CF Rule conditional');
+        }
+
         const inverse = conditional.getConditionType() === Conditional.CONDITION_CONTAINSERRORS;
         const wizard = new Errors(cellRange, inverse);
         wizard.setStyle(conditional.getStyle());

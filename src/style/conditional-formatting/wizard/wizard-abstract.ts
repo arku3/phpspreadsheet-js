@@ -43,7 +43,7 @@ export abstract class WizardAbstract {
 
     public getStyle(): Style {
         if (!this.style) {
-            this.style = new Style(false);
+            this.style = new Style(false, true);
         }
         return this.style;
     }
@@ -57,14 +57,23 @@ export abstract class WizardAbstract {
      * Ported from PHP's cellConditionCheck.
      */
     protected cellConditionCheck(condition: string): string {
+        const quotedSegments = condition.split('"');
         const rowAdjustment = this.referenceRow - 1;
         const columnAdjustment = this.referenceColumn - 1;
         const regexp = /((?:'[^']+'|[A-Za-z0-9_]+)!|)(\$?[A-Z]{1,3}\$?\d+)/g;
 
-        return condition.replace(regexp, (_match, worksheetRef: string, cellRef: string) => {
-            const adjustedCell = this.conditionCellAdjustment(cellRef, rowAdjustment, columnAdjustment);
-            return `${worksheetRef}${adjustedCell}`;
-        });
+        return quotedSegments
+            .map((segment, index) => {
+                if (index % 2 === 1) {
+                    return segment;
+                }
+
+                return segment.replace(regexp, (_match, worksheetRef: string, cellRef: string) => {
+                    const adjustedCell = this.conditionCellAdjustment(cellRef, rowAdjustment, columnAdjustment);
+                    return `${worksheetRef}${adjustedCell}`;
+                });
+            })
+            .join('"');
     }
 
     protected conditionCellAdjustment(cellAddress: string, rowAdjustment: number, columnAdjustment: number): string {
@@ -78,10 +87,10 @@ export abstract class WizardAbstract {
         let rowIndex = Number(rowDigits ?? '1');
 
         if (colDollar !== '$') {
-            colIndex -= columnAdjustment;
+            colIndex += columnAdjustment;
         }
         if (rowDollar !== '$') {
-            rowIndex -= rowAdjustment;
+            rowIndex += rowAdjustment;
         }
 
         colIndex = Math.max(1, colIndex);
@@ -99,5 +108,49 @@ export abstract class WizardAbstract {
             }
             return condition;
         });
+    }
+
+    protected static reverseAdjustCellRef(condition: string, cellRange: string): string {
+        const splitRange = Coordinate.splitRange(cellRange.replace(/\$/g, '').toUpperCase());
+        const firstRange = splitRange[0];
+        const referenceCell = firstRange?.[0] ?? 'A1';
+        const [referenceColumn, referenceRow] = Coordinate.indexesFromString(referenceCell);
+        const regexp = /((?:'[^']+'|[A-Za-z0-9_]+)!|)(\$?)([A-Z]{1,3})(\$?)(\d+)/g;
+
+        return condition
+            .split('"')
+            .map((segment, index) => {
+                if (index % 2 === 1) {
+                    return segment;
+                }
+
+                return segment.replace(
+                    regexp,
+                    (
+                        _match,
+                        worksheetRef: string,
+                        colDollar: string,
+                        colLetters: string,
+                        rowDollar: string,
+                        rowDigits: string,
+                    ) => {
+                        let colIndex = Coordinate.columnIndexFromString(colLetters);
+                        let rowIndex = Number(rowDigits);
+
+                        if (colDollar !== '$') {
+                            colIndex -= referenceColumn - 1;
+                        }
+                        if (rowDollar !== '$') {
+                            rowIndex -= referenceRow - 1;
+                        }
+
+                        colIndex = Math.max(1, colIndex);
+                        rowIndex = Math.max(1, rowIndex);
+
+                        return `${worksheetRef}${colDollar}${Coordinate.stringFromColumnIndex(colIndex)}${rowDollar}${rowIndex}`;
+                    },
+                );
+            })
+            .join('"');
     }
 }

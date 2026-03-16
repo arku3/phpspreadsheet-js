@@ -36,8 +36,25 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
   - [x] Extend complex-mask parity for multi-block decimal formats like `000-00-00.00-0` and `000\.00\.00\.00\.00`.
   - [x] Add PHP-like decimal/thousands separator overrides for formatted numeric output.
   - [x] Fix complex-mask spillover for single-block decimal submasks and scientific-to-plain-string cases.
+  - [x] Cover more PHP fixture complex masks such as `(000) 0-0000-000`, `0000:00:00`, and `0000:00.00`.
+  - [x] Match more PHP scientific complex-mask fixtures, including integer-with-decimal-mask scaling and the >= `1e18` plain-string fallback.
+  - [x] Preserve quoted characters and escaped quotes in text `@` substitution paths.
+  - [x] Ignore quoted numeric literals when deriving decimal precision for prefixed/suffixed number masks.
+  - [x] Preserve PHP-like accounting spacing for `_`/`*` patterns, including zero `??` placeholders and text-section trimming.
+  - [x] Match PHP section-selection defaults when only some sections define conditions, and accept compact `[color10]` formatter tags.
+  - [x] Preserve trailing underscore spacing in quoted literal numeric masks like `$#,##0.00_`.
+  - [x] Use PHP-like half-up rounding for simple numeric masks and keep leading zeroes when the mask requires `0`.
+  - [x] Preserve zero-padded percentage placeholders and keep negative percentage parentheses around the `%` sign.
+  - [x] Match PHP negative sign placement for currency-style masks, inserting the sign after leading currency/literal prefixes.
+  - [x] Trim `General` scientific notation like PHP while keeping a single decimal digit for whole mantissas.
+  - [x] Match PHP optional grouping and optional integer placeholder behavior for masks like `?,???` and `$?.00`.
+  - [x] Ignore quoted literals when detecting date formats and splice formatted numeric tokens back into literal-prefix masks.
+  - [x] Follow PhpSpreadsheet's current behavior of ignoring four-section text formatting and returning raw text unless a single-section `@` mask is used.
+  - [x] Lock empty-section behavior and issue-specific HUF / dollar-sign regressions with NumberFormat tests.
   - [ ] Finish remaining NumberFormat parity gaps in formatter edge cases and helper-class coverage.
 - [ ] Align conditional formatting (rule evaluation, color scale/data bar/icon set APIs, wizard factories, cell matcher).
+  - [x] Fix wizard factory parity for blanks/errors, quoted formula reference adjustment, and expression reverse-adjust round trips.
+  - [ ] Continue conditional-formatting runtime evaluation and assessor parity.
 - [ ] Fix hash code mismatches (Alignment, Color, Fill, NumberFormat, Font).
 - [ ] Align Theme/Color logic and hyperlink theme behavior.
 

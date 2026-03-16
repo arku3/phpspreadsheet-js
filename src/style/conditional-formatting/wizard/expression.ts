@@ -10,7 +10,7 @@ export class Expression extends WizardAbstract implements WizardInterface {
     }
 
     public expression(expression: string): this {
-        this._expression = expression;
+        this._expression = expression.startsWith('=') ? expression.slice(1) : expression;
         return this;
     }
 
@@ -31,11 +31,15 @@ export class Expression extends WizardAbstract implements WizardInterface {
     }
 
     public static fromConditional(conditional: Conditional, cellRange: string = 'A1'): Expression {
+        if (conditional.getConditionType() !== Conditional.CONDITION_EXPRESSION) {
+            throw new Error('Conditional is not an Expression CF Rule conditional');
+        }
+
         const wizard = new Expression(cellRange);
         wizard.setStyle(conditional.getStyle());
         wizard.setStopIfTrue(conditional.getStopIfTrue());
         const conditions = conditional.getConditions();
-        wizard.expression(String(conditions[0] ?? ''));
+        wizard.expression(WizardAbstract.reverseAdjustCellRef(String(conditions[0] ?? ''), cellRange));
         return wizard;
     }
 }

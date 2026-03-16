@@ -158,6 +158,21 @@
   - Complex-mask support now covers more PHP-style multi-block formats, including decimal-split masks such as `000-00-00.00-0` and escaped multi-dot masks such as `000\.00\.00\.00\.00`.
   - Added `StringHelper`-style decimal/thousands separator overrides in TS and wired number/scientific/general formatting through separator adjustment, allowing PHP-like locale-style output changes.
   - Fixed a complex-mask gap where single-block decimal submasks were left as literal zeros; TS now matches PHP for cases like `000 0.0` with `97.15` and `0 000.000000` with `-2.7e-5`.
+  - Complex-mask parity now also covers more PHP fixture formats with literal punctuation and sign handling, including `(000) 0-0000-000`, `0 (+00) 0000 00 00 00`, `0000:00:00`, and `0000:00.00`.
+  - Scientific complex-mask parity now also matches more PHP fixtures: integer values with a single decimal mask are scaled before mask injection (for example `9.2e17` with `0 000.0`), and values at or above `1e18` fall back to a plain expanded numeric string instead of forcing an incorrect complex-mask layout.
+  - Text substitution now preserves quote characters inside text values and honors escaped quotes in format strings, so PHP fixtures like `@`, `"@"`, and `"Text: "@` render without stripping embedded quote marks from the input.
+  - Numeric mask analysis now ignores quoted literals and escaped characters when counting decimal places or detecting complex masks, fixing prefixed formats such as `"pfx." 0.00` that previously misread the quoted dot as the numeric decimal point.
+  - Accounting-style masks now keep PHP-like spacing from `_` and `*` patterns instead of trimming everything away, and optional-only integer masks like `??` no longer render `0` for zero values in accounting zero sections. The fourth text section is still trimmed back to plain text for string inputs.
+  - Section selection now follows PhpSpreadsheet's default sign-based comparisons even when only some sections specify explicit conditions, so mixed conditional/default formats like `[Green][<>25]...;[Red]...` choose the correct fallback section. Formatter color parsing now also accepts compact tags like `[color10]` in addition to `[Color 10]`.
+  - Underscore spacing cleanup now matches PHP more closely for trailing underscore markers as well, preserving terminal spaces in masks like `$#,##0.00_` instead of dropping them.
+  - Simple numeric formatting now uses a PHP-like half-up rounding helper instead of relying directly on JavaScript `toFixed`, fixing cases like `1.15` with `0.0`. Leading-zero stripping is now limited to masks that truly omit the integer zero placeholder, so formats such as `0.00` and `#,##0.00_-` keep the required leading `0` for zero values.
+  - Percentage formatting now keeps the original `%` placement from the mask instead of always appending it, which fixes negative-parentheses formats like `#,##0.0%;(#,##0.0%)`. Integer percentage masks that use only `0` placeholders also now preserve required left padding, so `00.0%` and `00%` render as `06.2%` and `06%`.
+  - Negative sign placement now better matches PhpSpreadsheet for currency-style masks whose literal prefix comes before the number token, so outputs like `$#,##0.00`, `[$USD-409]#,##0.00`, and `[$€]#,##0.00` render as `$-1,234.50`, `USD-1,234.50`, and `€-1,234.50` instead of putting the minus sign before the currency symbol.
+  - `General` scientific formatting now trims redundant exponent mantissa zeroes like PhpSpreadsheet (`1.200000E-11` -> `1.2E-11`) while preserving a single decimal place for whole mantissas (`1.0E-11`).
+  - Integer masking now handles optional grouping punctuation and a lone optional integer placeholder more like PhpSpreadsheet, which fixes formats like `?,???` and `$?.00` without introducing spurious left-padding spaces or breaking comma insertion.
+  - Date-format detection now ignores quoted literals, preventing literal-prefix masks like `"Product SKU #"0` from being misclassified as dates because of words like `Product`. Numeric token replacement also now reinserts formatted numeric or complex-mask output into the last mask token position, which fixes quoted literal prefixes and suffixes around numeric masks.
+  - Text formatting now mirrors PhpSpreadsheet's current limitation more closely: four-section formats do not apply the fourth text section, and raw text is returned unless the format is a single section containing `@`.
+  - Added regression coverage for PhpSpreadsheet fixture edge cases that already match in TS now, including empty negative sections, the HUF suffix case from issue 4124, and dollar-sign text/general behaviors from issue 4242. These are now locked in tests to guard future formatter refactors.
   - Remaining known gap: formatter parity is still partial versus PHP helper classes (`Formatter`, `BaseFormatter`, `PercentageFormatter`, `FractionFormatter`, `DateFormatter`) and likely misses locale-specific and complex-mask edge cases.
 
 ### Conditional Formatting (`src/style/conditional*.ts` vs `Style/Conditional*.php`)
@@ -168,6 +183,11 @@
 - `ConditionalIconSet` auto-creates thresholds in JS (PHP does not).
 - `CellMatcher` and `WizardAbstract` are stubbed (missing relative reference parsing and matching).
 - Wizard API parity gaps: missing `fromConditional(...)`, `newRule(...)`, method alias differences, operator naming mismatch.
+- Progress update:
+  - `Wizard.newRule(...)` now matches PhpSpreadsheet for blanks/errors inversion, so `BLANKS` creates `containsBlanks`, `NOT_BLANKS` creates `notContainsBlanks`, and the equivalent error mappings are correct as well.
+  - `WizardAbstract.cellConditionCheck(...)` now ignores quoted string segments when adjusting relative references, preventing formulas like `SEARCH("A1",A1)` from rewriting the quoted `"A1"` literal.
+  - Expression wizard round-tripping now mirrors PHP more closely: leading `=` is stripped on input, `fromConditional(...)` validates the conditional type, and stored formulas are reverse-adjusted relative to the sqref top-left before being rebuilt.
+  - Added targeted tests in `tests/style/conditional-formatting-wizard-parity.test.ts` to lock factory mapping and expression reference round trips.
 
 ## Phase 3: Calculation Parity Findings
 ### Missing Core Classes / Engine Helpers

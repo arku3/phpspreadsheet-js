@@ -38,13 +38,13 @@ export class Wizard {
             case Wizard.TEXT_VALUE:
                 return new TextValue(this.#cellRange);
             case Wizard.BLANKS:
-                return new Blanks(this.#cellRange);
-            case Wizard.NOT_BLANKS:
                 return new Blanks(this.#cellRange, true);
+            case Wizard.NOT_BLANKS:
+                return new Blanks(this.#cellRange, false);
             case Wizard.ERRORS:
                 return new Errors(this.#cellRange, true);
             case Wizard.NOT_ERRORS:
-                return new Errors(this.#cellRange);
+                return new Errors(this.#cellRange, false);
             case Wizard.EXPRESSION:
             case Wizard.FORMULA:
                 return new Expression(this.#cellRange);
