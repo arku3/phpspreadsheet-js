@@ -297,12 +297,30 @@ export class StylesReader extends ReaderPart {
             const fontId = parseInt(fontIdMatch[1]!, 10);
             if (fontId >= 0 && fontId < styles.fonts.length) {
                 const font = styles.fonts[fontId]!;
-                style.getFont().setName(font.getName());
-                style.getFont().setSize(font.getSize());
-                style.getFont().setBold(font.getBold());
-                style.getFont().setItalic(font.getItalic());
-                style.getFont().setUnderline(font.getUnderline());
-                style.getFont().setStrikethrough(font.getStrikethrough());
+                const fontName = font.getName();
+                if (fontName !== null) {
+                    style.getFont().setName(fontName);
+                }
+                const fontSize = font.getSize();
+                if (fontSize !== null) {
+                    style.getFont().setSize(fontSize);
+                }
+                const fontBold = font.getBold();
+                if (fontBold !== null) {
+                    style.getFont().setBold(fontBold);
+                }
+                const fontItalic = font.getItalic();
+                if (fontItalic !== null) {
+                    style.getFont().setItalic(fontItalic);
+                }
+                const fontUnderline = font.getUnderline();
+                if (fontUnderline !== null) {
+                    style.getFont().setUnderline(fontUnderline);
+                }
+                const fontStrikethrough = font.getStrikethrough();
+                if (fontStrikethrough !== null) {
+                    style.getFont().setStrikethrough(fontStrikethrough);
+                }
                 style.getFont().getColor().setARGB(font.getColor().getARGB());
             }
         }

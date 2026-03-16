@@ -188,6 +188,15 @@
   - `WizardAbstract.cellConditionCheck(...)` now ignores quoted string segments when adjusting relative references, preventing formulas like `SEARCH("A1",A1)` from rewriting the quoted `"A1"` literal.
   - Expression wizard round-tripping now mirrors PHP more closely: leading `=` is stripped on input, `fromConditional(...)` validates the conditional type, and stored formulas are reverse-adjusted relative to the sqref top-left before being rebuilt.
   - Added targeted tests in `tests/style/conditional-formatting-wizard-parity.test.ts` to lock factory mapping and expression reference round trips.
+  - `CellMatcher.cellConditionCheck(...)` now performs PhpSpreadsheet-style relative cell substitution at evaluation time and skips quoted string segments, so expression/runtime rules can dereference neighboring cells without corrupting quoted literals.
+  - Conditional `Font` instances now use nullable defaults like PHP, and `StyleMerger`/`styles-reader` were made null-safe around those font properties. This preserves earlier matched font attributes when later conditional styles only set a different font flag.
+  - `CellMatcher` now sorts `between`/`notBetween` operands numerically after relative-cell substitution, matching PhpSpreadsheet when the substituted values are numeric strings (for example `5` and `15` instead of lexicographic `15`, `5`).
+  - Text-based runtime rules (`containsText`, `notContainsText`, `beginsWith`, `endsWith`) are now evaluated directly in `CellMatcher`, which avoids relying on unsupported `SEARCH(...)` calculation paths while still matching PhpSpreadsheet semantics.
+  - Blank/not-blank runtime rules are now evaluated directly from trimmed cell contents in `CellMatcher`, which avoids relying on unsupported `LEN(TRIM(...))` calculation paths and matches PhpSpreadsheet behavior for empty strings and whitespace-only cells.
+  - Error/not-error runtime rules are now evaluated directly in `CellMatcher` by checking the cell data type and known Excel error literals, avoiding unsupported `ISERROR(...)` engine paths while matching PhpSpreadsheet behavior for error cells.
+  - Core time-period runtime rules (`today`, `yesterday`, `tomorrow`, `last7Days`) are now evaluated directly in `CellMatcher` using Excel-day serial comparisons, avoiding unsupported `TODAY()`/date expression engine paths while matching PhpSpreadsheet behavior for those common rule types.
+  - Week/month time-period runtime rules are now also evaluated directly in `CellMatcher` using UTC week/month boundaries, covering `lastWeek`, `thisWeek`, `nextWeek`, `lastMonth`, `thisMonth`, and `nextMonth` without relying on unsupported `TODAY()`/`EDATE()` formula evaluation.
+  - Added runtime regression coverage in `tests/style/conditional-formatting-runtime-parity.test.ts` for quoted-literal-safe expression evaluation, direct text/blank/error/time-period rule matching, `stopIfTrue` handling, null-return when no styles match, multi-rule font merging, and numeric `between` evaluation.
 
 ## Phase 3: Calculation Parity Findings
 ### Missing Core Classes / Engine Helpers

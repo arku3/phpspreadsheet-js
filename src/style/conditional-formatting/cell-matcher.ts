@@ -1,4 +1,4 @@
-import { Cell } from '../../core/cell.ts';
+import { Cell, DataType } from '../../core/cell.ts';
 import { Worksheet } from '../../core/worksheet.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
 import { Conditional } from '../conditional.ts';
@@ -73,11 +73,15 @@ export class CellMatcher {
             case Conditional.CONDITION_NOTCONTAINSTEXT:
             case Conditional.CONDITION_BEGINSWITH:
             case Conditional.CONDITION_ENDSWITH:
+                return this.processTextCondition(conditional);
             case Conditional.CONDITION_CONTAINSBLANKS:
             case Conditional.CONDITION_NOTCONTAINSBLANKS:
+                return this.processBlankCondition(conditional);
             case Conditional.CONDITION_CONTAINSERRORS:
             case Conditional.CONDITION_NOTCONTAINSERRORS:
+                return this.processErrorCondition(conditional);
             case Conditional.CONDITION_TIMEPERIOD:
+                return this.processTimePeriodCondition(conditional);
             case Conditional.CONDITION_EXPRESSION:
                 return this.processExpression(conditional);
             default:
@@ -124,7 +128,7 @@ export class CellMatcher {
 
     protected processRangeOperator(conditional: Conditional): boolean {
         const conditions = this.adjustConditionsForCellReferences(conditional.getConditions());
-        conditions.sort();
+        conditions.sort((left, right) => Number(left) - Number(right));
 
         let expression = CellMatcher.COMPARISON_RANGE_OPERATORS[conditional.getOperatorType()]!;
         expression = expression.replace(/\bA1\b/gi, String(this.wrapCellValue()));
@@ -143,6 +147,88 @@ export class CellMatcher {
             .replace('%s', String(this.wrapValue(this.cell.getCalculatedValue())));
 
         return this.evaluateExpression(expression);
+    }
+
+    protected processTextCondition(conditional: Conditional): boolean {
+        const cellValue = this.cell.getCalculatedValue();
+        const haystack = cellValue == null ? '' : String(cellValue);
+        const needle = this.extractConditionText(conditional);
+
+        switch (conditional.getConditionType()) {
+            case Conditional.CONDITION_CONTAINSTEXT:
+                return haystack.includes(needle);
+            case Conditional.CONDITION_NOTCONTAINSTEXT:
+                return !haystack.includes(needle);
+            case Conditional.CONDITION_BEGINSWITH:
+                return haystack.startsWith(needle);
+            case Conditional.CONDITION_ENDSWITH:
+                return haystack.endsWith(needle);
+            default:
+                return false;
+        }
+    }
+
+    protected extractConditionText(conditional: Conditional): string {
+        const directText = conditional.getText();
+        if (directText) {
+            return directText;
+        }
+
+        const condition = String(conditional.getConditions()[0] ?? '');
+        const match = condition.match(/"((?:[^"]|"")*)"/);
+        return match ? match[1]!.replace(/""/g, '"') : '';
+    }
+
+    protected processBlankCondition(conditional: Conditional): boolean {
+        const cellValue = this.cell.getCalculatedValue();
+        const trimmed = cellValue == null ? '' : String(cellValue).trim();
+        const isBlank = trimmed.length === 0;
+
+        return conditional.getConditionType() === Conditional.CONDITION_CONTAINSBLANKS ? isBlank : !isBlank;
+    }
+
+    protected processErrorCondition(conditional: Conditional): boolean {
+        const value = this.cell.getCalculatedValue();
+        const isError =
+            this.cell.getDataType() === DataType.TYPE_ERROR ||
+            ['#NULL!', '#DIV/0!', '#VALUE!', '#REF!', '#NAME?', '#NUM!', '#N/A'].includes(String(value));
+
+        return conditional.getConditionType() === Conditional.CONDITION_CONTAINSERRORS ? isError : !isError;
+    }
+
+    protected processTimePeriodCondition(conditional: Conditional): boolean {
+        const value = this.cell.getCalculatedValue();
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+            return false;
+        }
+
+        const cellDay = Math.floor(value);
+        const today = CellMatcher.currentExcelDay();
+
+        switch (conditional.getText()) {
+            case Conditional.TIMEPERIOD_YESTERDAY:
+                return cellDay === today - 1;
+            case Conditional.TIMEPERIOD_TODAY:
+                return cellDay === today;
+            case Conditional.TIMEPERIOD_TOMORROW:
+                return cellDay === today + 1;
+            case Conditional.TIMEPERIOD_LAST_7_DAYS:
+                return today - cellDay <= 6 && cellDay <= today;
+            case Conditional.TIMEPERIOD_LAST_WEEK:
+                return this.isInWeekOffset(cellDay, -1);
+            case Conditional.TIMEPERIOD_THIS_WEEK:
+                return this.isInWeekOffset(cellDay, 0);
+            case Conditional.TIMEPERIOD_NEXT_WEEK:
+                return this.isInWeekOffset(cellDay, 1);
+            case Conditional.TIMEPERIOD_LAST_MONTH:
+                return this.isInMonthOffset(cellDay, -1);
+            case Conditional.TIMEPERIOD_THIS_MONTH:
+                return this.isInMonthOffset(cellDay, 0);
+            case Conditional.TIMEPERIOD_NEXT_MONTH:
+                return this.isInMonthOffset(cellDay, 1);
+            default:
+                return this.processExpression(conditional);
+        }
     }
 
     protected processExpression(conditional: Conditional): boolean {
@@ -169,6 +255,45 @@ export class CellMatcher {
         }
     }
 
+    protected static currentExcelDay(): number {
+        const now = new Date();
+        const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+        const excelEpochUtc = Date.UTC(1899, 11, 30);
+        return Math.floor((todayUtc - excelEpochUtc) / (24 * 60 * 60 * 1000));
+    }
+
+    protected isInWeekOffset(cellDay: number, weekOffset: number): boolean {
+        const todayDate = CellMatcher.excelDayToUtcDate(CellMatcher.currentExcelDay());
+        const startOfThisWeek = CellMatcher.startOfWeek(todayDate);
+        const startOfTargetWeek = new Date(startOfThisWeek.getTime());
+        startOfTargetWeek.setUTCDate(startOfTargetWeek.getUTCDate() + weekOffset * 7);
+        const endOfTargetWeek = new Date(startOfTargetWeek.getTime());
+        endOfTargetWeek.setUTCDate(endOfTargetWeek.getUTCDate() + 6);
+
+        const cellDate = CellMatcher.excelDayToUtcDate(cellDay);
+        return cellDate >= startOfTargetWeek && cellDate <= endOfTargetWeek;
+    }
+
+    protected isInMonthOffset(cellDay: number, monthOffset: number): boolean {
+        const todayDate = CellMatcher.excelDayToUtcDate(CellMatcher.currentExcelDay());
+        const targetStart = new Date(Date.UTC(todayDate.getUTCFullYear(), todayDate.getUTCMonth() + monthOffset, 1));
+        const targetEnd = new Date(Date.UTC(todayDate.getUTCFullYear(), todayDate.getUTCMonth() + monthOffset + 1, 0));
+
+        const cellDate = CellMatcher.excelDayToUtcDate(cellDay);
+        return cellDate >= targetStart && cellDate <= targetEnd;
+    }
+
+    protected static excelDayToUtcDate(day: number): Date {
+        const excelEpochUtc = Date.UTC(1899, 11, 30);
+        return new Date(excelEpochUtc + day * 24 * 60 * 60 * 1000);
+    }
+
+    protected static startOfWeek(date: Date): Date {
+        const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+        start.setUTCDate(start.getUTCDate() - start.getUTCDay());
+        return start;
+    }
+
     protected adjustConditionsForCellReferences(conditions: (string | number)[]): (string | number)[] {
         return conditions.map((condition) => {
             if (typeof condition === 'string') {
@@ -179,6 +304,49 @@ export class CellMatcher {
     }
 
     protected cellConditionCheck(condition: string): string {
-        return condition;
+        const regexp = /((?:'[^']+'|[A-Za-z0-9_]+)!|)?(\$?)([A-Z]{1,3})(\$?)(\d+)/g;
+
+        return condition
+            .split('"')
+            .map((segment, index) => {
+                if (index % 2 === 1) {
+                    return segment;
+                }
+
+                return segment.replace(
+                    regexp,
+                    (
+                        _match,
+                        worksheetRef: string | undefined,
+                        colDollar: string,
+                        colLetters: string,
+                        rowDollar: string,
+                        rowDigits: string,
+                    ) => {
+                        let colIndex = Coordinate.columnIndexFromString(colLetters);
+                        let rowIndex = Number(rowDigits);
+
+                        if (colDollar !== '$') {
+                            colIndex += this.cellColumn - this.referenceColumn;
+                        }
+                        if (rowDollar !== '$') {
+                            rowIndex += this.cellRow - this.referenceRow;
+                        }
+
+                        const coordinate = `${Coordinate.stringFromColumnIndex(Math.max(1, colIndex))}${Math.max(1, rowIndex)}`;
+                        const worksheetName = worksheetRef?.slice(0, -1);
+                        const targetWorksheet = worksheetName
+                            ? (this.worksheet.getParent()?.getSheetByName(worksheetName.replace(/^'|'$/g, '')) ?? null)
+                            : this.worksheet;
+
+                        if (!targetWorksheet) {
+                            return String(this.wrapValue(null));
+                        }
+
+                        return String(this.wrapValue(targetWorksheet.getCell(coordinate).getCalculatedValue()));
+                    },
+                );
+            })
+            .join('"');
     }
 }

@@ -1,0 +1,269 @@
+import { describe, expect, it } from 'bun:test';
+import { Spreadsheet } from '../../src/core/spreadsheet.ts';
+import { CellMatcher } from '../../src/style/conditional-formatting/cell-matcher.ts';
+import { CellStyleAssessor } from '../../src/style/conditional-formatting/cell-style-assessor.ts';
+import { Expression } from '../../src/style/conditional-formatting/wizard/expression.ts';
+import { Conditional } from '../../src/style/conditional.ts';
+
+const currentExcelDay = (): number => {
+    const now = new Date();
+    const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    const excelEpochUtc = Date.UTC(1899, 11, 30);
+    return Math.floor((todayUtc - excelEpochUtc) / (24 * 60 * 60 * 1000));
+};
+
+const excelDayFromUtcDate = (date: Date): number => {
+    const excelEpochUtc = Date.UTC(1899, 11, 30);
+    const utcDate = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    return Math.floor((utcDate - excelEpochUtc) / (24 * 60 * 60 * 1000));
+};
+
+const startOfWeekUtc = (date: Date): Date => {
+    const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    start.setUTCDate(start.getUTCDate() - start.getUTCDay());
+    return start;
+};
+
+describe('Conditional Formatting Runtime Parity', () => {
+    it('should evaluate relative expression references without rewriting quoted cell-like text', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', 'A1');
+
+        const conditional = new Expression('B2').formula('A1="A1"').getConditional();
+        const matcher = new CellMatcher(sheet.getCell('B2'), 'B2');
+
+        expect(matcher.evaluateConditional(conditional)).toBe(true);
+    });
+
+    it('should evaluate text conditions directly like PhpSpreadsheet runtime matching', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', 'foobar');
+        sheet.setCellValue('C2', 'bar');
+
+        const contains = new Conditional();
+        contains.setConditionType(Conditional.CONDITION_CONTAINSTEXT);
+        contains.setText('foo');
+        contains.setConditions(['NOT(ISERROR(SEARCH("foo",B2)))']);
+
+        const notContains = new Conditional();
+        notContains.setConditionType(Conditional.CONDITION_NOTCONTAINSTEXT);
+        notContains.setText('foo');
+        notContains.setConditions(['ISERROR(SEARCH("foo",C2))']);
+
+        expect(new CellMatcher(sheet.getCell('B2'), 'B2').evaluateConditional(contains)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('C2'), 'C2').evaluateConditional(notContains)).toBe(true);
+    });
+
+    it('should evaluate blank and not-blank conditions directly like PhpSpreadsheet runtime matching', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', '');
+        sheet.setCellValue('C2', '  ');
+        sheet.setCellValue('D2', 'value');
+
+        const blank = new Conditional();
+        blank.setConditionType(Conditional.CONDITION_CONTAINSBLANKS);
+        blank.setConditions(['LEN(TRIM(B2))=0']);
+
+        const notBlank = new Conditional();
+        notBlank.setConditionType(Conditional.CONDITION_NOTCONTAINSBLANKS);
+        notBlank.setConditions(['LEN(TRIM(D2))>0']);
+
+        expect(new CellMatcher(sheet.getCell('B2'), 'B2').evaluateConditional(blank)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('C2'), 'C2').evaluateConditional(blank)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('D2'), 'D2').evaluateConditional(notBlank)).toBe(true);
+    });
+
+    it('should evaluate error and not-error conditions directly like PhpSpreadsheet runtime matching', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', '#DIV/0!');
+        sheet.setCellValue('C2', 'value');
+
+        const containsErrors = new Conditional();
+        containsErrors.setConditionType(Conditional.CONDITION_CONTAINSERRORS);
+        containsErrors.setConditions(['ISERROR(B2)']);
+
+        const notContainsErrors = new Conditional();
+        notContainsErrors.setConditionType(Conditional.CONDITION_NOTCONTAINSERRORS);
+        notContainsErrors.setConditions(['NOT(ISERROR(C2))']);
+
+        expect(new CellMatcher(sheet.getCell('B2'), 'B2').evaluateConditional(containsErrors)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('C2'), 'C2').evaluateConditional(notContainsErrors)).toBe(true);
+    });
+
+    it('should evaluate key time-period rules directly like PhpSpreadsheet runtime matching', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        const today = currentExcelDay();
+        sheet.setCellValue('B2', today);
+        sheet.setCellValue('C2', today - 1);
+        sheet.setCellValue('D2', today - 6);
+
+        const todayConditional = new Conditional();
+        todayConditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        todayConditional.setText(Conditional.TIMEPERIOD_TODAY);
+
+        const yesterdayConditional = new Conditional();
+        yesterdayConditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        yesterdayConditional.setText(Conditional.TIMEPERIOD_YESTERDAY);
+
+        const last7DaysConditional = new Conditional();
+        last7DaysConditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        last7DaysConditional.setText(Conditional.TIMEPERIOD_LAST_7_DAYS);
+
+        expect(new CellMatcher(sheet.getCell('B2'), 'B2').evaluateConditional(todayConditional)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('C2'), 'C2').evaluateConditional(yesterdayConditional)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('D2'), 'D2').evaluateConditional(last7DaysConditional)).toBe(true);
+    });
+
+    it('should evaluate week and month time-period rules directly like PhpSpreadsheet runtime matching', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        const now = new Date();
+        const startOfThisWeek = startOfWeekUtc(now);
+        const thisWeek = excelDayFromUtcDate(startOfThisWeek);
+        const lastWeek = excelDayFromUtcDate(
+            new Date(
+                Date.UTC(
+                    startOfThisWeek.getUTCFullYear(),
+                    startOfThisWeek.getUTCMonth(),
+                    startOfThisWeek.getUTCDate() - 7,
+                ),
+            ),
+        );
+        const nextWeek = excelDayFromUtcDate(
+            new Date(
+                Date.UTC(
+                    startOfThisWeek.getUTCFullYear(),
+                    startOfThisWeek.getUTCMonth(),
+                    startOfThisWeek.getUTCDate() + 7,
+                ),
+            ),
+        );
+        const thisMonth = excelDayFromUtcDate(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)));
+        const lastMonth = excelDayFromUtcDate(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)));
+        const nextMonth = excelDayFromUtcDate(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)));
+
+        sheet.setCellValue('B2', thisWeek);
+        sheet.setCellValue('C2', lastWeek);
+        sheet.setCellValue('D2', nextWeek);
+        sheet.setCellValue('E2', thisMonth);
+        sheet.setCellValue('F2', lastMonth);
+        sheet.setCellValue('G2', nextMonth);
+
+        const thisWeekConditional = new Conditional();
+        thisWeekConditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        thisWeekConditional.setText(Conditional.TIMEPERIOD_THIS_WEEK);
+
+        const lastWeekConditional = new Conditional();
+        lastWeekConditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        lastWeekConditional.setText(Conditional.TIMEPERIOD_LAST_WEEK);
+
+        const nextWeekConditional = new Conditional();
+        nextWeekConditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        nextWeekConditional.setText(Conditional.TIMEPERIOD_NEXT_WEEK);
+
+        const thisMonthConditional = new Conditional();
+        thisMonthConditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        thisMonthConditional.setText(Conditional.TIMEPERIOD_THIS_MONTH);
+
+        const lastMonthConditional = new Conditional();
+        lastMonthConditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        lastMonthConditional.setText(Conditional.TIMEPERIOD_LAST_MONTH);
+
+        const nextMonthConditional = new Conditional();
+        nextMonthConditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        nextMonthConditional.setText(Conditional.TIMEPERIOD_NEXT_MONTH);
+
+        expect(new CellMatcher(sheet.getCell('B2'), 'B2').evaluateConditional(thisWeekConditional)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('C2'), 'C2').evaluateConditional(lastWeekConditional)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('D2'), 'D2').evaluateConditional(nextWeekConditional)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('E2'), 'E2').evaluateConditional(thisMonthConditional)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('F2'), 'F2').evaluateConditional(lastMonthConditional)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('G2'), 'G2').evaluateConditional(nextMonthConditional)).toBe(true);
+    });
+
+    it('should stop merging styles after a matching stopIfTrue rule', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', 10);
+
+        const first = new Conditional();
+        first.setConditionType(Conditional.CONDITION_CELLIS);
+        first.setOperatorType(Conditional.OPERATOR_EQUAL);
+        first.setConditions([10]);
+        first.setStopIfTrue(true);
+        first.getStyle().getFont().setBold(true);
+
+        const second = new Conditional();
+        second.setConditionType(Conditional.CONDITION_CELLIS);
+        second.setOperatorType(Conditional.OPERATOR_EQUAL);
+        second.setConditions([10]);
+        second.getStyle().getFont().setItalic(true);
+
+        const assessor = new CellStyleAssessor(sheet.getCell('B2'), 'B2');
+        const style = assessor.matchConditions([first, second]);
+
+        expect(style.getFont().getBold()).toBe(true);
+        expect(style.getFont().getItalic()).not.toBe(true);
+    });
+
+    it('should return null when no runtime conditional styles match', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', 10);
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_CELLIS);
+        conditional.setOperatorType(Conditional.OPERATOR_GREATERTHAN);
+        conditional.setConditions([20]);
+
+        const assessor = new CellStyleAssessor(sheet.getCell('B2'), 'B2');
+
+        expect(assessor.matchConditionsReturnNullIfNoneMatched([conditional], '10')).toBeNull();
+    });
+
+    it('should evaluate relative between comparisons numerically like PhpSpreadsheet', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('A1', 5);
+        sheet.setCellValue('B1', 15);
+        sheet.setCellValue('B2', 10);
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_CELLIS);
+        conditional.setOperatorType(Conditional.OPERATOR_BETWEEN);
+        conditional.setConditions(['A1', 'B1']);
+
+        const matcher = new CellMatcher(sheet.getCell('B2'), 'B2');
+
+        expect(matcher.evaluateConditional(conditional)).toBe(true);
+    });
+
+    it('should merge later matching conditional styles when stopIfTrue is false', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', 10);
+
+        const first = new Conditional();
+        first.setConditionType(Conditional.CONDITION_CELLIS);
+        first.setOperatorType(Conditional.OPERATOR_EQUAL);
+        first.setConditions([10]);
+        first.getStyle().getFont().setBold(true);
+
+        const second = new Conditional();
+        second.setConditionType(Conditional.CONDITION_CELLIS);
+        second.setOperatorType(Conditional.OPERATOR_EQUAL);
+        second.setConditions([10]);
+        second.getStyle().getFont().setItalic(true);
+
+        const assessor = new CellStyleAssessor(sheet.getCell('B2'), 'B2');
+        const style = assessor.matchConditions([first, second]);
+
+        expect(style.getFont().getBold()).toBe(true);
+        expect(style.getFont().getItalic()).toBe(true);
+    });
+});

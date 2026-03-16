@@ -27,17 +27,21 @@ export class StyleMerger {
     }
 
     protected mergeFontStyle(baseFontStyle: Font, fontStyle: Font): void {
-        if (fontStyle.getBold() !== null) {
-            baseFontStyle.setBold(fontStyle.getBold());
+        const bold = fontStyle.getBold();
+        if (bold !== null) {
+            baseFontStyle.setBold(bold);
         }
-        if (fontStyle.getItalic() !== null) {
-            baseFontStyle.setItalic(fontStyle.getItalic());
+        const italic = fontStyle.getItalic();
+        if (italic !== null) {
+            baseFontStyle.setItalic(italic);
         }
-        if (fontStyle.getStrikethrough() !== null) {
-            baseFontStyle.setStrikethrough(fontStyle.getStrikethrough());
+        const strikethrough = fontStyle.getStrikethrough();
+        if (strikethrough !== null) {
+            baseFontStyle.setStrikethrough(strikethrough);
         }
-        if (fontStyle.getUnderline() !== null) {
-            baseFontStyle.setUnderline(fontStyle.getUnderline());
+        const underline = fontStyle.getUnderline();
+        if (underline !== null) {
+            baseFontStyle.setUnderline(underline);
         }
         if (fontStyle.getColor().getARGB() !== null || fontStyle.getColor().getTheme() >= 0) {
             baseFontStyle.setColor(fontStyle.getColor());

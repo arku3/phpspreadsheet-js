@@ -64,14 +64,14 @@ export class Font extends Supervisor {
 
     public static readonly DEFAULT_CALIBRI_11 = { px: 64, width: 9.140625, height: 15.0 };
 
-    #name: string = 'Calibri';
-    #size: number = 11;
-    #bold: boolean = false;
-    #italic: boolean = false;
-    #superscript: boolean = false;
-    #subscript: boolean = false;
-    #underline: string = Font.UNDERLINE_NONE;
-    #strikethrough: boolean = false;
+    #name: string | null = 'Calibri';
+    #size: number | null = 11;
+    #bold: boolean | null = false;
+    #italic: boolean | null = false;
+    #superscript: boolean | null = false;
+    #subscript: boolean | null = false;
+    #underline: string | null = Font.UNDERLINE_NONE;
+    #strikethrough: boolean | null = false;
     #color: Color;
     #autoColor: boolean = false;
     #scheme: string = '';
@@ -87,14 +87,14 @@ export class Font extends Supervisor {
     constructor(isSupervisor: boolean = false, isConditional: boolean = false) {
         super(isSupervisor);
         if (isConditional) {
-            this.#name = '';
-            this.#size = 0;
-            this.#bold = false;
-            this.#italic = false;
-            this.#superscript = false;
-            this.#subscript = false;
-            this.#underline = '';
-            this.#strikethrough = false;
+            this.#name = null;
+            this.#size = null;
+            this.#bold = null;
+            this.#italic = null;
+            this.#superscript = null;
+            this.#subscript = null;
+            this.#underline = null;
+            this.#strikethrough = null;
         }
         this.#color = new Color(Color.COLOR_BLACK, isSupervisor, isConditional);
         // Bind for both supervisor and non-supervisor so Color knows its parent property.
@@ -119,7 +119,7 @@ export class Font extends Supervisor {
         return { font: array };
     }
 
-    public getName(): string {
+    public getName(): string | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getName();
         }
@@ -136,7 +136,7 @@ export class Font extends Supervisor {
         return this;
     }
 
-    public getSize(): number {
+    public getSize(): number | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getSize();
         }
@@ -153,7 +153,7 @@ export class Font extends Supervisor {
         return this;
     }
 
-    public getBold(): boolean {
+    public getBold(): boolean | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getBold();
         }
@@ -170,7 +170,7 @@ export class Font extends Supervisor {
         return this;
     }
 
-    public getItalic(): boolean {
+    public getItalic(): boolean | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getItalic();
         }
@@ -187,7 +187,7 @@ export class Font extends Supervisor {
         return this;
     }
 
-    public getSuperscript(): boolean {
+    public getSuperscript(): boolean | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getSuperscript();
         }
@@ -207,7 +207,7 @@ export class Font extends Supervisor {
         return this;
     }
 
-    public getSubscript(): boolean {
+    public getSubscript(): boolean | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getSubscript();
         }
@@ -227,7 +227,7 @@ export class Font extends Supervisor {
         return this;
     }
 
-    public getUnderline(): string {
+    public getUnderline(): string | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getUnderline();
         }
@@ -244,7 +244,7 @@ export class Font extends Supervisor {
         return this;
     }
 
-    public getStrikethrough(): boolean {
+    public getStrikethrough(): boolean | null {
         if (this.isSupervisor) {
             return this.getSharedComponent().getStrikethrough();
         }
@@ -494,13 +494,13 @@ export class Font extends Supervisor {
         }
         return createHash('md5')
             .update(
-                this.#name +
-                    this.#size +
+                (this.#name ?? '') +
+                    (this.#size ?? '') +
                     (this.#bold ? 't' : 'f') +
                     (this.#italic ? 't' : 'f') +
                     (this.#superscript ? 't' : 'f') +
                     (this.#subscript ? 't' : 'f') +
-                    this.#underline +
+                    (this.#underline ?? '') +
                     (this.#strikethrough ? 't' : 'f') +
                     this.#color.getHashCode() +
                     this.#scheme +
@@ -542,8 +542,8 @@ export class Font extends Supervisor {
     }
 
     public static getDefaultColumnWidthByFont(font: Font, returnAsPixels: boolean = false): number {
-        const name = font.getName();
-        const size = Math.trunc(font.getSize());
+        const name = font.getName() ?? 'Calibri';
+        const size = Math.trunc(font.getSize() ?? 11);
         const mapping = Font.DEFAULT_COLUMN_WIDTHS[name]?.[size];
         if (mapping) {
             return returnAsPixels ? mapping.px : mapping.width;
@@ -555,8 +555,8 @@ export class Font extends Supervisor {
     }
 
     public static getDefaultRowHeightByFont(font: Font): number {
-        const name = font.getName();
-        const size = font.getSize();
+        const name = font.getName() ?? 'Calibri';
+        const size = font.getSize() ?? 11;
         const mapping = Font.DEFAULT_COLUMN_WIDTHS[name]?.[Math.trunc(size)];
         if (mapping) {
             return mapping.height;
@@ -597,8 +597,8 @@ export class Font extends Supervisor {
     }
 
     public static getTextWidthPixelsApprox(text: string, font: Font, rotation: number): number {
-        const name = font.getName();
-        const size = font.getSize();
+        const name = font.getName() ?? 'Calibri';
+        const size = font.getSize() ?? 11;
         const charCount = countCharactersDbcs(text);
         let width = 0;
         if (name === 'Arial' || name === 'Verdana') {
@@ -620,8 +620,8 @@ export class Font extends Supervisor {
     }
 
     public static pixelsToCellDimension(pixelValue: number, defaultFont: Font): number {
-        const name = defaultFont.getName();
-        const size = Math.trunc(defaultFont.getSize());
+        const name = defaultFont.getName() ?? 'Calibri';
+        const size = Math.trunc(defaultFont.getSize() ?? 11);
         const mapping = Font.DEFAULT_COLUMN_WIDTHS[name]?.[size];
         if (mapping) {
             return (pixelValue * mapping.width) / mapping.px;

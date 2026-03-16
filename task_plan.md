@@ -54,6 +54,14 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
   - [ ] Finish remaining NumberFormat parity gaps in formatter edge cases and helper-class coverage.
 - [ ] Align conditional formatting (rule evaluation, color scale/data bar/icon set APIs, wizard factories, cell matcher).
   - [x] Fix wizard factory parity for blanks/errors, quoted formula reference adjustment, and expression reverse-adjust round trips.
+  - [x] Implement relative reference/value substitution in `CellMatcher` while preserving quoted strings.
+  - [x] Preserve conditional-style nullable font defaults so multiple matched rules merge without wiping earlier font attributes.
+  - [x] Sort relative range-operator operands numerically in `CellMatcher` for PHP-like `between` evaluation.
+  - [x] Evaluate contains/begins/ends text rules directly in `CellMatcher` instead of relying on unsupported `SEARCH(...)` engine paths.
+  - [x] Evaluate blank / not-blank runtime rules directly in `CellMatcher` instead of relying on unsupported `LEN(TRIM(...))` engine paths.
+  - [x] Evaluate contains-errors / not-contains-errors runtime rules directly in `CellMatcher` instead of relying on unsupported `ISERROR(...)` engine paths.
+  - [x] Evaluate core time-period runtime rules (`today`, `yesterday`, `tomorrow`, `last7Days`) directly in `CellMatcher` instead of relying on unsupported `TODAY()` expression paths.
+  - [x] Evaluate week/month time-period runtime rules (`lastWeek`, `thisWeek`, `nextWeek`, `lastMonth`, `thisMonth`, `nextMonth`) directly in `CellMatcher`.
   - [ ] Continue conditional-formatting runtime evaluation and assessor parity.
 - [ ] Fix hash code mismatches (Alignment, Color, Fill, NumberFormat, Font).
 - [ ] Align Theme/Color logic and hyperlink theme behavior.
