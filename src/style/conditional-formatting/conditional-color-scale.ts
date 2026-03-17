@@ -95,11 +95,13 @@ export class ConditionalColorScale {
 
     public setScaleArray(): this {
         if (this.#sqref !== null && this.#worksheet !== null) {
-            const values = this.#worksheet.rangeToArray(this.#sqref, null, true, true, true);
             this.#valueArray = [];
-            for (const row of values) {
-                for (const value of Object.values(row)) {
-                    this.#valueArray.push(Number(value));
+            for (const range of this.#sqref.split(',')) {
+                const values = this.#worksheet.rangeToArray(range, null, true, true, true);
+                for (const row of Object.values(values)) {
+                    for (const value of Object.values(row as Record<string, unknown>)) {
+                        this.#valueArray.push(Number(value));
+                    }
                 }
             }
             this.prepareColorScale();
@@ -232,7 +234,7 @@ export class ConditionalColorScale {
         ];
         const [a1, r1, g1, b1] = parse(startArgb);
         const [a2, r2, g2, b2] = parse(endArgb);
-        const mix = (x: number, y: number) => Math.round(y * blendClamped + x * (1 - blendClamped));
+        const mix = (x: number, y: number) => Math.trunc(y * blendClamped + x * (1 - blendClamped));
         const result = [mix(a1, a2), mix(r1, r2), mix(g1, g2), mix(b1, b2)]
             .map((v) => v.toString(16).padStart(2, '0'))
             .join('');

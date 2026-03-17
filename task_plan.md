@@ -62,6 +62,8 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
   - [x] Evaluate contains-errors / not-contains-errors runtime rules directly in `CellMatcher` instead of relying on unsupported `ISERROR(...)` engine paths.
   - [x] Evaluate core time-period runtime rules (`today`, `yesterday`, `tomorrow`, `last7Days`) directly in `CellMatcher` instead of relying on unsupported `TODAY()` expression paths.
   - [x] Evaluate week/month time-period runtime rules (`lastWeek`, `thisWeek`, `nextWeek`, `lastMonth`, `thisMonth`, `nextMonth`) directly in `CellMatcher`.
+  - [x] Make text runtime rules case-insensitive like PhpSpreadsheet/Excel and align color-scale midpoint/sqref handling.
+  - [x] Add data-bar extension model/writer parity for x14/extLst serialization.
   - [ ] Continue conditional-formatting runtime evaluation and assessor parity.
 - [ ] Fix hash code mismatches (Alignment, Color, Fill, NumberFormat, Font).
 - [ ] Align Theme/Color logic and hyperlink theme behavior.

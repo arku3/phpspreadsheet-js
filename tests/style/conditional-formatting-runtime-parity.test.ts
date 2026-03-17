@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 import { Spreadsheet } from '../../src/core/spreadsheet.ts';
+import { Color } from '../../src/style/color.ts';
 import { CellMatcher } from '../../src/style/conditional-formatting/cell-matcher.ts';
 import { CellStyleAssessor } from '../../src/style/conditional-formatting/cell-style-assessor.ts';
+import { ConditionalColorScale } from '../../src/style/conditional-formatting/conditional-color-scale.ts';
+import { ConditionalFormatValueObject } from '../../src/style/conditional-formatting/conditional-format-value-object.ts';
 import { Expression } from '../../src/style/conditional-formatting/wizard/expression.ts';
 import { Conditional } from '../../src/style/conditional.ts';
 
@@ -41,6 +44,9 @@ describe('Conditional Formatting Runtime Parity', () => {
         const sheet = spreadsheet.getActiveSheet();
         sheet.setCellValue('B2', 'foobar');
         sheet.setCellValue('C2', 'bar');
+        sheet.setCellValue('D2', 'FoObAr');
+        sheet.setCellValue('E2', 'FoObAr');
+        sheet.setCellValue('F2', 'FoObAr');
 
         const contains = new Conditional();
         contains.setConditionType(Conditional.CONDITION_CONTAINSTEXT);
@@ -52,8 +58,19 @@ describe('Conditional Formatting Runtime Parity', () => {
         notContains.setText('foo');
         notContains.setConditions(['ISERROR(SEARCH("foo",C2))']);
 
+        const beginsWith = new Conditional();
+        beginsWith.setConditionType(Conditional.CONDITION_BEGINSWITH);
+        beginsWith.setText('foo');
+
+        const endsWith = new Conditional();
+        endsWith.setConditionType(Conditional.CONDITION_ENDSWITH);
+        endsWith.setText('bar');
+
         expect(new CellMatcher(sheet.getCell('B2'), 'B2').evaluateConditional(contains)).toBe(true);
         expect(new CellMatcher(sheet.getCell('C2'), 'C2').evaluateConditional(notContains)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('D2'), 'D2').evaluateConditional(contains)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('E2'), 'E2').evaluateConditional(beginsWith)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('F2'), 'F2').evaluateConditional(endsWith)).toBe(true);
     });
 
     it('should evaluate blank and not-blank conditions directly like PhpSpreadsheet runtime matching', () => {
@@ -265,5 +282,32 @@ describe('Conditional Formatting Runtime Parity', () => {
 
         expect(style.getFont().getBold()).toBe(true);
         expect(style.getFont().getItalic()).toBe(true);
+    });
+
+    it('should use PHP-like truncation and multi-range values for color scales', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', 1);
+        sheet.setCellValue('B3', 3);
+        sheet.setCellValue('D2', 7);
+        sheet.setCellValue('D3', 9);
+
+        const colorScale = new ConditionalColorScale()
+            .setMinimumConditionalFormatValueObject(new ConditionalFormatValueObject('min'))
+            .setMaximumConditionalFormatValueObject(new ConditionalFormatValueObject('max'))
+            .setMinimumColor(new Color('FF000000'))
+            .setMaximumColor(new Color('FFFFFFFF'))
+            .setSqRef('B2:B3,D2:D3', sheet)
+            .setScaleArray();
+
+        expect(colorScale.getColorForValue(5)).toBe('FF7F7F7F');
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_COLORSCALE);
+        conditional.setColorScale(colorScale);
+
+        const assessed = new CellStyleAssessor(sheet.getCell('D2'), 'B2:B3,D2:D3').matchConditions([conditional]);
+        expect(assessed.getFill().getFillType()).toBe('solid');
+        expect(assessed.getFill().getStartColor().getARGB()).toBe('FFBFBFBF');
     });
 });

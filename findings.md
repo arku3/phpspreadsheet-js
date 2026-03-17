@@ -196,7 +196,10 @@
   - Error/not-error runtime rules are now evaluated directly in `CellMatcher` by checking the cell data type and known Excel error literals, avoiding unsupported `ISERROR(...)` engine paths while matching PhpSpreadsheet behavior for error cells.
   - Core time-period runtime rules (`today`, `yesterday`, `tomorrow`, `last7Days`) are now evaluated directly in `CellMatcher` using Excel-day serial comparisons, avoiding unsupported `TODAY()`/date expression engine paths while matching PhpSpreadsheet behavior for those common rule types.
   - Week/month time-period runtime rules are now also evaluated directly in `CellMatcher` using UTC week/month boundaries, covering `lastWeek`, `thisWeek`, `nextWeek`, `lastMonth`, `thisMonth`, and `nextMonth` without relying on unsupported `TODAY()`/`EDATE()` formula evaluation.
-  - Added runtime regression coverage in `tests/style/conditional-formatting-runtime-parity.test.ts` for quoted-literal-safe expression evaluation, direct text/blank/error/time-period rule matching, `stopIfTrue` handling, null-return when no styles match, multi-rule font merging, and numeric `between` evaluation.
+  - Text runtime rules now compare case-insensitively, matching PhpSpreadsheet/Excel formula behavior. `ConditionalColorScale` now truncates channel blending like PHP instead of rounding, and `setScaleArray()` now handles comma-separated sqref unions instead of only a single contiguous range.
+  - Added typed TS models for data-bar rule extensions and x14/extLst worksheet serialization, including extension attributes, cfvo formulas, and extension colors (`borderColor`, `negativeFillColor`, `negativeBorderColor`, `axisColor`).
+  - Added runtime regression coverage in `tests/style/conditional-formatting-runtime-parity.test.ts` for quoted-literal-safe expression evaluation, direct text/blank/error/time-period rule matching, multi-range color scales, `stopIfTrue` handling, null-return when no styles match, multi-rule font merging, and numeric `between` evaluation.
+  - Added writer regression coverage in `tests/io/xlsx/conditional-formatting.test.ts` for x14/extLst data-bar serialization.
 
 ## Phase 3: Calculation Parity Findings
 ### Missing Core Classes / Engine Helpers

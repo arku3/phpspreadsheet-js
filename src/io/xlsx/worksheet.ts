@@ -5,6 +5,7 @@ import { RichText } from '../../rich-text/rich-text.ts';
 import { Run } from '../../rich-text/run.ts';
 import { ConditionalColorScale } from '../../style/conditional-formatting/conditional-color-scale.ts';
 import { ConditionalDataBar } from '../../style/conditional-formatting/conditional-data-bar.ts';
+import { ConditionalFormattingRuleExtension } from '../../style/conditional-formatting/conditional-formatting-rule-extension.ts';
 import { ConditionalIconSet } from '../../style/conditional-formatting/conditional-icon-set.ts';
 import { Conditional } from '../../style/conditional.ts';
 import { Coordinate } from '../../utils/coordinate.ts';
@@ -38,8 +39,10 @@ export class Worksheet extends WriterPart {
             xmlns: 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
             'xmlns:r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
             'xmlns:mc': 'http://schemas.openxmlformats.org/compatibility/2006',
-            'mc:Ignorable': 'x14ac',
+            'mc:Ignorable': 'x14ac x14',
             'xmlns:x14ac': 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac',
+            'xmlns:x14': 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/main',
+            'xmlns:xm': 'http://schemas.microsoft.com/office/excel/2006/main',
         });
 
         // sheetViews
@@ -62,6 +65,9 @@ export class Worksheet extends WriterPart {
 
         // conditionalFormatting
         this.writeConditionalFormatting(root, worksheet);
+
+        // extLst
+        this.writeExtLst(root, worksheet);
 
         // dataValidations
         this.writeDataValidations(root, worksheet);
@@ -873,6 +879,66 @@ export class Worksheet extends WriterPart {
 
         if (dataBar.getColor()) {
             db.ele('color', { rgb: dataBar.getColor() });
+        }
+
+        const extension = dataBar.getConditionalFormattingRuleExt();
+        if (extension) {
+            const extLst = rule.ele('extLst');
+            const ext = extLst.ele('ext', { uri: '{B025F937-C7B1-47D3-B67F-A62EFF666E3E}' });
+            ext.ele('x14:id').txt(extension.getId());
+        }
+    }
+
+    private writeExtLst(root: any, worksheet: CoreWorksheet): void {
+        const extensions: ConditionalFormattingRuleExtension[] = [];
+        for (const styles of worksheet.getConditionalStylesCollection().values()) {
+            for (const conditional of styles) {
+                const extension = conditional.getDataBar()?.getConditionalFormattingRuleExt();
+                if (extension) {
+                    extensions.push(extension);
+                }
+            }
+        }
+
+        if (extensions.length === 0) {
+            return;
+        }
+
+        const extLst = root.ele('extLst');
+        const ext = extLst.ele('ext', { uri: '{78C0D931-6437-407d-A8EE-F0AAD7539E65}' });
+        const conditionalFormattings = ext.ele('x14:conditionalFormattings');
+
+        for (const extension of extensions) {
+            const conditionalFormatting = conditionalFormattings.ele('x14:conditionalFormatting');
+            conditionalFormatting.ele('xm:sqref').txt(extension.getSqref());
+            const cfRule = conditionalFormatting.ele('x14:cfRule', {
+                type: extension.getCfRule(),
+                id: extension.getId(),
+            });
+            const dataBarExtension = extension.getDataBarExt();
+            if (!dataBarExtension) {
+                continue;
+            }
+
+            const dataBar = cfRule.ele('x14:dataBar', dataBarExtension.getXmlAttributes());
+            for (const cfvo of [
+                dataBarExtension.getMinimumConditionalFormatValueObject(),
+                dataBarExtension.getMaximumConditionalFormatValueObject(),
+            ]) {
+                if (!cfvo) {
+                    continue;
+                }
+
+                const cfvoNode = dataBar.ele('x14:cfvo', { type: cfvo.getType() });
+                const formula = cfvo.getCellFormula();
+                if (formula !== null) {
+                    cfvoNode.ele('xm:f').txt(formula);
+                }
+            }
+
+            for (const [name, attrs] of Object.entries(dataBarExtension.getXmlElements())) {
+                dataBar.ele(`x14:${name}`, attrs);
+            }
         }
     }
 

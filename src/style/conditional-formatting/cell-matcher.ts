@@ -151,8 +151,8 @@ export class CellMatcher {
 
     protected processTextCondition(conditional: Conditional): boolean {
         const cellValue = this.cell.getCalculatedValue();
-        const haystack = cellValue == null ? '' : String(cellValue);
-        const needle = this.extractConditionText(conditional);
+        const haystack = (cellValue == null ? '' : String(cellValue)).toLowerCase();
+        const needle = this.extractConditionText(conditional).toLowerCase();
 
         switch (conditional.getConditionType()) {
             case Conditional.CONDITION_CONTAINSTEXT:

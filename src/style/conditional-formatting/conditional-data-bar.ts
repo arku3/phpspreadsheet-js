@@ -1,4 +1,5 @@
 import { ConditionalFormatValueObject } from './conditional-format-value-object.ts';
+import { ConditionalFormattingRuleExtension } from './conditional-formatting-rule-extension.ts';
 
 /**
  * Conditional Data Bar.
@@ -9,9 +10,7 @@ export class ConditionalDataBar {
     #maximumConditionalFormatValueObject: ConditionalFormatValueObject | null = null;
     #color: string = '';
 
-    #conditionalFormattingRuleExt: unknown | null = null;
-
-    // TODO: support for conditionalFormattingRuleExt
+    #conditionalFormattingRuleExt: ConditionalFormattingRuleExtension | null = null;
 
     public getShowValue(): boolean | null {
         return this.#showValue;
@@ -53,11 +52,13 @@ export class ConditionalDataBar {
         return this;
     }
 
-    public getConditionalFormattingRuleExt(): unknown | null {
+    public getConditionalFormattingRuleExt(): ConditionalFormattingRuleExtension | null {
         return this.#conditionalFormattingRuleExt;
     }
 
-    public setConditionalFormattingRuleExt(conditionalFormattingRuleExt: unknown | null): this {
+    public setConditionalFormattingRuleExt(
+        conditionalFormattingRuleExt: ConditionalFormattingRuleExtension | null,
+    ): this {
         this.#conditionalFormattingRuleExt = conditionalFormattingRuleExt;
         return this;
     }
@@ -74,7 +75,7 @@ export class ConditionalDataBar {
             cloned.setMaximumConditionalFormatValueObject(this.#maximumConditionalFormatValueObject.clone());
         }
         cloned.setColor(this.#color);
-        cloned.setConditionalFormattingRuleExt(this.#conditionalFormattingRuleExt);
+        cloned.setConditionalFormattingRuleExt(this.#conditionalFormattingRuleExt?.clone() ?? null);
         return cloned;
     }
 }
