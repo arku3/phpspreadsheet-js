@@ -43,20 +43,29 @@ export class StyleMerger {
         if (underline !== null) {
             baseFontStyle.setUnderline(underline);
         }
-        if (fontStyle.getColor().getARGB() !== null || fontStyle.getColor().getTheme() >= 0) {
+        if (
+            (fontStyle.getColor().getARGB() !== null && fontStyle.getColor().getARGB() !== '') ||
+            fontStyle.getColor().getTheme() >= 0
+        ) {
             baseFontStyle.setColor(fontStyle.getColor());
         }
     }
 
     protected mergeFillStyle(baseFillStyle: Fill, fillStyle: Fill): void {
-        if (fillStyle.getFillType() !== null) {
+        if (fillStyle.getFillType() !== null && fillStyle.getFillType() !== '') {
             baseFillStyle.setFillType(fillStyle.getFillType());
         }
         baseFillStyle.setRotation(fillStyle.getRotation());
-        if (fillStyle.getStartColor().getARGB() !== null || fillStyle.getStartColor().getTheme() >= 0) {
+        if (
+            (fillStyle.getStartColor().getARGB() !== null && fillStyle.getStartColor().getARGB() !== '') ||
+            fillStyle.getStartColor().getTheme() >= 0
+        ) {
             baseFillStyle.setStartColor(fillStyle.getStartColor());
         }
-        if (fillStyle.getEndColor().getARGB() !== null || fillStyle.getEndColor().getTheme() >= 0) {
+        if (
+            (fillStyle.getEndColor().getARGB() !== null && fillStyle.getEndColor().getARGB() !== '') ||
+            fillStyle.getEndColor().getTheme() >= 0
+        ) {
             baseFillStyle.setEndColor(fillStyle.getEndColor());
         }
     }
@@ -72,7 +81,10 @@ export class StyleMerger {
         if (borderStyle.getBorderStyle() !== 'omit') {
             baseBorderStyle.setBorderStyle(borderStyle.getBorderStyle());
         }
-        if (borderStyle.getColor().getARGB() !== null || borderStyle.getColor().getTheme() >= 0) {
+        if (
+            (borderStyle.getColor().getARGB() !== null && borderStyle.getColor().getARGB() !== '') ||
+            borderStyle.getColor().getTheme() >= 0
+        ) {
             baseBorderStyle.setColor(borderStyle.getColor());
         }
     }

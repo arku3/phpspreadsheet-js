@@ -220,4 +220,114 @@ describe('XLSX Worksheet Writer - Conditional Formatting', () => {
         expect(xml).toContain('text="test"');
         expect(xml).toContain('<formula>NOT(ISERROR(SEARCH("test",D1)))</formula>');
     });
+
+    test('writeWorksheet with timePeriod condition formulas', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        const today = new Conditional();
+        today.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        today.setOperatorType(Conditional.TIMEPERIOD_TODAY);
+        today.setText(Conditional.TIMEPERIOD_TODAY);
+
+        const lastWeek = new Conditional();
+        lastWeek.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        lastWeek.setOperatorType(Conditional.TIMEPERIOD_LAST_WEEK);
+        lastWeek.setText(Conditional.TIMEPERIOD_LAST_WEEK);
+
+        const nextMonth = new Conditional();
+        nextMonth.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        nextMonth.setOperatorType(Conditional.TIMEPERIOD_NEXT_MONTH);
+        nextMonth.setText(Conditional.TIMEPERIOD_NEXT_MONTH);
+
+        sheet.setConditionalStyles('B2', [today]);
+        sheet.setConditionalStyles('C3', [lastWeek]);
+        sheet.setConditionalStyles('D:D', [nextMonth]);
+
+        const writer = new XlsxWriter(spreadsheet);
+        const worksheetWriter = new Worksheet(writer);
+        writer.createStyleDictionaries();
+
+        const xml = worksheetWriter.writeWorksheet(sheet, []);
+
+        expect(xml).toContain('<cfRule type="timePeriod"');
+        expect(xml).toContain('timePeriod="today"');
+        expect(xml).toContain('<formula>FLOOR(B2)=TODAY()</formula>');
+        expect(xml).toContain('timePeriod="lastWeek"');
+        expect(xml).toContain(
+            '<formula>AND(TODAY()-ROUNDDOWN(C3,0)&gt;=(WEEKDAY(TODAY())),TODAY()-ROUNDDOWN(C3,0)&lt;(WEEKDAY(TODAY())+7))</formula>',
+        );
+        expect(xml).toContain('timePeriod="nextMonth"');
+        expect(xml).toContain(
+            '<formula>AND(MONTH(D1)=MONTH(EDATE(TODAY(),0+1)),YEAR(D1)=YEAR(EDATE(TODAY(),0+1)))</formula>',
+        );
+    });
+
+    test('writeWorksheet preserves explicit timePeriod formulas', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_TIMEPERIOD);
+        conditional.setOperatorType(Conditional.TIMEPERIOD_THIS_MONTH);
+        conditional.setText(Conditional.TIMEPERIOD_THIS_MONTH);
+        conditional.setConditions(['CUSTOM_THIS_MONTH(A1)']);
+
+        sheet.setConditionalStyles('A1', [conditional]);
+
+        const writer = new XlsxWriter(spreadsheet);
+        const worksheetWriter = new Worksheet(writer);
+        writer.createStyleDictionaries();
+
+        const xml = worksheetWriter.writeWorksheet(sheet, []);
+
+        expect(xml).toContain('timePeriod="thisMonth"');
+        expect(xml).toContain('<formula>CUSTOM_THIS_MONTH(A1)</formula>');
+        expect(xml).not.toContain('<formula>AND(MONTH(A1)=MONTH(TODAY()),YEAR(A1)=YEAR(TODAY()))</formula>');
+    });
+
+    test('writeWorksheet prefixes formula-backed conditional functions like PhpSpreadsheet', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        const expression = new Conditional();
+        expression.setConditionType(Conditional.CONDITION_EXPRESSION);
+        expression.setConditions(['FILTER(A1:A3,A1:A3>0)', 'A1#>0', '_xlfn.LET(x,1,x)']);
+
+        sheet.setConditionalStyles('A1:A3', [expression]);
+
+        const writer = new XlsxWriter(spreadsheet);
+        const worksheetWriter = new Worksheet(writer);
+        writer.createStyleDictionaries();
+
+        const xml = worksheetWriter.writeWorksheet(sheet, []);
+
+        expect(xml).toContain('<formula>_xlfn._xlws.FILTER(A1:A3,A1:A3&gt;0)</formula>');
+        expect(xml).toContain('<formula>_xlfn.ANCHORARRAY(A1)&gt;0</formula>');
+        expect(xml).toContain('<formula>_xlfn.LET(x,1,x)</formula>');
+        expect(xml).not.toContain('<formula>_xlfn._xlfn.LET(x,1,x)</formula>');
+    });
+
+    test('writeWorksheet serializes boolean conditional formulas as TRUE and FALSE', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_CELLIS);
+        conditional.setOperatorType(Conditional.OPERATOR_EQUAL);
+        conditional.setConditions([true, false]);
+
+        sheet.setConditionalStyles('E1', [conditional]);
+
+        const writer = new XlsxWriter(spreadsheet);
+        const worksheetWriter = new Worksheet(writer);
+        writer.createStyleDictionaries();
+
+        const xml = worksheetWriter.writeWorksheet(sheet, []);
+
+        expect(xml).toContain('<formula>TRUE</formula>');
+        expect(xml).toContain('<formula>FALSE</formula>');
+        expect(xml).not.toContain('<formula>true</formula>');
+        expect(xml).not.toContain('<formula>false</formula>');
+    });
 });

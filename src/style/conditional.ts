@@ -96,7 +96,7 @@ export class Conditional {
     #operatorType: string = Conditional.OPERATOR_NONE;
     #text: string = '';
     #stopIfTrue: boolean = false;
-    #conditions: (string | number)[] = [];
+    #conditions: (string | number | boolean)[] = [];
     #style: Style;
     #priority: number = 0;
     #noFormatSet: boolean = false;
@@ -145,11 +145,11 @@ export class Conditional {
         return this;
     }
 
-    public getConditions(): (string | number)[] {
+    public getConditions(): (string | number | boolean)[] {
         return this.#conditions;
     }
 
-    public setConditions(conditions: (string | number)[] | string | number): this {
+    public setConditions(conditions: (string | number | boolean)[] | string | number | boolean): this {
         if (!Array.isArray(conditions)) {
             conditions = [conditions];
         }
@@ -157,7 +157,7 @@ export class Conditional {
         return this;
     }
 
-    public addCondition(condition: string | number): this {
+    public addCondition(condition: string | number | boolean): this {
         this.#conditions.push(condition);
         return this;
     }

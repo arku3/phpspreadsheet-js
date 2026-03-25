@@ -47,7 +47,7 @@ export class StructuredReference {
         }
 
         // 2. Locate Table
-        let table: Table | undefined;
+        let table: Table | null = null;
         if (tableName) {
             table = worksheet.getTableByName(tableName);
             if (!table) {

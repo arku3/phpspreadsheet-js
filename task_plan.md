@@ -19,6 +19,7 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
 
 ## Phase 2: Worksheet Extras Parity
 - [x] Tables: add `Table/Column`, `TableStyle`, `TableDxfsStyle` and align table APIs.
+  - [x] Align worksheet table collection helpers and table column mutator semantics with PhpSpreadsheet.
 - [x] Drawings: add `MemoryDrawing`, `HeaderFooterDrawing` and complete BaseDrawing/Drawing APIs.
 - [x] Charts: add `Layout`, `Properties`, `AxisText` and align chart/axis/data-series/legend/title APIs.
 - [x] AutoFilter/HeaderFooter: align range input types, add image APIs, clone behavior, return types.
@@ -65,10 +66,13 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
   - [x] Make text runtime rules case-insensitive like PhpSpreadsheet/Excel and align color-scale midpoint/sqref handling.
   - [x] Add data-bar extension model/writer parity for x14/extLst serialization.
   - [x] Align icon-set model/writer parity by preserving only explicit cfvos and writing `custom` / `gte` attributes.
+  - [x] Add XLSX writer parity for conditional-formatting `timePeriod` rules, including PHP default formulas and explicit formula override support.
+  - [x] Canonicalize writer formulas for formula-backed conditional rules by prefixing modern Excel functions and serializing boolean conditions as `TRUE` / `FALSE`.
   - [x] Add worksheet conditional-style API parity for in-range lookup, intersection-aware `getConditionalRange`, priority ordering, and `duplicateConditionalStyle`.
   - [x] Treat numeric strings as numeric in conditional color-scale runtime matching and sqref aggregation.
   - [x] Wire `Cell.getAppliedStyle()` through worksheet conditional lookup and `CellStyleAssessor` so applied styles reflect matching conditional rules.
   - [x] Treat numeric-string cell values like PHP `is_numeric` in `CellMatcher` comparisons and duplicate/unique runtime checks.
+  - [x] Add merged applied-style parity for table styles plus first-match conditional overlays via `MergedCellStyle` and worksheet table-style lookup helpers.
   - [ ] Continue conditional-formatting runtime evaluation and assessor parity.
 - [ ] Fix hash code mismatches (Alignment, Color, Fill, NumberFormat, Font).
 - [ ] Align Theme/Color logic and hyperlink theme behavior.
@@ -83,6 +87,8 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
 - [ ] Align IReader/IWriter interfaces with PHP flags and options.
 - [ ] Implement missing reader parts (conditional styles, hyperlinks, theme, shared formula).
 - [ ] Implement missing writer parts (metadata, defined names, richer drawings/comments).
+  - [x] Serialize table-scoped AutoFilter metadata in `xl/tables/tableN.xml`, including hidden buttons and filter rule payloads.
+  - [x] Extend table AutoFilter writer parity for blank, date-group, and dynamic filter payloads in table XML.
 - [ ] Add missing writer options (forceFullCalc, explicitStyle0, restrictMaxColumnWidth) where applicable.
 
 ## Phase 6: Shared/Utils Parity

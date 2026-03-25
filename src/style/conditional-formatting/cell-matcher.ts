@@ -309,7 +309,9 @@ export class CellMatcher {
         return start;
     }
 
-    protected adjustConditionsForCellReferences(conditions: (string | number)[]): (string | number)[] {
+    protected adjustConditionsForCellReferences(
+        conditions: (string | number | boolean)[],
+    ): (string | number | boolean)[] {
         return conditions.map((condition) => {
             if (typeof condition === 'string') {
                 return this.cellConditionCheck(condition);

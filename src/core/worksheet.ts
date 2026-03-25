@@ -1000,8 +1000,10 @@ export class Worksheet {
     /**
      * Add table.
      */
-    public addTable(table: Table): void {
+    public addTable(table: Table): this {
+        table.setWorksheet(this);
         this.#tables.push(table);
+        return this;
     }
 
     /**
@@ -1009,6 +1011,39 @@ export class Worksheet {
      */
     public getTables(): Table[] {
         return this.#tables;
+    }
+
+    public getTableCollection(): Table[] {
+        return this.#tables;
+    }
+
+    public getTablesWithStylesForCell(cell: Cell): Table[] {
+        return this.#tables.filter((table) => {
+            const tableDxfsStyle = table.getStyle().getTableDxfsStyle();
+            return (
+                tableDxfsStyle !== null &&
+                (tableDxfsStyle.getHeaderRowStyle() !== null ||
+                    tableDxfsStyle.getFirstRowStripeStyle() !== null ||
+                    tableDxfsStyle.getSecondRowStripeStyle() !== null) &&
+                cell.isInRange(table.getRange())
+            );
+        });
+    }
+
+    public getTablesWithoutStylesForCell(cell: Cell): Table[] {
+        return this.#tables.filter((table) => {
+            if (!cell.isInRange(table.getRange())) {
+                return false;
+            }
+
+            const tableDxfsStyle = table.getStyle().getTableDxfsStyle();
+            return (
+                tableDxfsStyle === null ||
+                (tableDxfsStyle.getHeaderRowStyle() === null &&
+                    tableDxfsStyle.getFirstRowStripeStyle() === null &&
+                    tableDxfsStyle.getSecondRowStripeStyle() === null)
+            );
+        });
     }
 
     /**
@@ -1198,27 +1233,27 @@ export class Worksheet {
      *
      * @param name Table name
      */
-    public getTableByName(name: string): Table | undefined {
+    public getTableByName(name: string): Table | null {
         const searchName = name.toUpperCase();
-        return this.#tables.find((table) => table.getName().toUpperCase() === searchName);
+        return this.#tables.find((table) => table.getName().toUpperCase() === searchName) ?? null;
     }
 
     public getTableNames(): string[] {
         return this.#tables.map((table) => table.getName());
     }
 
-    public removeTableByName(name: string): boolean {
+    public removeTableByName(name: string): this {
         const searchName = name.toUpperCase();
         const index = this.#tables.findIndex((table) => table.getName().toUpperCase() === searchName);
-        if (index === -1) {
-            return false;
+        if (index !== -1) {
+            this.#tables.splice(index, 1);
         }
-        this.#tables.splice(index, 1);
-        return true;
+        return this;
     }
 
-    public removeTableCollection(): void {
+    public removeTableCollection(): this {
         this.#tables = [];
+        return this;
     }
 
     public refreshColumnDimensions(): this {

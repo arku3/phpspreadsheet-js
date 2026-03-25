@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Spreadsheet } from '../../src/core/spreadsheet.ts';
 import { TableStyle } from '../../src/worksheet/table-style.ts';
-import { Table } from '../../src/worksheet/table.ts';
+import { Table, TableColumn } from '../../src/worksheet/table.ts';
 
 describe('Table', () => {
     test('setName validates and enforces uniqueness', () => {
@@ -48,5 +48,50 @@ describe('Table', () => {
         expect(table.getStyle().getShowColumnStripes()).toBe(true);
         expect(table.getStyle().getShowFirstColumn()).toBe(true);
         expect(table.getStyle().getShowLastColumn()).toBe(true);
+    });
+
+    test('worksheet table collection helpers match PhpSpreadsheet semantics', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        const first = new Table('A1:B2', 'FirstTable', sheet);
+        const second = new Table('D1:E2', 'SecondTable', sheet);
+        sheet.addTable(first).addTable(second);
+
+        expect(sheet.getTableCollection()).toEqual([first, second]);
+        expect(sheet.getTableNames()).toEqual(['FirstTable', 'SecondTable']);
+        expect(sheet.getTableByName('firsttable')).toBe(first);
+
+        const removed = sheet.removeTableByName('SECONDTABLE');
+        expect(removed).toBe(sheet);
+        expect(sheet.getTableByName('SecondTable')).toBeNull();
+        expect(sheet.getTableNames()).toEqual(['FirstTable']);
+
+        const cleared = sheet.removeTableCollection();
+        expect(cleared).toBe(sheet);
+        expect(sheet.getTableCollection()).toEqual([]);
+    });
+
+    test('table column mutators follow PhpSpreadsheet behavior', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        const table = new Table('A1:C3', 'Table1', sheet);
+
+        table.setColumn('B');
+        expect(table.getColumn('B').getTable()).toBe(table);
+
+        const columnA = new TableColumn('A');
+        columnA.setName('Alpha');
+        table.setColumn(columnA);
+
+        expect(table.getColumn('A')).toBe(columnA);
+        expect(Array.from(table.getColumns().keys())).toEqual(['A', 'B']);
+
+        expect(() => table.clearColumn('C')).not.toThrow();
+        expect(() => table.shiftColumn('Z', 'A')).not.toThrow();
+
+        table.shiftColumn('A', 'C');
+        expect(table.getColumn('C')).toBe(columnA);
+        expect(columnA.getTable()).toBe(table);
     });
 });

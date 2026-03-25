@@ -12,6 +12,7 @@ import { Coordinate } from '../../utils/coordinate.ts';
 import { AutoFilter } from '../../worksheet/auto-filter.ts';
 import { Column as AutoFilterColumn } from '../../worksheet/auto-filter/column.ts';
 import { Rule as AutoFilterRule } from '../../worksheet/auto-filter/column/rule.ts';
+import { FunctionPrefix } from './function-prefix.ts';
 import { WriterPart } from './writer-part.ts';
 
 /**
@@ -667,7 +668,7 @@ export class Worksheet extends WriterPart {
             const cellRange = Coordinate.splitRange(cellCoordinate.replace(/\$/g, '').toUpperCase());
             const firstRange = cellRange[0];
             const firstPair = firstRange ? firstRange[0] : undefined;
-            const topLeftCell = Worksheet.normalizeConditionalTopLeftCell(firstPair?.[0] ?? 'A1');
+            const topLeftCell = Worksheet.normalizeConditionalTopLeftCell(firstPair ?? 'A1');
 
             for (const conditional of styles) {
                 const type = conditional.getConditionType();
@@ -714,6 +715,8 @@ export class Worksheet extends WriterPart {
                     type === Conditional.CONDITION_ENDSWITH
                 ) {
                     this.writeTextCondElements(rule, conditional, topLeftCell);
+                } else if (type === Conditional.CONDITION_TIMEPERIOD) {
+                    this.writeTimePeriodCondElements(rule, conditional, topLeftCell);
                 } else if (type === Conditional.CONDITION_COLORSCALE) {
                     this.writeColorScaleElements(rule, conditional.getColorScale());
                 } else if (type === Conditional.CONDITION_DATABAR) {
@@ -748,6 +751,48 @@ export class Worksheet extends WriterPart {
                     rule.ele('formula').txt(String(condition));
                 }
             }
+        }
+    }
+
+    private writeTimePeriodCondElements(rule: any, conditional: Conditional, topLeftCell: string): void {
+        const txt = conditional.getText();
+        if (!txt) {
+            return;
+        }
+
+        rule.att('timePeriod', txt);
+
+        const conditions = conditional.getConditions();
+        if (conditions.length > 0) {
+            rule.ele('formula').txt(String(conditions[0]));
+            return;
+        }
+
+        let formula: string | null = null;
+        if (conditional.getOperatorType() === Conditional.TIMEPERIOD_TODAY) {
+            formula = `FLOOR(${topLeftCell})=TODAY()`;
+        } else if (conditional.getOperatorType() === Conditional.TIMEPERIOD_TOMORROW) {
+            formula = `FLOOR(${topLeftCell})=TODAY()+1`;
+        } else if (conditional.getOperatorType() === Conditional.TIMEPERIOD_YESTERDAY) {
+            formula = `FLOOR(${topLeftCell})=TODAY()-1`;
+        } else if (conditional.getOperatorType() === Conditional.TIMEPERIOD_LAST_7_DAYS) {
+            formula = `AND(TODAY()-FLOOR(${topLeftCell},1)<=6,FLOOR(${topLeftCell},1)<=TODAY())`;
+        } else if (conditional.getOperatorType() === Conditional.TIMEPERIOD_LAST_WEEK) {
+            formula = `AND(TODAY()-ROUNDDOWN(${topLeftCell},0)>=(WEEKDAY(TODAY())),TODAY()-ROUNDDOWN(${topLeftCell},0)<(WEEKDAY(TODAY())+7))`;
+        } else if (conditional.getOperatorType() === Conditional.TIMEPERIOD_THIS_WEEK) {
+            formula = `AND(TODAY()-ROUNDDOWN(${topLeftCell},0)<=WEEKDAY(TODAY())-1,ROUNDDOWN(${topLeftCell},0)-TODAY()<=7-WEEKDAY(TODAY()))`;
+        } else if (conditional.getOperatorType() === Conditional.TIMEPERIOD_NEXT_WEEK) {
+            formula = `AND(ROUNDDOWN(${topLeftCell},0)-TODAY()>(7-WEEKDAY(TODAY())),ROUNDDOWN(${topLeftCell},0)-TODAY()<(15-WEEKDAY(TODAY())))`;
+        } else if (conditional.getOperatorType() === Conditional.TIMEPERIOD_LAST_MONTH) {
+            formula = `AND(MONTH(${topLeftCell})=MONTH(EDATE(TODAY(),0-1)),YEAR(${topLeftCell})=YEAR(EDATE(TODAY(),0-1)))`;
+        } else if (conditional.getOperatorType() === Conditional.TIMEPERIOD_THIS_MONTH) {
+            formula = `AND(MONTH(${topLeftCell})=MONTH(TODAY()),YEAR(${topLeftCell})=YEAR(TODAY()))`;
+        } else if (conditional.getOperatorType() === Conditional.TIMEPERIOD_NEXT_MONTH) {
+            formula = `AND(MONTH(${topLeftCell})=MONTH(EDATE(TODAY(),0+1)),YEAR(${topLeftCell})=YEAR(EDATE(TODAY(),0+1)))`;
+        }
+
+        if (formula !== null) {
+            rule.ele('formula').txt(formula);
         }
     }
 
@@ -959,9 +1004,15 @@ export class Worksheet extends WriterPart {
 
     private writeOtherCondElements(rule: any, conditional: Conditional, topLeftCell: string): void {
         const conditions = conditional.getConditions();
-        if (conditions.length > 0) {
+        if (
+            conditional.getConditionType() === Conditional.CONDITION_CELLIS ||
+            conditional.getConditionType() === Conditional.CONDITION_EXPRESSION ||
+            conditions.length > 0
+        ) {
             for (const condition of conditions) {
-                rule.ele('formula').txt(String(condition));
+                const normalizedCondition =
+                    typeof condition === 'boolean' ? (condition ? 'TRUE' : 'FALSE') : String(condition);
+                rule.ele('formula').txt(FunctionPrefix.addFunctionPrefix(normalizedCondition));
             }
         } else {
             const type = conditional.getConditionType();

@@ -336,21 +336,33 @@ export class Table {
         return this.getColumn(columnIndex);
     }
 
-    public setColumn(columnName: string, column: TableColumn): this {
-        const normalized = columnName.toUpperCase();
-        this.isColumnInRange(normalized);
-        column.setTable(this);
-        column.setColumnIndex(normalized);
-        this.#columns.set(normalized, column);
+    public setColumn(columnObjectOrString: TableColumn | string): this {
+        let column: string;
+
+        if (typeof columnObjectOrString === 'string' && columnObjectOrString !== '') {
+            column = columnObjectOrString.toUpperCase();
+        } else if (columnObjectOrString instanceof TableColumn) {
+            column = columnObjectOrString.getColumnIndex().toUpperCase();
+        } else {
+            throw new Error('Column is not within the table range.');
+        }
+
+        this.isColumnInRange(column);
+
+        if (typeof columnObjectOrString === 'string') {
+            this.#columns.set(column, new TableColumn(column, this));
+        } else {
+            columnObjectOrString.setTable(this);
+            this.#columns.set(column, columnObjectOrString);
+        }
+
         this.sortColumns();
         return this;
     }
 
     public clearColumn(columnName: string): this {
         const normalized = columnName.toUpperCase();
-        if (!this.#columns.has(normalized)) {
-            throw new Error(`Column ${columnName} is not in table.`);
-        }
+        this.isColumnInRange(normalized);
         this.#columns.delete(normalized);
         return this;
     }
@@ -359,14 +371,15 @@ export class Table {
         const normalized = columnName.toUpperCase();
         const to = newColumn.toUpperCase();
         const column = this.#columns.get(normalized);
-        if (!column) {
-            throw new Error(`Column ${columnName} is not in table.`);
+        if (column) {
+            column.setTable(null);
+            column.setColumnIndex(to);
+            this.#columns.set(to, column);
+            column.setTable(this);
+            this.#columns.delete(normalized);
+
+            this.sortColumns();
         }
-        this.isColumnInRange(to);
-        this.#columns.delete(normalized);
-        column.setColumnIndex(to);
-        this.#columns.set(to, column);
-        this.sortColumns();
         return this;
     }
 
