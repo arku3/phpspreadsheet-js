@@ -4,6 +4,19 @@ import { Coordinate } from '../../utils/coordinate.ts';
 import { Conditional } from '../conditional.ts';
 
 export class CellMatcher {
+    protected static isNumericValue(value: unknown): boolean {
+        if (typeof value === 'number') {
+            return Number.isFinite(value);
+        }
+
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            return trimmed !== '' && Number.isFinite(Number(trimmed));
+        }
+
+        return false;
+    }
+
     public static readonly COMPARISON_OPERATORS: Record<string, string> = {
         [Conditional.OPERATOR_EQUAL]: '=',
         [Conditional.OPERATOR_GREATERTHAN]: '>',
@@ -95,11 +108,13 @@ export class CellMatcher {
             return false;
         }
         const value = this.cell.getCalculatedValue();
-        return typeof value === 'number' && Number.isFinite(value);
+        return CellMatcher.isNumericValue(value);
     }
 
     protected wrapValue(value: any): string | number {
-        if (typeof value === 'number') return value;
+        if (CellMatcher.isNumericValue(value)) {
+            return typeof value === 'number' ? value : String(value).trim();
+        }
         if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE';
         if (value === null) return 'NULL';
         return '"' + String(value).replace(/"/g, '""') + '"';
@@ -144,7 +159,7 @@ export class CellMatcher {
         const expression = `=${CellMatcher.COMPARISON_DUPLICATES_OPERATORS[conditional.getConditionType()]}`
             .replace('%s', worksheetName)
             .replace('%s', this.conditionalRange)
-            .replace('%s', String(this.wrapValue(this.cell.getCalculatedValue())));
+            .replace('%s', this.cellConditionCheck(this.cell.getCalculatedValueString()));
 
         return this.evaluateExpression(expression);
     }

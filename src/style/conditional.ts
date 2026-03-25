@@ -8,6 +8,19 @@ import { Style } from './style.ts';
  * Conditional style.
  */
 export class Conditional {
+    static #isNumericValue(value: unknown): boolean {
+        if (typeof value === 'number') {
+            return Number.isFinite(value);
+        }
+
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            return trimmed !== '' && Number.isFinite(Number(trimmed));
+        }
+
+        return false;
+    }
+
     // Condition types
     public static readonly CONDITION_NONE = 'none';
     public static readonly CONDITION_BEGINSWITH = 'beginsWith';
@@ -154,11 +167,14 @@ export class Conditional {
             this.#conditionType === Conditional.CONDITION_COLORSCALE &&
             this.#colorScale &&
             this.#colorScale.colorScaleReadyForUse() &&
-            typeof cellData === 'number'
+            Conditional.#isNumericValue(cellData)
         ) {
             const style = new Style(false, true);
             style.getFill().setFillType('solid');
-            style.getFill().getStartColor().setARGB(this.#colorScale.getColorForValue(cellData));
+            style
+                .getFill()
+                .getStartColor()
+                .setARGB(this.#colorScale.getColorForValue(Number(cellData)));
             return style;
         }
         return this.#style;

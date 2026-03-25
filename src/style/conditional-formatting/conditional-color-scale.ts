@@ -6,6 +6,28 @@ import { ConditionalFormatValueObject } from './conditional-format-value-object.
  * Conditional Color Scale.
  */
 export class ConditionalColorScale {
+    static #coerceNumericValue(value: unknown): number {
+        if (typeof value === 'number') {
+            return Number.isFinite(value) ? value : 0;
+        }
+
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed === '') {
+                return 0;
+            }
+
+            const numeric = Number(trimmed);
+            return Number.isFinite(numeric) ? numeric : 0;
+        }
+
+        if (typeof value === 'boolean') {
+            return value ? 1 : 0;
+        }
+
+        return 0;
+    }
+
     #minimumConditionalFormatValueObject: ConditionalFormatValueObject | null = null;
     #midpointConditionalFormatValueObject: ConditionalFormatValueObject | null = null;
     #maximumConditionalFormatValueObject: ConditionalFormatValueObject | null = null;
@@ -100,7 +122,7 @@ export class ConditionalColorScale {
                 const values = this.#worksheet.rangeToArray(range, null, true, true, true);
                 for (const row of Object.values(values)) {
                     for (const value of Object.values(row as Record<string, unknown>)) {
-                        this.#valueArray.push(Number(value));
+                        this.#valueArray.push(ConditionalColorScale.#coerceNumericValue(value));
                     }
                 }
             }

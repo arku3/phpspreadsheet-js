@@ -310,4 +310,201 @@ describe('Conditional Formatting Runtime Parity', () => {
         expect(assessed.getFill().getFillType()).toBe('solid');
         expect(assessed.getFill().getStartColor().getARGB()).toBe('FFBFBFBF');
     });
+
+    it('should treat numeric strings as numeric for color-scale runtime matching', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValueExplicit('B2', '7');
+        sheet.setCellValue('B3', 3);
+        sheet.setCellValue('B4', 9);
+
+        const colorScale = new ConditionalColorScale()
+            .setMinimumConditionalFormatValueObject(new ConditionalFormatValueObject('min'))
+            .setMaximumConditionalFormatValueObject(new ConditionalFormatValueObject('max'))
+            .setMinimumColor(new Color('FF000000'))
+            .setMaximumColor(new Color('FFFFFFFF'))
+            .setSqRef('B2:B4', sheet)
+            .setScaleArray();
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_COLORSCALE);
+        conditional.setColorScale(colorScale);
+
+        expect(new CellMatcher(sheet.getCell('B2'), 'B2:B4').evaluateConditional(conditional)).toBe(true);
+
+        const assessed = new CellStyleAssessor(sheet.getCell('B2'), 'B2:B4').matchConditions([conditional]);
+        expect(assessed.getFill().getFillType()).toBe('solid');
+        expect(assessed.getFill().getStartColor().getARGB()).toBe('FFA9A9A9');
+    });
+
+    it('should treat explicit numeric strings as numeric for cellIs comparisons', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValueExplicit('B2', '7');
+        sheet.setCellValueExplicit('C2', '10');
+
+        const equal = new Conditional();
+        equal.setConditionType(Conditional.CONDITION_CELLIS);
+        equal.setOperatorType(Conditional.OPERATOR_EQUAL);
+        equal.setConditions([7]);
+
+        const between = new Conditional();
+        between.setConditionType(Conditional.CONDITION_CELLIS);
+        between.setOperatorType(Conditional.OPERATOR_BETWEEN);
+        between.setConditions([5, 15]);
+
+        expect(new CellMatcher(sheet.getCell('B2'), 'B2').evaluateConditional(equal)).toBe(true);
+        expect(new CellMatcher(sheet.getCell('C2'), 'C2').evaluateConditional(between)).toBe(true);
+    });
+
+    it('should match duplicate and unique rules with mixed numeric and numeric-string values', () => {
+        const spreadsheet = new Spreadsheet();
+        const duplicateSheet = spreadsheet.getActiveSheet();
+        duplicateSheet.setCellValueExplicit('B2', '7');
+        duplicateSheet.setCellValue('B3', 7);
+
+        const duplicate = new Conditional();
+        duplicate.setConditionType(Conditional.CONDITION_DUPLICATES);
+
+        expect(new CellMatcher(duplicateSheet.getCell('B2'), 'B2:B3').evaluateConditional(duplicate)).toBe(true);
+        expect(new CellMatcher(duplicateSheet.getCell('B3'), 'B2:B3').evaluateConditional(duplicate)).toBe(true);
+
+        const uniqueSheet = spreadsheet.createSheet();
+        uniqueSheet.setCellValueExplicit('B2', '7');
+        uniqueSheet.setCellValue('B3', 8);
+
+        const unique = new Conditional();
+        unique.setConditionType(Conditional.CONDITION_UNIQUE);
+
+        expect(new CellMatcher(uniqueSheet.getCell('B2'), 'B2:B3').evaluateConditional(unique)).toBe(true);
+        expect(new CellMatcher(uniqueSheet.getCell('B3'), 'B2:B3').evaluateConditional(unique)).toBe(true);
+    });
+
+    it('should coerce mixed color-scale sqref values like PhpSpreadsheet instead of producing NaN', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValueExplicit('B2', '7');
+        sheet.setCellValue('B3', 'text');
+        sheet.setCellValue('B4', 9);
+
+        const colorScale = new ConditionalColorScale()
+            .setMinimumConditionalFormatValueObject(new ConditionalFormatValueObject('min'))
+            .setMaximumConditionalFormatValueObject(new ConditionalFormatValueObject('max'))
+            .setMinimumColor(new Color('FF000000'))
+            .setMaximumColor(new Color('FFFFFFFF'))
+            .setSqRef('B2:B4', sheet)
+            .setScaleArray();
+
+        expect(colorScale.getColorForValue(7)).toBe('FFC6C6C6');
+        expect(colorScale.getColorForValue(9)).toBe('FFFFFFFF');
+    });
+
+    it('should return the base style when no conditional styles apply through getAppliedStyle', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.getCell('B2').getStyle().getFont().setBold(true);
+
+        expect(sheet.getCell('B2').getAppliedStyle().getFont().getBold()).toBe(true);
+    });
+
+    it('should apply matching conditional styles through Cell.getAppliedStyle', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', 10);
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_CELLIS);
+        conditional.setOperatorType(Conditional.OPERATOR_EQUAL);
+        conditional.setConditions([10]);
+        conditional.getStyle().getFont().setBold(true);
+
+        sheet.setConditionalStyles('B2', [conditional]);
+
+        expect(sheet.getCell('B2').getAppliedStyle().getFont().getBold()).toBe(true);
+    });
+
+    it('should apply numeric-string cellIs rules through Cell.getAppliedStyle', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValueExplicit('B2', '7');
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_CELLIS);
+        conditional.setOperatorType(Conditional.OPERATOR_EQUAL);
+        conditional.setConditions([7]);
+        conditional.getStyle().getFont().setBold(true);
+
+        sheet.setConditionalStyles('B2', [conditional]);
+
+        expect(sheet.getCell('B2').getAppliedStyle().getFont().getBold()).toBe(true);
+    });
+
+    it('should respect stopIfTrue when applying conditional styles through Cell.getAppliedStyle', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('B2', 10);
+
+        const first = new Conditional();
+        first.setConditionType(Conditional.CONDITION_CELLIS);
+        first.setOperatorType(Conditional.OPERATOR_EQUAL);
+        first.setConditions([10]);
+        first.setStopIfTrue(true);
+        first.getStyle().getFont().setBold(true);
+
+        const second = new Conditional();
+        second.setConditionType(Conditional.CONDITION_CELLIS);
+        second.setOperatorType(Conditional.OPERATOR_EQUAL);
+        second.setConditions([10]);
+        second.getStyle().getFont().setItalic(true);
+
+        sheet.setConditionalStyles('B2', [first, second]);
+
+        const applied = sheet.getCell('B2').getAppliedStyle();
+        expect(applied.getFont().getBold()).toBe(true);
+        expect(applied.getFont().getItalic()).not.toBe(true);
+    });
+
+    it('should apply color-scale fills for numeric-string cells through Cell.getAppliedStyle', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValueExplicit('B2', '7');
+        sheet.setCellValue('B3', 3);
+        sheet.setCellValue('B4', 9);
+
+        const colorScale = new ConditionalColorScale()
+            .setMinimumConditionalFormatValueObject(new ConditionalFormatValueObject('min'))
+            .setMaximumConditionalFormatValueObject(new ConditionalFormatValueObject('max'))
+            .setMinimumColor(new Color('FF000000'))
+            .setMaximumColor(new Color('FFFFFFFF'))
+            .setSqRef('B2:B4', sheet)
+            .setScaleArray();
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_COLORSCALE);
+        conditional.setColorScale(colorScale);
+
+        sheet.setConditionalStyles('B2:B4', [conditional]);
+
+        const applied = sheet.getCell('B2').getAppliedStyle();
+        expect(applied.getFill().getFillType()).toBe('solid');
+        expect(applied.getFill().getStartColor().getARGB()).toBe('FFA9A9A9');
+    });
+
+    it('should honor worksheet conditional range semantics through Cell.getAppliedStyle', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setCellValue('A2', 2);
+        sheet.setCellValue('B2', 2);
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_CELLIS);
+        conditional.setOperatorType(Conditional.OPERATOR_EQUAL);
+        conditional.setConditions([2]);
+        conditional.getStyle().getFont().setBold(true);
+
+        sheet.setConditionalStyles('A1:C3 B1:B3', [conditional]);
+
+        expect(sheet.getCell('A2').getAppliedStyle().getFont().getBold()).not.toBe(true);
+        expect(sheet.getCell('B2').getAppliedStyle().getFont().getBold()).toBe(true);
+    });
 });

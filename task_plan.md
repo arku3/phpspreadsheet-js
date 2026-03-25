@@ -64,6 +64,11 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
   - [x] Evaluate week/month time-period runtime rules (`lastWeek`, `thisWeek`, `nextWeek`, `lastMonth`, `thisMonth`, `nextMonth`) directly in `CellMatcher`.
   - [x] Make text runtime rules case-insensitive like PhpSpreadsheet/Excel and align color-scale midpoint/sqref handling.
   - [x] Add data-bar extension model/writer parity for x14/extLst serialization.
+  - [x] Align icon-set model/writer parity by preserving only explicit cfvos and writing `custom` / `gte` attributes.
+  - [x] Add worksheet conditional-style API parity for in-range lookup, intersection-aware `getConditionalRange`, priority ordering, and `duplicateConditionalStyle`.
+  - [x] Treat numeric strings as numeric in conditional color-scale runtime matching and sqref aggregation.
+  - [x] Wire `Cell.getAppliedStyle()` through worksheet conditional lookup and `CellStyleAssessor` so applied styles reflect matching conditional rules.
+  - [x] Treat numeric-string cell values like PHP `is_numeric` in `CellMatcher` comparisons and duplicate/unique runtime checks.
   - [ ] Continue conditional-formatting runtime evaluation and assessor parity.
 - [ ] Fix hash code mismatches (Alignment, Color, Fill, NumberFormat, Font).
 - [ ] Align Theme/Color logic and hyperlink theme behavior.

@@ -140,6 +140,11 @@ describe('XLSX Worksheet Writer - Conditional Formatting', () => {
 
         const iconSet = new ConditionalIconSet();
         iconSet.setIconSetType(IconSetValues.ThreeArrows);
+        iconSet.setCfvos([
+            new ConditionalFormatValueObject('percent', 0),
+            new ConditionalFormatValueObject('percent', 33),
+            new ConditionalFormatValueObject('percent', 67),
+        ]);
         conditional.setIconSet(iconSet);
 
         sheet.setConditionalStyles('C1:C10', [conditional]);
@@ -157,6 +162,39 @@ describe('XLSX Worksheet Writer - Conditional Formatting', () => {
         expect(xml).toContain('<cfvo type="percent" val="0"/>');
         expect(xml).toContain('<cfvo type="percent" val="33"/>');
         expect(xml).toContain('<cfvo type="percent" val="67"/>');
+    });
+
+    test('writeWorksheet with custom IconSet attributes and explicit gte values', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+
+        const conditional = new Conditional();
+        conditional.setConditionType(Conditional.CONDITION_ICONSET);
+
+        const iconSet = new ConditionalIconSet();
+        iconSet.setIconSetType(IconSetValues.ThreeArrows);
+        iconSet.setReverse(true);
+        iconSet.setShowValue(false);
+        iconSet.setCustom(true);
+        iconSet.setCfvos([
+            new ConditionalFormatValueObject('percent', 0).setGreaterThanOrEqual(true),
+            new ConditionalFormatValueObject('num', 10).setGreaterThanOrEqual(false),
+            new ConditionalFormatValueObject('percentile', 90).setGreaterThanOrEqual(true),
+        ]);
+        conditional.setIconSet(iconSet);
+
+        sheet.setConditionalStyles('C1:C10', [conditional]);
+
+        const writer = new XlsxWriter(spreadsheet);
+        const worksheetWriter = new Worksheet(writer);
+        writer.createStyleDictionaries();
+
+        const xml = worksheetWriter.writeWorksheet(sheet, []);
+
+        expect(xml).toContain('<iconSet iconSet="3Arrows" reverse="1" showValue="0" custom="1">');
+        expect(xml).toContain('<cfvo type="percent" val="0" gte="1"/>');
+        expect(xml).toContain('<cfvo type="num" val="10" gte="0"/>');
+        expect(xml).toContain('<cfvo type="percentile" val="90" gte="1"/>');
     });
 
     test('writeWorksheet with Text Condition', () => {

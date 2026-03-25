@@ -948,6 +948,7 @@ export class Worksheet extends WriterPart {
         if (iconSet.getIconSetType()) is.att('iconSet', iconSet.getIconSetType());
         if (iconSet.getReverse() !== null) is.att('reverse', iconSet.getReverse() ? '1' : '0');
         if (iconSet.getShowValue() !== null) is.att('showValue', iconSet.getShowValue() ? '1' : '0');
+        if (iconSet.getCustom() !== null) is.att('custom', iconSet.getCustom() ? '1' : '0');
 
         for (const cfvoObj of iconSet.getCfvos()) {
             const cfvo = is.ele('cfvo', { type: cfvoObj.getType() });

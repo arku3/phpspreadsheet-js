@@ -1838,13 +1838,102 @@ export class Worksheet {
         return this;
     }
 
+    static #conditionalPriorityComparator(condA: Conditional, condB: Conditional): number {
+        const a = condA.getPriority();
+        const b = condB.getPriority();
+
+        if (a === b) {
+            return 0;
+        }
+        if (a === 0) {
+            return 1;
+        }
+        if (b === 0) {
+            return -1;
+        }
+
+        return a < b ? -1 : 1;
+    }
+
+    static #coordinateIsInsideRange(range: string, coordinate: string): boolean {
+        const [[startCol, startRow], [endCol, endRow]] = Coordinate.rangeBoundaries(range);
+        const [[cellCol, cellRow]] = Coordinate.rangeBoundaries(coordinate);
+
+        const minCol = Math.min(startCol, endCol);
+        const maxCol = Math.max(startCol, endCol);
+        const minRow = Math.min(startRow, endRow);
+        const maxRow = Math.max(startRow, endRow);
+
+        return cellCol >= minCol && cellCol <= maxCol && cellRow >= minRow && cellRow <= maxRow;
+    }
+
     /**
      * Get conditional styles.
      *
      * @param range Range (e.g. 'A1:A10')
      */
-    public getConditionalStyles(range: string): Conditional[] {
-        return this.#conditionalStylesCollection.get(range.toUpperCase()) ?? [];
+    public getConditionalStyles(range: string, firstOnly: boolean = true): Conditional[] {
+        const coordinate = range.toUpperCase();
+        if (/[: ,]/.test(coordinate)) {
+            return this.#conditionalStylesCollection.get(coordinate) ?? [];
+        }
+
+        const conditionalStyles = new Map<string, Conditional[]>();
+        for (const [keyStylesOrig, conditionalRange] of this.#conditionalStylesCollection.entries()) {
+            const keyStyles = Coordinate.resolveUnionAndIntersection(keyStylesOrig);
+            const keyParts = keyStyles.split(',');
+            for (const keyPartRaw of keyParts) {
+                const keyPart = keyPartRaw.trim();
+                if (keyPart === '') {
+                    continue;
+                }
+
+                if (keyPart === coordinate) {
+                    if (firstOnly) {
+                        return conditionalRange;
+                    }
+                    conditionalStyles.set(keyStylesOrig, conditionalRange);
+                    break;
+                }
+
+                if (keyPart.includes(':') && Worksheet.#coordinateIsInsideRange(keyPart, coordinate)) {
+                    if (firstOnly) {
+                        return conditionalRange;
+                    }
+                    conditionalStyles.set(keyStylesOrig, conditionalRange);
+                    break;
+                }
+            }
+        }
+
+        const outArray = [...conditionalStyles.values()].flat();
+        outArray.sort(Worksheet.#conditionalPriorityComparator);
+
+        return outArray;
+    }
+
+    public getConditionalRange(coordinate: string): string | null {
+        const cellCoordinate = coordinate.toUpperCase();
+        for (const conditionalRange of this.#conditionalStylesCollection.keys()) {
+            const cellBlocks = Coordinate.resolveUnionAndIntersection(conditionalRange).split(',');
+            for (const cellBlockRaw of cellBlocks) {
+                const cellBlock = cellBlockRaw.trim();
+                if (cellBlock !== '' && Worksheet.#coordinateIsInsideRange(cellBlock, cellCoordinate)) {
+                    return conditionalRange;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public conditionalStylesExists(coordinate: string): boolean {
+        return this.getConditionalStyles(coordinate).length > 0;
+    }
+
+    public removeConditionalStyles(coordinate: string): this {
+        this.#conditionalStylesCollection.delete(coordinate.toUpperCase());
+        return this;
     }
 
     /**
@@ -1936,6 +2025,32 @@ export class Worksheet {
         const styles = this.getConditionalStyles(range);
         styles.push(style);
         this.setConditionalStyles(range, styles);
+        return this;
+    }
+
+    public duplicateConditionalStyle(styles: Conditional[], range: string = ''): this {
+        for (const cellStyle of styles) {
+            if (!(cellStyle instanceof Conditional)) {
+                throw new Error('Style is not a conditional style');
+            }
+        }
+
+        if (range === '') {
+            return this;
+        }
+
+        const [[startCol, startRow], [endCol, endRow]] = Coordinate.rangeBoundaries(`${range}:${range}`);
+        const minCol = Math.min(startCol, endCol);
+        const maxCol = Math.max(startCol, endCol);
+        const minRow = Math.min(startRow, endRow);
+        const maxRow = Math.max(startRow, endRow);
+
+        for (let col = minCol; col <= maxCol; ++col) {
+            for (let row = minRow; row <= maxRow; ++row) {
+                this.setConditionalStyles(`${Coordinate.stringFromColumnIndex(col)}${row}`, styles);
+            }
+        }
+
         return this;
     }
 

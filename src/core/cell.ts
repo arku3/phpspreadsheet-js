@@ -1,5 +1,6 @@
 import { isError } from '../calculation/calculation-errors.ts';
 import { convertIsoDate } from '../shared/date.ts';
+import { CellStyleAssessor } from '../style/conditional-formatting/cell-style-assessor.ts';
 import { Protection } from '../style/protection.ts';
 import { Style } from '../style/style.ts';
 import { Coordinate } from '../utils/coordinate.ts';
@@ -501,7 +502,20 @@ export class Cell {
     }
 
     public getAppliedStyle(): Style {
-        return this.getStyle();
+        const worksheet = this.getWorksheet();
+        const coordinate = this.getCoordinate();
+
+        if (worksheet.conditionalStylesExists(coordinate) === false) {
+            return this.getStyle();
+        }
+
+        const range = worksheet.getConditionalRange(coordinate);
+        if (range === null) {
+            return this.getStyle();
+        }
+
+        const matcher = new CellStyleAssessor(this, range);
+        return matcher.matchConditions(worksheet.getConditionalStyles(coordinate));
     }
 
     public rebindParent(worksheet: Worksheet): this {

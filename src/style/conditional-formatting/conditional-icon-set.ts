@@ -22,38 +22,12 @@ export class ConditionalIconSet {
     /** @var ConditionalFormatValueObject[] */
     #cfvos: ConditionalFormatValueObject[] = [];
 
-    /** True if cfvos were auto-generated defaults for the current icon set type. */
-    #cfvosAuto: boolean = false;
-
-    #ensureDefaultCfvos(): void {
-        if (!this.#iconSetType) return;
-
-        // Most built-in icon set names start with their icon count (e.g. "3Arrows", "4Rating", "5Quarters").
-        const match = /^([3-5])/.exec(this.#iconSetType);
-        const count = match ? Number(match[1]) : 3;
-
-        const cfvos: ConditionalFormatValueObject[] = [];
-        for (let i = 0; i < count; i++) {
-            const val = i === 0 ? 0 : Math.round((i * 100) / count);
-            cfvos.push(new ConditionalFormatValueObject('percent', val));
-        }
-
-        this.#cfvos = cfvos;
-        this.#cfvosAuto = true;
-    }
-
     public getIconSetType(): IconSetValues | null {
         return this.#iconSetType;
     }
 
     public setIconSetType(type: IconSetValues): this {
         this.#iconSetType = type;
-
-        // Excel writes a default set of cfvo thresholds for built-in icon sets.
-        // If the user hasn't provided explicit thresholds, populate sensible defaults.
-        if (this.#cfvos.length === 0 || this.#cfvosAuto) {
-            this.#ensureDefaultCfvos();
-        }
         return this;
     }
 
@@ -88,9 +62,6 @@ export class ConditionalIconSet {
      * Get the conditional format value objects.
      */
     public getCfvos(): ConditionalFormatValueObject[] {
-        if (this.#cfvos.length === 0 && this.#iconSetType) {
-            this.#ensureDefaultCfvos();
-        }
         return this.#cfvos;
     }
 
@@ -99,7 +70,6 @@ export class ConditionalIconSet {
      */
     public setCfvos(cfvos: ConditionalFormatValueObject[]): this {
         this.#cfvos = cfvos;
-        this.#cfvosAuto = false;
         return this;
     }
 }
