@@ -36,6 +36,42 @@ export class Worksheet {
     public static getInvalidCharacters(): string[] {
         return Worksheet.INVALID_CHARACTERS;
     }
+
+    public static extractSheetTitle(
+        range: string | null,
+        returnRange: boolean = false,
+        unapostrophize: boolean = false,
+    ): [string | null, string | null] | string | null {
+        if (!range) {
+            return returnRange ? [null, null] : null;
+        }
+
+        const separator = range.lastIndexOf('!');
+        if (separator === -1) {
+            return returnRange ? ['', range] : '';
+        }
+
+        if (returnRange) {
+            let title = range.slice(0, separator);
+            if (unapostrophize) {
+                title = Worksheet.unApostrophizeTitle(title);
+            }
+
+            return [title, range.slice(separator + 1)];
+        }
+
+        return range.slice(separator + 1);
+    }
+
+    public static unApostrophizeTitle(title: string | null): string {
+        const normalized = title ?? '';
+        if (normalized.startsWith("'") && normalized.endsWith("'")) {
+            return normalized.slice(1, -1).replace(/''/g, "'");
+        }
+
+        return normalized;
+    }
+
     // Sheet state constants
     public static readonly SHEETSTATE_VISIBLE = 'visible';
     public static readonly SHEETSTATE_HIDDEN = 'hidden';

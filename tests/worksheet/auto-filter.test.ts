@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Spreadsheet } from '../../src/core/spreadsheet.ts';
+import { Worksheet } from '../../src/core/worksheet.ts';
 import { Column } from '../../src/worksheet/auto-filter/column.ts';
 import { Rule } from '../../src/worksheet/auto-filter/column/rule.ts';
 
@@ -145,5 +146,23 @@ describe('AutoFilter', () => {
         autoFilter.setRangeToMaxRow();
 
         expect(autoFilter.getRange()).toBe('A1:A4');
+    });
+
+    test('sheet title extraction matches PhpSpreadsheet quoting behavior', () => {
+        expect(Worksheet.extractSheetTitle("'Quarter!1'!A1:B2", true, true)).toEqual(['Quarter!1', 'A1:B2']);
+        expect(Worksheet.extractSheetTitle("'O''Brien'!A1", true, true)).toEqual(["O'Brien", 'A1']);
+    });
+
+    test('autofilter accepts sheet-qualified ranges with quoted titles', () => {
+        const spreadsheet = new Spreadsheet();
+        const sheet = spreadsheet.getActiveSheet();
+        sheet.setTitle('Quarter!1');
+
+        const autoFilter = sheet.getAutoFilter();
+        autoFilter.setRange("'Quarter!1'!$A$1:$B$5");
+
+        expect(autoFilter.getRange()).toBe('A1:B5');
+        expect(() => autoFilter.getColumn('A')).not.toThrow();
+        expect(() => autoFilter.getColumn('B')).not.toThrow();
     });
 });

@@ -139,6 +139,17 @@ export class TableColumn {
             }
         }
     }
+
+    public clone(table: Table | null = null): TableColumn {
+        const cloned = new TableColumn(this.#columnIndex, table);
+        cloned.setName(this.#name);
+        cloned.setShowFilterButton(this.#showFilterButton);
+        cloned.setTotalsRowLabel(this.#totalsRowLabel);
+        cloned.setTotalsRowFunction(this.#totalsRowFunction);
+        cloned.setTotalsRowFormula(this.#totalsRowFormula);
+        cloned.setColumnFormula(this.#columnFormula);
+        return cloned;
+    }
 }
 
 /**
@@ -155,13 +166,14 @@ export class Table {
     #autoFilter: AutoFilter;
     #style: TableStyle;
 
-    constructor(range: string = '', name: string = '', worksheet: Worksheet | null = null) {
+    constructor(range: string | number[] = '', name: string = '', worksheet: Worksheet | null = null) {
         this.#name = name;
-        this.#range = range;
+        this.#range = '';
         this.#worksheet = worksheet;
         this.#style = new TableStyle();
         this.#style.setTable(this);
-        this.#autoFilter = new AutoFilter(range, worksheet);
+        this.#autoFilter = new AutoFilter(Array.isArray(range) ? '' : range, worksheet);
+        this.setRange(range);
     }
 
     public getName(): string {
@@ -197,7 +209,7 @@ export class Table {
         return this.#range;
     }
 
-    public setRange(range: string): this {
+    public setRange(range: string | number[]): this {
         if (range === '') {
             this.#range = '';
             this.#columns.clear();
@@ -205,9 +217,23 @@ export class Table {
             return this;
         }
 
-        const rawRange = range.toUpperCase();
-        const sheetSplit = rawRange.split('!');
-        const upperRange = (sheetSplit[1] ?? rawRange).replace(/\$/g, '');
+        let rangeString: string;
+        if (Array.isArray(range)) {
+            if (range.length === 2) {
+                rangeString = Coordinate.stringFromCoordinate(Number(range[0]), Number(range[1]));
+            } else if (range.length === 4) {
+                const start = Coordinate.stringFromCoordinate(Number(range[0]), Number(range[1]));
+                const end = Coordinate.stringFromCoordinate(Number(range[2]), Number(range[3]));
+                rangeString = `${start}:${end}`;
+            } else {
+                throw new Error('Table range array must have 2 or 4 entries.');
+            }
+        } else {
+            rangeString = range;
+        }
+
+        const extracted = Worksheet.extractSheetTitle(rangeString.toUpperCase(), true, true) as [string, string];
+        const upperRange = (extracted[1] ?? '').replace(/\$/g, '');
         if (!upperRange.includes(':')) {
             throw new Error('Table range must be a cell range.');
         }
@@ -227,10 +253,6 @@ export class Table {
             if (columnOffset < startCol || columnOffset > endCol) {
                 this.#columns.delete(columnIndex);
             }
-        }
-
-        if (this.#worksheet) {
-            this.setTableColumns();
         }
 
         return this;
@@ -259,9 +281,6 @@ export class Table {
         }
         this.#worksheet = worksheet;
         this.#autoFilter.setWorksheet(worksheet);
-        if (worksheet) {
-            this.setTableColumns();
-        }
         return this;
     }
 
@@ -442,21 +461,6 @@ export class Table {
         ];
     }
 
-    private setTableColumns(): void {
-        if (this.#columns.size > 0) {
-            return;
-        }
-        const [[startCol], [endCol]] = this.getRangeBoundaries();
-        const columnCount = Math.max(1, endCol - startCol + 1);
-        for (let i = 0; i < columnCount; i++) {
-            const columnIndex = Coordinate.stringFromColumnIndex(startCol + i);
-            const column = new TableColumn(columnIndex, this);
-            column.setName(`Column${i + 1}`);
-            this.#columns.set(columnIndex, column);
-        }
-        this.sortColumns();
-    }
-
     public getRowNumber(coordinate: string): number {
         const [[, startRow]] = this.getRangeBoundaries();
         const [, row] = Coordinate.coordinateFromString(coordinate);
@@ -492,7 +496,29 @@ export class Table {
 
     public setAutoFilter(autoFilter: AutoFilter): this {
         this.#autoFilter = autoFilter;
+        this.#autoFilter.setWorksheet(this.#worksheet);
+        if (this.#range !== '') {
+            this.#autoFilter.setRange(this.#range);
+        }
         return this;
+    }
+
+    public clone(worksheet: Worksheet | null = null): Table {
+        const cloned = new Table(this.#range, this.#name, worksheet);
+        cloned.#showTotals = this.#showTotals;
+        cloned.#showHeader = this.#showHeader;
+        cloned.#allowFilter = this.#allowFilter;
+        cloned.setStyle(this.#style.clone(cloned));
+        cloned.setAutoFilter(this.#autoFilter.clone(worksheet));
+        cloned.#columns.clear();
+
+        for (const [key, column] of this.#columns) {
+            cloned.#columns.set(key, column.clone(cloned));
+        }
+
+        cloned.sortColumns();
+
+        return cloned;
     }
 
     private checkForDuplicateTableNames(worksheet: Worksheet | null, name: string): void {

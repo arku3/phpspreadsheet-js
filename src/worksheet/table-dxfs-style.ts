@@ -70,4 +70,28 @@ export class TableDxfsStyle {
     public getSecondRowStripeStyle(): Style | null {
         return this.#secondRowStripeStyle;
     }
+
+    public clone(): TableDxfsStyle {
+        const cloned = new TableDxfsStyle(this.#name);
+        if (this.#headerRow !== null) {
+            cloned.setHeaderRow(this.#headerRow);
+        }
+        if (this.#firstRowStripe !== null) {
+            cloned.setFirstRowStripe(this.#firstRowStripe);
+        }
+        if (this.#secondRowStripe !== null) {
+            cloned.setSecondRowStripe(this.#secondRowStripe);
+        }
+        if (this.#headerRowStyle !== null) {
+            cloned.setHeaderRowStyle(this.#headerRowStyle.clone());
+        }
+        if (this.#firstRowStripeStyle !== null) {
+            cloned.setFirstRowStripeStyle(this.#firstRowStripeStyle.clone());
+        }
+        if (this.#secondRowStripeStyle !== null) {
+            cloned.setSecondRowStripeStyle(this.#secondRowStripeStyle.clone());
+        }
+
+        return cloned;
+    }
 }

@@ -156,4 +156,20 @@ export class TableStyle {
             this.#tableStyle.setSecondRowStripeStyle(dxfs[secondRowStripe]);
         }
     }
+
+    public clone(table: Table | null = null): TableStyle {
+        const cloned = new TableStyle();
+        cloned.setTheme(this.#theme);
+        cloned.setShowFirstColumn(this.#showFirstColumn);
+        cloned.setShowLastColumn(this.#showLastColumn);
+        cloned.setShowRowStripes(this.#showRowStripes);
+        cloned.setShowColumnStripes(this.#showColumnStripes);
+        cloned.setTable(table);
+
+        if (this.#tableStyle !== null) {
+            cloned.setTableDxfsStyle(this.#tableStyle.clone());
+        }
+
+        return cloned;
+    }
 }

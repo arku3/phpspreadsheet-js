@@ -236,4 +236,16 @@ export class Rule {
         this.#parent = parent;
         return this;
     }
+
+    public clone(parent: Column | null = null): Rule {
+        const cloned = new Rule(parent);
+        cloned.setRuleType(this.#ruleType);
+        cloned.setOperator(this.#operator);
+        cloned.setValue(typeof this.#value === 'object' && this.#value !== null ? { ...this.#value } : this.#value);
+        if (this.#grouping !== '') {
+            cloned.setGrouping(this.#grouping);
+        }
+
+        return cloned;
+    }
 }

@@ -156,4 +156,17 @@ export class Column {
         this.setJoin(Column.AUTOFILTER_COLUMN_JOIN_OR);
         return this;
     }
+
+    public clone(parent: AutoFilter | null = null): Column {
+        const cloned = new Column(this.#columnIndex, parent);
+        cloned.setFilterType(this.#filterType);
+        cloned.setJoin(this.#join);
+        cloned.setAttributes(Object.fromEntries(this.#attributes));
+
+        for (const rule of this.#ruleset) {
+            cloned.addRule(rule.clone(cloned));
+        }
+
+        return cloned;
+    }
 }

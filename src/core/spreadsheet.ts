@@ -931,6 +931,10 @@ export class Spreadsheet {
                 newSheet.addChart(chart.clone());
             }
 
+            for (const table of worksheet.getTableCollection()) {
+                newSheet.addTable(table.clone(newSheet));
+            }
+
             clone.#workSheetCollection.push(newSheet);
         }
 

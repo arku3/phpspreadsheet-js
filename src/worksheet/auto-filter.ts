@@ -11,7 +11,12 @@ export class AutoFilter {
     #evaluated: boolean = false;
 
     constructor(range: string = '', worksheet: Worksheet | null = null) {
-        this.#range = range;
+        if (range !== '') {
+            const extracted = Worksheet.extractSheetTitle(range, true, true) as [string, string];
+            this.#range = (extracted[1] ?? '').replace(/\$/g, '').toUpperCase();
+        } else {
+            this.#range = range;
+        }
         this.#worksheet = worksheet;
     }
 
@@ -65,8 +70,8 @@ export class AutoFilter {
             rangeString = range;
         }
 
-        const split = rangeString.split('!');
-        const normalized = (split[1] ?? split[0] ?? '').toUpperCase();
+        const extracted = Worksheet.extractSheetTitle(rangeString, true, true) as [string, string];
+        const normalized = (extracted[1] ?? '').replace(/\$/g, '').toUpperCase();
         if (/^[0-9]+$/.test(normalized) || /^[A-Z]+$/.test(normalized)) {
             throw new Error(`${rangeString} is an invalid range for AutoFilter`);
         }
@@ -198,6 +203,17 @@ export class AutoFilter {
         }
 
         return this;
+    }
+
+    public clone(worksheet: Worksheet | null = null): AutoFilter {
+        const cloned = new AutoFilter(this.#range, worksheet);
+        cloned.setEvaluated(this.#evaluated);
+
+        for (const [key, column] of this.#columns) {
+            cloned.#columns.set(key, column.clone(cloned));
+        }
+
+        return cloned;
     }
 
     public toString(): string {

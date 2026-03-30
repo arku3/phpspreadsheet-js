@@ -89,6 +89,8 @@ Close parity gaps between TypeScript and PHP while preserving XLSX-only IO scope
 - [ ] Implement missing writer parts (metadata, defined names, richer drawings/comments).
   - [x] Serialize table-scoped AutoFilter metadata in `xl/tables/tableN.xml`, including hidden buttons and filter rule payloads.
   - [x] Extend table AutoFilter writer parity for blank, date-group, and dynamic filter payloads in table XML.
+  - [x] Preserve worksheet tables, table AutoFilter state, and table style/dxfs metadata through `Spreadsheet.copy()`.
+  - [x] Normalize table and AutoFilter ranges like PhpSpreadsheet, including sheet-qualified inputs, apostrophized sheet names, and numeric array table ranges.
 - [ ] Add missing writer options (forceFullCalc, explicitStyle0, restrictMaxColumnWidth) where applicable.
 
 ## Phase 6: Shared/Utils Parity
